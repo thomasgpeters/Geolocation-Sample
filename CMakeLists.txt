@@ -13,6 +13,9 @@ endif()
 # Find Wt package
 find_package(Wt REQUIRED COMPONENTS Wt HTTP)
 
+# Find CURL for HTTP requests to AI APIs
+find_package(CURL REQUIRED)
+
 # Include directories (our source directories)
 include_directories(
     ${CMAKE_SOURCE_DIR}/src
@@ -33,6 +36,9 @@ set(SERVICE_SOURCES
     src/services/BBBAPI.cpp
     src/services/DemographicsAPI.cpp
     src/services/AISearchService.cpp
+    src/services/AIEngine.cpp
+    src/services/OpenAIEngine.cpp
+    src/services/GeminiEngine.cpp
 )
 
 # Source files - Widgets
@@ -67,10 +73,11 @@ if(WT_INCLUDE_DIRS)
     target_include_directories(franchise_ai_search SYSTEM PRIVATE ${WT_INCLUDE_DIRS})
 endif()
 
-# Link Wt libraries
+# Link Wt and CURL libraries
 target_link_libraries(franchise_ai_search
     Wt::Wt
     Wt::HTTP
+    CURL::libcurl
 )
 
 # Copy resources to build directory
