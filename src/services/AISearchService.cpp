@@ -1,4 +1,6 @@
 #include "AISearchService.h"
+#include "OpenAIEngine.h"
+#include "GeminiEngine.h"
 #include <algorithm>
 #include <numeric>
 #include <sstream>
@@ -12,12 +14,24 @@ AISearchService::AISearchService() {
     googleAPI_.setConfig(config_.googleConfig);
     bbbAPI_.setConfig(config_.bbbConfig);
     demographicsAPI_.setConfig(config_.demographicsConfig);
+
+    // Initialize AI engine if configured
+    if (config_.aiEngineConfig.provider != AIProvider::LOCAL &&
+        !config_.aiEngineConfig.apiKey.empty()) {
+        aiEngine_ = createAIEngine(config_.aiEngineConfig.provider, config_.aiEngineConfig);
+    }
 }
 
 AISearchService::AISearchService(const AISearchConfig& config) : config_(config) {
     googleAPI_.setConfig(config_.googleConfig);
     bbbAPI_.setConfig(config_.bbbConfig);
     demographicsAPI_.setConfig(config_.demographicsConfig);
+
+    // Initialize AI engine if configured
+    if (config_.aiEngineConfig.provider != AIProvider::LOCAL &&
+        !config_.aiEngineConfig.apiKey.empty()) {
+        aiEngine_ = createAIEngine(config_.aiEngineConfig.provider, config_.aiEngineConfig);
+    }
 }
 
 AISearchService::~AISearchService() {
@@ -29,6 +43,40 @@ void AISearchService::setConfig(const AISearchConfig& config) {
     googleAPI_.setConfig(config_.googleConfig);
     bbbAPI_.setConfig(config_.bbbConfig);
     demographicsAPI_.setConfig(config_.demographicsConfig);
+
+    // Update AI engine if configuration changed
+    if (config_.aiEngineConfig.provider != AIProvider::LOCAL &&
+        !config_.aiEngineConfig.apiKey.empty()) {
+        aiEngine_ = createAIEngine(config_.aiEngineConfig.provider, config_.aiEngineConfig);
+    } else {
+        aiEngine_.reset();
+    }
+}
+
+void AISearchService::setAIEngine(std::unique_ptr<AIEngine> engine) {
+    aiEngine_ = std::move(engine);
+}
+
+void AISearchService::setAIProvider(AIProvider provider, const std::string& apiKey) {
+    config_.aiEngineConfig.provider = provider;
+    config_.aiEngineConfig.apiKey = apiKey;
+
+    if (provider != AIProvider::LOCAL && !apiKey.empty()) {
+        aiEngine_ = createAIEngine(provider, config_.aiEngineConfig);
+    } else {
+        aiEngine_.reset();
+    }
+}
+
+AIProvider AISearchService::getAIProvider() const {
+    if (aiEngine_) {
+        return aiEngine_->getProvider();
+    }
+    return AIProvider::LOCAL;
+}
+
+bool AISearchService::isAIEngineConfigured() const {
+    return aiEngine_ && aiEngine_->isConfigured();
 }
 
 void AISearchService::search(
@@ -386,8 +434,26 @@ void AISearchService::scoreResult(Models::SearchResultItem& item) {
 
 void AISearchService::generateAIInsights(Models::SearchResultItem& item) {
     if (item.business) {
-        std::ostringstream insights;
         auto& biz = *item.business;
+
+        // Use AI engine if available
+        if (aiEngine_ && aiEngine_->isConfigured()) {
+            auto analysis = aiEngine_->analyzeBusinessPotentialSync(biz);
+            item.aiSummary = analysis.summary;
+            item.keyHighlights = analysis.keyHighlights;
+            item.recommendedActions = analysis.recommendedActions;
+            item.matchReason = analysis.matchReason;
+            item.aiConfidenceScore = analysis.confidenceScore;
+
+            // Update business score from AI analysis if provided
+            if (analysis.cateringPotentialScore > 0) {
+                biz.cateringPotentialScore = analysis.cateringPotentialScore;
+            }
+            return;
+        }
+
+        // Fall back to local analysis
+        std::ostringstream insights;
 
         insights << biz.name << " is a " << biz.getBusinessTypeString()
                  << " with approximately " << biz.employeeCount << " employees. ";
@@ -429,20 +495,44 @@ void AISearchService::generateAIInsights(Models::SearchResultItem& item) {
 }
 
 void AISearchService::generateOverallAnalysis(Models::SearchResults& results) {
-    std::ostringstream analysis;
-
     int highPotentialCount = 0;
     int withConferenceRoom = 0;
     int bbbAccredited = 0;
 
+    std::vector<Models::DemographicData> demographics;
+    std::vector<Models::BusinessInfo> businesses;
+
     for (const auto& item : results.items) {
         if (item.business) {
+            businesses.push_back(*item.business);
             if (item.business->cateringPotentialScore >= 60) ++highPotentialCount;
             if (item.business->hasConferenceRoom) ++withConferenceRoom;
             if (item.business->bbbAccredited) ++bbbAccredited;
         }
+        if (item.demographic) {
+            demographics.push_back(*item.demographic);
+        }
     }
 
+    // Use AI engine for market analysis if available
+    if (aiEngine_ && aiEngine_->isConfigured() && !businesses.empty()) {
+        auto marketAnalysis = aiEngine_->analyzeMarketPotentialSync(demographics, businesses);
+        results.aiOverallAnalysis = marketAnalysis.overallAnalysis;
+        results.topRecommendations = marketAnalysis.topRecommendations;
+        results.marketSummary = marketAnalysis.marketSummary;
+
+        // Also generate a search summary using AI
+        std::vector<std::string> businessSummaries;
+        for (const auto& biz : businesses) {
+            if (businessSummaries.size() >= 5) break;
+            businessSummaries.push_back(biz.name + " (" + biz.getBusinessTypeString() + ")");
+        }
+        // The market analysis already covers what we need
+        return;
+    }
+
+    // Fall back to local analysis
+    std::ostringstream analysis;
     analysis << "Found " << results.totalResults << " potential catering prospects. ";
     analysis << highPotentialCount << " are high-potential leads (score 60+). ";
     analysis << withConferenceRoom << " have conference facilities. ";

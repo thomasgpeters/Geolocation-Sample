@@ -12,6 +12,7 @@
 #include "GoogleMyBusinessAPI.h"
 #include "BBBAPI.h"
 #include "DemographicsAPI.h"
+#include "AIEngine.h"
 
 namespace FranchiseAI {
 namespace Services {
@@ -24,6 +25,9 @@ struct AISearchConfig {
     GoogleAPIConfig googleConfig;
     BBBAPIConfig bbbConfig;
     DemographicsAPIConfig demographicsConfig;
+
+    // AI Engine configuration
+    AIEngineConfig aiEngineConfig;
 
     // Search preferences
     int defaultRadius = 25;  // miles
@@ -152,6 +156,13 @@ public:
     BBBAPI& getBBBAPI() { return bbbAPI_; }
     DemographicsAPI& getDemographicsAPI() { return demographicsAPI_; }
 
+    // AI Engine access
+    AIEngine* getAIEngine() { return aiEngine_.get(); }
+    void setAIEngine(std::unique_ptr<AIEngine> engine);
+    void setAIProvider(AIProvider provider, const std::string& apiKey);
+    AIProvider getAIProvider() const;
+    bool isAIEngineConfigured() const;
+
     // Statistics
     int getTotalSearches() const { return totalSearches_; }
     int getTotalResultsFound() const { return totalResultsFound_; }
@@ -161,6 +172,9 @@ private:
     GoogleMyBusinessAPI googleAPI_;
     BBBAPI bbbAPI_;
     DemographicsAPI demographicsAPI_;
+
+    // AI Engine for analysis
+    std::unique_ptr<AIEngine> aiEngine_;
 
     bool isSearching_ = false;
     bool cancelRequested_ = false;
