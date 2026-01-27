@@ -5,10 +5,15 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Suppress deprecation warnings from Wt library headers (sprintf in WLogger.h)
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang|GNU")
+    add_compile_options(-Wno-deprecated-declarations)
+endif()
+
 # Find Wt package
 find_package(Wt REQUIRED COMPONENTS Wt HTTP)
 
-# Include directories
+# Include directories (our source directories)
 include_directories(
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/src/widgets
@@ -55,6 +60,12 @@ set(ALL_SOURCES
 
 # Create executable
 add_executable(franchise_ai_search ${ALL_SOURCES})
+
+# Mark Wt include directories as SYSTEM to suppress warnings from library headers
+get_target_property(WT_INCLUDE_DIRS Wt::Wt INTERFACE_INCLUDE_DIRECTORIES)
+if(WT_INCLUDE_DIRS)
+    target_include_directories(franchise_ai_search SYSTEM PRIVATE ${WT_INCLUDE_DIRS})
+endif()
 
 # Link Wt libraries
 target_link_libraries(franchise_ai_search
