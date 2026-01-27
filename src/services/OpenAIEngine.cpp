@@ -4,6 +4,7 @@
 #include <cstring>
 #include <algorithm>
 #include <regex>
+#include <iomanip>
 
 namespace FranchiseAI {
 namespace Services {
