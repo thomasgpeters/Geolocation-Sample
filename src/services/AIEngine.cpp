@@ -4,6 +4,7 @@
 #include <sstream>
 #include <algorithm>
 #include <regex>
+#include <iomanip>
 
 namespace FranchiseAI {
 namespace Services {
@@ -106,15 +107,21 @@ std::string AIEngine::buildMarketAnalysisPrompt(
 BusinessAnalysisResult AIEngine::parseBusinessAnalysis(const std::string& response) {
     BusinessAnalysisResult result;
 
-    // Parse SUMMARY
-    std::regex summaryRegex("SUMMARY:\\s*(.+?)(?=\\n(?:SCORE|HIGHLIGHTS|ACTIONS|MATCH_REASON|$))",
-                            std::regex::dotall);
-    std::smatch summaryMatch;
-    if (std::regex_search(response, summaryMatch, summaryRegex)) {
-        result.summary = summaryMatch[1].str();
+    // Parse SUMMARY - use simple string search instead of regex with dotall
+    size_t summaryStart = response.find("SUMMARY:");
+    if (summaryStart != std::string::npos) {
+        summaryStart += 8; // Length of "SUMMARY:"
+        size_t summaryEnd = response.find("\nSCORE:", summaryStart);
+        if (summaryEnd == std::string::npos) summaryEnd = response.find("\nHIGHLIGHTS:", summaryStart);
+        if (summaryEnd == std::string::npos) summaryEnd = response.find("\nACTIONS:", summaryStart);
+        if (summaryEnd == std::string::npos) summaryEnd = response.find("\nMATCH_REASON:", summaryStart);
+        if (summaryEnd == std::string::npos) summaryEnd = response.length();
+        result.summary = response.substr(summaryStart, summaryEnd - summaryStart);
         // Trim whitespace
         result.summary.erase(0, result.summary.find_first_not_of(" \n\r\t"));
-        result.summary.erase(result.summary.find_last_not_of(" \n\r\t") + 1);
+        if (!result.summary.empty()) {
+            result.summary.erase(result.summary.find_last_not_of(" \n\r\t") + 1);
+        }
     }
 
     // Parse SCORE
@@ -180,14 +187,20 @@ BusinessAnalysisResult AIEngine::parseBusinessAnalysis(const std::string& respon
 MarketAnalysisResult AIEngine::parseMarketAnalysis(const std::string& response) {
     MarketAnalysisResult result;
 
-    // Parse OVERALL_ANALYSIS
-    std::regex analysisRegex("OVERALL_ANALYSIS:\\s*(.+?)(?=\\n(?:MARKET_SUMMARY|RECOMMENDATIONS|OPPORTUNITIES|RISKS|$))",
-                             std::regex::dotall);
-    std::smatch analysisMatch;
-    if (std::regex_search(response, analysisMatch, analysisRegex)) {
-        result.overallAnalysis = analysisMatch[1].str();
+    // Parse OVERALL_ANALYSIS - use simple string search instead of regex with dotall
+    size_t analysisStart = response.find("OVERALL_ANALYSIS:");
+    if (analysisStart != std::string::npos) {
+        analysisStart += 17; // Length of "OVERALL_ANALYSIS:"
+        size_t analysisEnd = response.find("\nMARKET_SUMMARY:", analysisStart);
+        if (analysisEnd == std::string::npos) analysisEnd = response.find("\nRECOMMENDATIONS:", analysisStart);
+        if (analysisEnd == std::string::npos) analysisEnd = response.find("\nOPPORTUNITIES:", analysisStart);
+        if (analysisEnd == std::string::npos) analysisEnd = response.find("\nRISKS:", analysisStart);
+        if (analysisEnd == std::string::npos) analysisEnd = response.length();
+        result.overallAnalysis = response.substr(analysisStart, analysisEnd - analysisStart);
         result.overallAnalysis.erase(0, result.overallAnalysis.find_first_not_of(" \n\r\t"));
-        result.overallAnalysis.erase(result.overallAnalysis.find_last_not_of(" \n\r\t") + 1);
+        if (!result.overallAnalysis.empty()) {
+            result.overallAnalysis.erase(result.overallAnalysis.find_last_not_of(" \n\r\t") + 1);
+        }
     }
 
     // Parse MARKET_SUMMARY
