@@ -1,0 +1,78 @@
+cmake_minimum_required(VERSION 3.16)
+project(FranchiseAISearch VERSION 1.0.0 LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Find Wt package
+find_package(Wt REQUIRED COMPONENTS Wt HTTP)
+
+# Include directories
+include_directories(
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/widgets
+    ${CMAKE_SOURCE_DIR}/src/services
+    ${CMAKE_SOURCE_DIR}/src/models
+)
+
+# Source files - Models
+set(MODEL_SOURCES
+    src/models/SearchResult.cpp
+    src/models/BusinessInfo.cpp
+)
+
+# Source files - Services
+set(SERVICE_SOURCES
+    src/services/GoogleMyBusinessAPI.cpp
+    src/services/BBBAPI.cpp
+    src/services/DemographicsAPI.cpp
+    src/services/AISearchService.cpp
+)
+
+# Source files - Widgets
+set(WIDGET_SOURCES
+    src/widgets/Sidebar.cpp
+    src/widgets/Navigation.cpp
+    src/widgets/SearchPanel.cpp
+    src/widgets/ResultCard.cpp
+    src/widgets/ResultsDisplay.cpp
+)
+
+# Main application sources
+set(APP_SOURCES
+    src/main.cpp
+    src/FranchiseApp.cpp
+)
+
+# Combine all sources
+set(ALL_SOURCES
+    ${MODEL_SOURCES}
+    ${SERVICE_SOURCES}
+    ${WIDGET_SOURCES}
+    ${APP_SOURCES}
+)
+
+# Create executable
+add_executable(franchise_ai_search ${ALL_SOURCES})
+
+# Link Wt libraries
+target_link_libraries(franchise_ai_search
+    Wt::Wt
+    Wt::HTTP
+)
+
+# Copy resources to build directory
+file(COPY ${CMAKE_SOURCE_DIR}/resources DESTINATION ${CMAKE_BINARY_DIR})
+
+# Install targets
+install(TARGETS franchise_ai_search RUNTIME DESTINATION bin)
+install(DIRECTORY resources/ DESTINATION share/franchise_ai_search/resources)
+
+# Custom target to run the application
+add_custom_target(run
+    COMMAND franchise_ai_search --docroot "${CMAKE_BINARY_DIR}/resources" --http-address 0.0.0.0 --http-port 8080
+    DEPENDS franchise_ai_search
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMENT "Running Franchise AI Search Application on http://localhost:8080"
+)
