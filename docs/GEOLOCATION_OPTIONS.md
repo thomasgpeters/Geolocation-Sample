@@ -276,7 +276,327 @@ SELECT ?business ?businessLabel ?coord WHERE {
 
 ---
 
-## 6. Data Pipeline for OSM Business Import
+## 6. Agentic Architecture
+
+An alternative to the traditional pipeline architecture is an **agentic approach** where each layer operates as an autonomous service orchestrated by an LLM. This enables dynamic routing, fault tolerance, and natural language interfaces.
+
+### 6.1 Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         User Natural Language Query                      │
+│            "Find me restaurants near downtown Springfield IL             │
+│                    that might need catering services"                    │
+└─────────────────────────────────┬───────────────────────────────────────┘
+                                  │
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          LLM ORCHESTRATOR                                │
+│                                                                          │
+│   • Parses user intent                                                   │
+│   • Selects appropriate agents                                           │
+│   • Determines execution order (parallel vs sequential)                  │
+│   • Synthesizes results from multiple agents                             │
+│   • Handles errors and retries                                           │
+└───────┬─────────────────┬─────────────────┬─────────────────┬───────────┘
+        │                 │                 │                 │
+        ▼                 ▼                 ▼                 ▼
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│  Geocoding   │  │   OSM Data   │  │  Wikidata    │  │  Web Search  │
+│    Agent     │  │    Agent     │  │    Agent     │  │    Agent     │
+│              │  │              │  │              │  │              │
+│ • Nominatim  │  │ • Overpass   │  │ • SPARQL     │  │ • SearXNG    │
+│ • Pelias     │  │ • POI query  │  │ • Enrichment │  │ • Scraping   │
+│ • Photon     │  │ • Categories │  │ • Firmograph │  │ • Validation │
+└──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘
+       │                 │                 │                 │
+       └─────────────────┴────────┬────────┴─────────────────┘
+                                  │
+                                  ▼
+                    ┌──────────────────────────┐
+                    │   Entity Resolution      │
+                    │        Agent             │
+                    │                          │
+                    │  • Deduplicate records   │
+                    │  • Merge attributes      │
+                    │  • Confidence scoring    │
+                    └────────────┬─────────────┘
+                                 │
+                                 ▼
+                    ┌──────────────────────────┐
+                    │   Semantic Ranking       │
+                    │        Agent             │
+                    │                          │
+                    │  • Embedding similarity  │
+                    │  • Intent matching       │
+                    │  • Lead scoring          │
+                    └────────────┬─────────────┘
+                                 │
+                                 ▼
+                    ┌──────────────────────────┐
+                    │     Ranked Results       │
+                    │   (Structured Output)    │
+                    └──────────────────────────┘
+```
+
+### 6.2 Agent Definitions
+
+Each agent is a self-contained service with defined inputs, outputs, and tools.
+
+#### Geocoding Agent
+
+| Property | Description |
+|----------|-------------|
+| **Purpose** | Convert addresses/place names to coordinates and vice versa |
+| **Input** | `{ query: string, type: "forward" \| "reverse", lat?: number, lon?: number }` |
+| **Output** | `{ lat: number, lon: number, display_name: string, confidence: number }` |
+| **Tools** | Nominatim API, Pelias API, Photon API |
+| **Fallback** | Try alternative geocoder if primary fails |
+
+#### OSM Data Agent
+
+| Property | Description |
+|----------|-------------|
+| **Purpose** | Query OpenStreetMap for POIs within a geographic area |
+| **Input** | `{ lat: number, lon: number, radius_m: number, categories?: string[] }` |
+| **Output** | `{ businesses: [{ name, lat, lon, category, address, phone, website, osm_id }] }` |
+| **Tools** | Overpass API, osmium CLI |
+| **Capabilities** | Category filtering, radius search, tag extraction |
+
+#### Wikidata Agent
+
+| Property | Description |
+|----------|-------------|
+| **Purpose** | Enrich business records with structured knowledge |
+| **Input** | `{ business_name: string, lat: number, lon: number }` |
+| **Output** | `{ wikidata_id, industry, employee_count, founding_date, parent_company, website }` |
+| **Tools** | SPARQL endpoint, entity reconciliation API |
+| **Use Case** | Firmographic data for larger/notable businesses |
+
+#### Web Search Agent
+
+| Property | Description |
+|----------|-------------|
+| **Purpose** | Find supplementary business information from the web |
+| **Input** | `{ business_name: string, location: string, info_needed: string[] }` |
+| **Output** | `{ website, social_media, recent_news, contact_info }` |
+| **Tools** | SearXNG (self-hosted), Scrapy, Common Crawl |
+| **Constraints** | Rate limiting, robots.txt compliance |
+
+#### Entity Resolution Agent
+
+| Property | Description |
+|----------|-------------|
+| **Purpose** | Merge duplicate records from multiple sources |
+| **Input** | `{ records: BusinessRecord[] }` |
+| **Output** | `{ merged_records: BusinessRecord[], duplicates_found: number }` |
+| **Tools** | Dedupe library, fuzzy matching (RapidFuzz) |
+| **Algorithm** | ML-based record linkage with confidence scores |
+
+#### Semantic Ranking Agent
+
+| Property | Description |
+|----------|-------------|
+| **Purpose** | Rank results by relevance to user intent |
+| **Input** | `{ query: string, businesses: BusinessRecord[] }` |
+| **Output** | `{ ranked_businesses: BusinessRecord[], relevance_scores: number[] }` |
+| **Tools** | Sentence Transformers, CrossEncoder models |
+| **Model** | `all-MiniLM-L6-v2` or `ms-marco-MiniLM-L-6-v2` |
+
+### 6.3 LLM Orchestrator
+
+The orchestrator is the central intelligence that coordinates agents using function calling.
+
+**Responsibilities:**
+- Parse natural language queries into structured intent
+- Determine which agents to invoke (and in what order)
+- Execute agents in parallel when possible
+- Handle agent failures with retries or fallbacks
+- Synthesize final results with explanations
+
+**Example Orchestration Flow:**
+
+```python
+# Pseudo-code for LLM orchestrator logic
+
+def orchestrate(user_query: str) -> SearchResults:
+    # Step 1: LLM parses intent
+    intent = llm.parse_intent(user_query)
+    # → { location: "downtown Springfield IL",
+    #     business_type: "restaurants",
+    #     purpose: "catering prospects" }
+
+    # Step 2: Geocode location (required first)
+    geo_result = geocoding_agent.execute(intent.location)
+
+    # Step 3: Query data sources in PARALLEL
+    osm_future = osm_agent.execute_async(geo_result, intent.business_type)
+    wiki_future = wikidata_agent.execute_async(geo_result, intent.business_type)
+    web_future = web_agent.execute_async(intent)  # optional enrichment
+
+    # Step 4: Gather results
+    all_records = await gather(osm_future, wiki_future, web_future)
+
+    # Step 5: Deduplicate and merge
+    merged = entity_resolution_agent.execute(all_records)
+
+    # Step 6: Rank by relevance to original query
+    ranked = semantic_ranking_agent.execute(user_query, merged)
+
+    # Step 7: LLM synthesizes final response
+    return llm.synthesize_response(ranked, user_query)
+```
+
+### 6.4 Agent Tool Schemas (OpenAI Function Calling Format)
+
+These schemas enable LLMs to invoke agents as tools:
+
+```json
+{
+  "name": "geocoding_agent",
+  "description": "Convert a place name or address to geographic coordinates",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "Address or place name to geocode"
+      },
+      "type": {
+        "type": "string",
+        "enum": ["forward", "reverse"],
+        "description": "Forward (text→coords) or reverse (coords→text)"
+      }
+    },
+    "required": ["query", "type"]
+  }
+}
+```
+
+```json
+{
+  "name": "osm_data_agent",
+  "description": "Search OpenStreetMap for businesses near a location",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "lat": { "type": "number", "description": "Latitude" },
+      "lon": { "type": "number", "description": "Longitude" },
+      "radius_m": { "type": "integer", "description": "Search radius in meters" },
+      "categories": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "OSM category tags (e.g., 'restaurant', 'office', 'shop')"
+      }
+    },
+    "required": ["lat", "lon", "radius_m"]
+  }
+}
+```
+
+```json
+{
+  "name": "semantic_ranking_agent",
+  "description": "Rank businesses by relevance to a natural language query",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "Natural language description of ideal business"
+      },
+      "business_ids": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "IDs of businesses to rank"
+      }
+    },
+    "required": ["query", "business_ids"]
+  }
+}
+```
+
+### 6.5 Open Source Frameworks for Agentic Systems
+
+| Framework | Language | Description | Best For |
+|-----------|----------|-------------|----------|
+| **LangChain** | Python/JS | Most popular agent framework | Rapid prototyping |
+| **LangGraph** | Python | Stateful multi-agent workflows | Complex orchestration |
+| **CrewAI** | Python | Role-based multi-agent collaboration | Team-like agent interactions |
+| **AutoGen** | Python | Microsoft's multi-agent framework | Conversational agents |
+| **Semantic Kernel** | C#/Python | Microsoft's LLM orchestration SDK | Enterprise/.NET integration |
+| **Haystack** | Python | NLP pipeline framework | Search/RAG applications |
+| **DSPy** | Python | Programmatic LLM pipelines | Optimized prompt engineering |
+
+**Recommended Stack:**
+- **LangGraph** for orchestration (supports cycles, parallel execution, state)
+- **FastAPI** for agent HTTP endpoints
+- **Redis** for inter-agent message passing
+- **PostgreSQL + pgvector** for embeddings storage
+
+### 6.6 Example: LangGraph Implementation
+
+```python
+from langgraph.graph import StateGraph, END
+from typing import TypedDict, List
+
+class SearchState(TypedDict):
+    query: str
+    coordinates: dict | None
+    osm_results: List[dict]
+    wiki_results: List[dict]
+    merged_results: List[dict]
+    ranked_results: List[dict]
+
+# Define the graph
+workflow = StateGraph(SearchState)
+
+# Add agent nodes
+workflow.add_node("geocode", geocoding_agent)
+workflow.add_node("osm_search", osm_agent)
+workflow.add_node("wiki_search", wikidata_agent)
+workflow.add_node("merge", entity_resolution_agent)
+workflow.add_node("rank", semantic_ranking_agent)
+
+# Define edges (execution flow)
+workflow.set_entry_point("geocode")
+workflow.add_edge("geocode", "osm_search")
+workflow.add_edge("geocode", "wiki_search")  # Parallel execution
+workflow.add_edge("osm_search", "merge")
+workflow.add_edge("wiki_search", "merge")
+workflow.add_edge("merge", "rank")
+workflow.add_edge("rank", END)
+
+# Compile and run
+app = workflow.compile()
+result = app.invoke({"query": "restaurants in Springfield IL"})
+```
+
+### 6.7 Benefits of Agentic Architecture
+
+| Benefit | Description |
+|---------|-------------|
+| **Dynamic Routing** | LLM decides which agents to call based on query type |
+| **Graceful Degradation** | If one data source fails, others can still provide results |
+| **Extensibility** | Add new agents (e.g., Yelp agent) without changing orchestration |
+| **Explainability** | LLM can explain why certain results were ranked higher |
+| **Natural Language** | Users don't need to learn query syntax |
+| **Parallel Execution** | Independent agents run concurrently for faster results |
+| **Self-Healing** | LLM can retry failed agents or try alternative approaches |
+
+### 6.8 Considerations
+
+| Challenge | Mitigation |
+|-----------|------------|
+| **Latency** | Cache agent results, use async execution |
+| **Cost** | Use smaller models for orchestration, cache LLM responses |
+| **Reliability** | Implement circuit breakers, timeouts, fallbacks |
+| **Observability** | Log all agent calls, trace execution paths |
+| **Testing** | Mock agents for unit tests, integration tests with real data |
+
+---
+
+## 7. Data Pipeline for OSM Business Import
 
 ```bash
 # 1. Download regional OSM extract
@@ -296,7 +616,7 @@ osmium export illinois-pois.osm.pbf -o illinois-pois.geojson
 
 ---
 
-## 7. Comparison Matrix
+## 8. Comparison Matrix
 
 | Solution | Cost | Coverage | Data Quality | Setup Effort | Real-time |
 |----------|------|----------|--------------|--------------|-----------|
@@ -308,7 +628,7 @@ osmium export illinois-pois.osm.pbf -o illinois-pois.geojson
 
 ---
 
-## 8. Next Steps
+## 9. Next Steps
 
 1. **Evaluate data coverage** - Query Overpass API for your target regions to assess OSM data completeness
 2. **Prototype with Overpass** - Build initial search using Overpass API for validation
@@ -318,7 +638,7 @@ osmium export illinois-pois.osm.pbf -o illinois-pois.geojson
 
 ---
 
-## 9. Useful Links
+## 10. Useful Links
 
 - OSM Wiki (Map Features): https://wiki.openstreetmap.org/wiki/Map_features
 - OSM Taginfo (tag statistics): https://taginfo.openstreetmap.org/
