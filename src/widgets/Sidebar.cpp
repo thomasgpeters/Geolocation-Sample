@@ -73,6 +73,7 @@ void Sidebar::createMenu() {
         }
         menuItem->setStyleClass(itemClass);
         menuItem->setId("menu-" + item.id);
+        menuItem->setObjectName("menu-" + item.id);
 
         auto icon = menuItem->addWidget(std::make_unique<Wt::WText>(item.icon));
         icon->setStyleClass("menu-icon");
