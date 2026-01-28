@@ -377,11 +377,13 @@ html, body {
     font-size: 28px;
     font-weight: 700;
     margin-bottom: 8px;
+    display: block;
 }
 
 .page-subtitle {
     color: var(--text-secondary);
     font-size: 15px;
+    display: block;
 }
 
 /* ==================== Search Page Layout ==================== */
