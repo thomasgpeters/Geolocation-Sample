@@ -10,15 +10,21 @@ SearchPanel::SearchPanel() {
 }
 
 void SearchPanel::setupUI() {
+    // Scrollable content container for form fields
+    scrollableContent_ = addWidget(std::make_unique<Wt::WContainerWidget>());
+    scrollableContent_->setStyleClass("search-content");
+
     createSearchHeader();
     createLocationSection();
     createFiltersSection();
     createDataSourcesSection();
+
+    // Actions stay outside scrollable area (sticky at bottom)
     createSearchActions();
 }
 
 void SearchPanel::createSearchHeader() {
-    auto header = addWidget(std::make_unique<Wt::WContainerWidget>());
+    auto header = scrollableContent_->addWidget(std::make_unique<Wt::WContainerWidget>());
     header->setStyleClass("search-header");
 
     auto title = header->addWidget(std::make_unique<Wt::WText>("🔍 AI-Powered Prospect Search"));
@@ -31,7 +37,7 @@ void SearchPanel::createSearchHeader() {
 }
 
 void SearchPanel::createLocationSection() {
-    auto section = addWidget(std::make_unique<Wt::WContainerWidget>());
+    auto section = scrollableContent_->addWidget(std::make_unique<Wt::WContainerWidget>());
     section->setStyleClass("search-section");
 
     auto sectionTitle = section->addWidget(std::make_unique<Wt::WText>("📍 Location"));
@@ -125,7 +131,7 @@ void SearchPanel::createLocationSection() {
 }
 
 void SearchPanel::createFiltersSection() {
-    auto section = addWidget(std::make_unique<Wt::WContainerWidget>());
+    auto section = scrollableContent_->addWidget(std::make_unique<Wt::WContainerWidget>());
     section->setStyleClass("search-section");
 
     auto sectionHeader = section->addWidget(std::make_unique<Wt::WContainerWidget>());
@@ -230,7 +236,7 @@ void SearchPanel::createFiltersSection() {
 }
 
 void SearchPanel::createDataSourcesSection() {
-    auto section = addWidget(std::make_unique<Wt::WContainerWidget>());
+    auto section = scrollableContent_->addWidget(std::make_unique<Wt::WContainerWidget>());
     section->setStyleClass("search-section");
 
     auto sectionTitle = section->addWidget(std::make_unique<Wt::WText>("📊 Data Sources"));

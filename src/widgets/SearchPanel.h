@@ -118,6 +118,9 @@ private:
     // Advanced filters
     Wt::WContainerWidget* advancedFilters_ = nullptr;
     bool advancedFiltersVisible_ = false;
+
+    // Scrollable content container
+    Wt::WContainerWidget* scrollableContent_ = nullptr;
 };
 
 } // namespace Widgets
