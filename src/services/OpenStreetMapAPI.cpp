@@ -779,5 +779,102 @@ std::string OSMAreaStats::getMarketQualityDescription() const {
     return "Limited";
 }
 
+// ===== GeoLocation-based API implementations =====
+
+void OpenStreetMapAPI::searchBusinesses(
+    const Models::SearchArea& searchArea,
+    BusinessCallback callback
+) {
+    searchBusinesses(
+        searchArea.center.latitude,
+        searchArea.center.longitude,
+        searchArea.radiusMiles,
+        callback
+    );
+}
+
+std::vector<Models::BusinessInfo> OpenStreetMapAPI::searchBusinessesSync(
+    const Models::SearchArea& searchArea
+) {
+    return searchBusinessesSync(
+        searchArea.center.latitude,
+        searchArea.center.longitude,
+        searchArea.radiusMiles
+    );
+}
+
+void OpenStreetMapAPI::searchCateringProspects(
+    const Models::SearchArea& searchArea,
+    BusinessCallback callback
+) {
+    searchCateringProspects(
+        searchArea.center.latitude,
+        searchArea.center.longitude,
+        searchArea.radiusMiles,
+        callback
+    );
+}
+
+void OpenStreetMapAPI::getAreaStatistics(
+    const Models::SearchArea& searchArea,
+    AreaStatsCallback callback
+) {
+    getAreaStatistics(
+        searchArea.center.latitude,
+        searchArea.center.longitude,
+        searchArea.radiusKm,
+        callback
+    );
+}
+
+OSMAreaStats OpenStreetMapAPI::getAreaStatisticsSync(const Models::SearchArea& searchArea) {
+    return getAreaStatisticsSync(
+        searchArea.center.latitude,
+        searchArea.center.longitude,
+        searchArea.radiusKm
+    );
+}
+
+void OpenStreetMapAPI::searchNearby(
+    const Models::SearchArea& searchArea,
+    POICallback callback
+) {
+    searchNearby(
+        searchArea.center.latitude,
+        searchArea.center.longitude,
+        searchArea.radiusMeters(),
+        callback
+    );
+}
+
+Models::GeoLocation OpenStreetMapAPI::poiToGeoLocation(const OSMPoi& poi) {
+    Models::GeoLocation location(poi.latitude, poi.longitude);
+    location.street = poi.houseNumber.empty() ? poi.street : poi.houseNumber + " " + poi.street;
+    location.city = poi.city;
+    location.state = poi.state;
+    location.postalCode = poi.postcode;
+    location.country = poi.country.empty() ? "USA" : poi.country;
+    location.source = "openstreetmap";
+
+    // Build formatted address
+    std::string addr;
+    if (!location.street.empty()) addr = location.street;
+    if (!location.city.empty()) {
+        if (!addr.empty()) addr += ", ";
+        addr += location.city;
+    }
+    if (!location.state.empty()) {
+        if (!addr.empty()) addr += ", ";
+        addr += location.state;
+    }
+    if (!location.postalCode.empty()) {
+        if (!addr.empty()) addr += " ";
+        addr += location.postalCode;
+    }
+    location.formattedAddress = addr;
+
+    return location;
+}
+
 } // namespace Services
 } // namespace FranchiseAI

@@ -13,7 +13,9 @@
 #include "BBBAPI.h"
 #include "DemographicsAPI.h"
 #include "OpenStreetMapAPI.h"
+#include "GeocodingService.h"
 #include "AIEngine.h"
+#include "models/GeoLocation.h"
 
 namespace FranchiseAI {
 namespace Services {
@@ -27,6 +29,7 @@ struct AISearchConfig {
     BBBAPIConfig bbbConfig;
     DemographicsAPIConfig demographicsConfig;
     OSMAPIConfig osmConfig;
+    GeocodingConfig geocodingConfig;
 
     // AI Engine configuration
     AIEngineConfig aiEngineConfig;
@@ -160,6 +163,22 @@ public:
     BBBAPI& getBBBAPI() { return bbbAPI_; }
     DemographicsAPI& getDemographicsAPI() { return demographicsAPI_; }
     OpenStreetMapAPI& getOSMAPI() { return osmAPI_; }
+    IGeocodingService& getGeocodingService() { return *geocodingService_; }
+
+    /**
+     * @brief Geocode an address to GeoLocation
+     * @param address Address string (city, state or full address)
+     * @return GeoLocation with coordinates
+     */
+    Models::GeoLocation geocodeAddress(const std::string& address);
+
+    /**
+     * @brief Create a search area from address and radius
+     * @param address Address string
+     * @param radiusMiles Search radius in miles
+     * @return SearchArea ready for API queries
+     */
+    Models::SearchArea createSearchArea(const std::string& address, double radiusMiles);
 
     // AI Engine access
     AIEngine* getAIEngine() { return aiEngine_.get(); }
@@ -178,6 +197,7 @@ private:
     BBBAPI bbbAPI_;
     DemographicsAPI demographicsAPI_;
     OpenStreetMapAPI osmAPI_;
+    std::unique_ptr<IGeocodingService> geocodingService_;
 
     // AI Engine for analysis
     std::unique_ptr<AIEngine> aiEngine_;

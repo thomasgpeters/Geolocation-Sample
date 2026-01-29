@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include "models/BusinessInfo.h"
 #include "models/DemographicData.h"
+#include "models/GeoLocation.h"
 
 namespace FranchiseAI {
 namespace Services {
@@ -225,6 +226,59 @@ public:
         double longitude,
         double radiusKm
     );
+
+    // ===== GeoLocation-based API (preferred for new code) =====
+
+    /**
+     * @brief Search for businesses using GeoLocation and SearchArea
+     * @param searchArea Search area with center and radius
+     * @param callback Callback with business results
+     */
+    void searchBusinesses(
+        const Models::SearchArea& searchArea,
+        BusinessCallback callback
+    );
+
+    /**
+     * @brief Search for businesses (sync) using SearchArea
+     */
+    std::vector<Models::BusinessInfo> searchBusinessesSync(
+        const Models::SearchArea& searchArea
+    );
+
+    /**
+     * @brief Search for catering prospects using SearchArea
+     */
+    void searchCateringProspects(
+        const Models::SearchArea& searchArea,
+        BusinessCallback callback
+    );
+
+    /**
+     * @brief Get area statistics using SearchArea
+     */
+    void getAreaStatistics(
+        const Models::SearchArea& searchArea,
+        AreaStatsCallback callback
+    );
+
+    /**
+     * @brief Get area statistics (sync) using SearchArea
+     */
+    OSMAreaStats getAreaStatisticsSync(const Models::SearchArea& searchArea);
+
+    /**
+     * @brief Search for POIs using SearchArea
+     */
+    void searchNearby(
+        const Models::SearchArea& searchArea,
+        POICallback callback
+    );
+
+    /**
+     * @brief Convert OSM POI to GeoLocation
+     */
+    static Models::GeoLocation poiToGeoLocation(const OSMPoi& poi);
 
     // Cache management
     void clearCache();

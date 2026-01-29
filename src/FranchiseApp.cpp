@@ -1,4 +1,5 @@
 #include "FranchiseApp.h"
+#include "models/GeoLocation.h"
 #include <Wt/WBootstrap5Theme.h>
 #include <Wt/WCssStyleSheet.h>
 #include <Wt/WText.h>
@@ -548,34 +549,36 @@ void FranchiseApp::showDemographicsPage() {
         attribution->setStyleClass("section-description");
     };
 
-    // Display default Denver stats
+    // Display default Denver stats using SearchArea
+    Models::GeoLocation defaultLocation(39.7392, -104.9903, "Denver", "CO");
+    Models::SearchArea defaultSearchArea(defaultLocation, 10.0);  // 10km radius
     auto& osmAPI = searchService_->getOSMAPI();
-    auto defaultStats = osmAPI.getAreaStatisticsSync(39.7392, -104.9903, 10.0);
+    auto defaultStats = osmAPI.getAreaStatisticsSync(defaultSearchArea);
     displayStatsFunc(resultsContainer, defaultStats);
 
     // Connect analyze button
     analyzeBtn->clicked().connect([this, locationInput, radiusInput, resultsContainer, displayStatsFunc]() {
         std::string location = locationInput->text().toUTF8();
-        double radius = 10.0;
+        double radiusKm = 10.0;
         try {
-            radius = std::stod(radiusInput->text().toUTF8());
+            radiusKm = std::stod(radiusInput->text().toUTF8());
         } catch (...) {
-            radius = 10.0;
+            radiusKm = 10.0;
         }
 
         if (location.empty()) {
             location = "Denver, CO";
         }
 
+        // Use geocodeAddress from AISearchService to get GeoLocation
+        Models::GeoLocation geoLocation = searchService_->geocodeAddress(location);
+
+        // Create SearchArea with the geocoded location
+        Models::SearchArea searchArea(geoLocation, radiusKm);
+
+        // Get area statistics using SearchArea-based API
         auto& osmAPI = searchService_->getOSMAPI();
-        double lat = 39.7392, lon = -104.9903;
-
-        osmAPI.geocodeAddress(location, [&lat, &lon](double foundLat, double foundLon, const std::string&) {
-            lat = foundLat;
-            lon = foundLon;
-        });
-
-        auto stats = osmAPI.getAreaStatisticsSync(lat, lon, radius);
+        auto stats = osmAPI.getAreaStatisticsSync(searchArea);
         displayStatsFunc(resultsContainer, stats);
     });
 }

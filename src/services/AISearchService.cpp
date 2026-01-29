@@ -16,6 +16,12 @@ AISearchService::AISearchService() {
     demographicsAPI_.setConfig(config_.demographicsConfig);
     osmAPI_.setConfig(config_.osmConfig);
 
+    // Initialize geocoding service
+    geocodingService_ = GeocodingServiceFactory::create(
+        config_.geocodingConfig.provider,
+        config_.geocodingConfig
+    );
+
     // Initialize AI engine if configured
     if (config_.aiEngineConfig.provider != AIProvider::LOCAL &&
         !config_.aiEngineConfig.apiKey.empty()) {
@@ -28,6 +34,12 @@ AISearchService::AISearchService(const AISearchConfig& config) : config_(config)
     bbbAPI_.setConfig(config_.bbbConfig);
     demographicsAPI_.setConfig(config_.demographicsConfig);
     osmAPI_.setConfig(config_.osmConfig);
+
+    // Initialize geocoding service
+    geocodingService_ = GeocodingServiceFactory::create(
+        config_.geocodingConfig.provider,
+        config_.geocodingConfig
+    );
 
     // Initialize AI engine if configured
     if (config_.aiEngineConfig.provider != AIProvider::LOCAL &&
@@ -47,6 +59,12 @@ void AISearchService::setConfig(const AISearchConfig& config) {
     demographicsAPI_.setConfig(config_.demographicsConfig);
     osmAPI_.setConfig(config_.osmConfig);
 
+    // Update geocoding service if configuration changed
+    geocodingService_ = GeocodingServiceFactory::create(
+        config_.geocodingConfig.provider,
+        config_.geocodingConfig
+    );
+
     // Update AI engine if configuration changed
     if (config_.aiEngineConfig.provider != AIProvider::LOCAL &&
         !config_.aiEngineConfig.apiKey.empty()) {
@@ -54,6 +72,19 @@ void AISearchService::setConfig(const AISearchConfig& config) {
     } else {
         aiEngine_.reset();
     }
+}
+
+Models::GeoLocation AISearchService::geocodeAddress(const std::string& address) {
+    if (!geocodingService_) {
+        // Fallback: return default location
+        return Models::GeoLocation(39.7392, -104.9903, "Denver", "CO");
+    }
+    return geocodingService_->geocodeSync(address);
+}
+
+Models::SearchArea AISearchService::createSearchArea(const std::string& address, double radiusMiles) {
+    Models::GeoLocation location = geocodeAddress(address);
+    return Models::SearchArea::fromMiles(location, radiusMiles);
 }
 
 void AISearchService::setAIEngine(std::unique_ptr<AIEngine> engine) {
@@ -210,24 +241,31 @@ void AISearchService::executeSearch(
 
     // Step 2: OpenStreetMap search
     if (query.includeOpenStreetMap && !cancelRequested_) {
-        progress.currentStep = "Searching OpenStreetMap...";
-        progress.percentComplete = 30;
+        progress.currentStep = "Geocoding address...";
+        progress.percentComplete = 28;
         if (progressCallback) progressCallback(progress);
 
-        // Use coordinates if available, otherwise use a default
-        double lat = query.latitude != 0 ? query.latitude : 39.7392;  // Default: Denver
-        double lon = query.longitude != 0 ? query.longitude : -104.9903;
-
-        // If no coordinates but location string, try to geocode
-        if (query.latitude == 0 && query.longitude == 0 && !query.location.empty()) {
-            osmAPI_.geocodeAddress(query.location,
-                [&lat, &lon](double foundLat, double foundLon, const std::string&) {
-                    lat = foundLat;
-                    lon = foundLon;
-                });
+        // Create search area from location using geocoding service
+        Models::SearchArea searchArea;
+        if (query.latitude != 0 && query.longitude != 0) {
+            // Use provided coordinates
+            Models::GeoLocation location(query.latitude, query.longitude);
+            searchArea = Models::SearchArea::fromMiles(location, query.radiusMiles);
+        } else if (!query.location.empty()) {
+            // Geocode the address using the geocoding service
+            searchArea = createSearchArea(query.location, query.radiusMiles);
+        } else {
+            // Default to Denver
+            Models::GeoLocation defaultLocation(39.7392, -104.9903, "Denver", "CO");
+            searchArea = Models::SearchArea::fromMiles(defaultLocation, query.radiusMiles);
         }
 
-        osmResults = osmAPI_.searchBusinessesSync(lat, lon, query.radiusMiles);
+        progress.currentStep = "Searching OpenStreetMap...";
+        progress.percentComplete = 32;
+        if (progressCallback) progressCallback(progress);
+
+        // Use SearchArea-based API
+        osmResults = osmAPI_.searchBusinessesSync(searchArea);
         progress.osmComplete = true;
         progress.osmResultCount = static_cast<int>(osmResults.size());
         progress.percentComplete = 45;
