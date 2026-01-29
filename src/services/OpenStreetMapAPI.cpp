@@ -876,5 +876,125 @@ Models::GeoLocation OpenStreetMapAPI::poiToGeoLocation(const OSMPoi& poi) {
     return location;
 }
 
+void OpenStreetMapAPI::searchByCategory(
+    const Models::SearchArea& searchArea,
+    const std::string& category,
+    POICallback callback
+) {
+    // Generate demo POIs filtered by category
+    auto pois = searchByCategorySync(searchArea, category);
+    callback(pois, "");
+}
+
+std::vector<OSMPoi> OpenStreetMapAPI::searchByCategorySync(
+    const Models::SearchArea& searchArea,
+    const std::string& category
+) {
+    // Category to OSM tag mapping
+    static const std::map<std::string, std::vector<std::pair<std::string, std::string>>> categoryTagMap = {
+        {"offices", {{"office", "company"}, {"office", "corporate"}, {"office", "it"}, {"building", "office"}, {"building", "commercial"}}},
+        {"hotels", {{"tourism", "hotel"}, {"building", "hotel"}}},
+        {"conference", {{"amenity", "conference_centre"}, {"amenity", "events_venue"}}},
+        {"hospitals", {{"amenity", "hospital"}, {"amenity", "clinic"}, {"building", "hospital"}}},
+        {"universities", {{"amenity", "university"}, {"amenity", "college"}, {"building", "university"}}},
+        {"schools", {{"amenity", "school"}, {"building", "school"}}},
+        {"industrial", {{"building", "industrial"}, {"landuse", "industrial"}}},
+        {"warehouses", {{"building", "warehouse"}}},
+        {"banks", {{"amenity", "bank"}, {"office", "financial"}}},
+        {"government", {{"office", "government"}, {"building", "government"}}},
+        {"restaurants", {{"amenity", "restaurant"}, {"amenity", "fast_food"}}},
+        {"cafes", {{"amenity", "cafe"}}}
+    };
+
+    // Normalize category name
+    std::string categoryLower = category;
+    std::transform(categoryLower.begin(), categoryLower.end(), categoryLower.begin(), ::tolower);
+
+    auto tagIt = categoryTagMap.find(categoryLower);
+    if (tagIt == categoryTagMap.end()) {
+        return {};  // Unknown category
+    }
+
+    // Generate demo POIs for this category
+    std::vector<OSMPoi> pois;
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<> latDist(-0.008, 0.008);
+    std::uniform_real_distribution<> lonDist(-0.008, 0.008);
+    std::uniform_int_distribution<> idDist(100000, 999999);
+    std::uniform_int_distribution<> numDist(100, 500);
+
+    // Sample business names by category
+    static const std::map<std::string, std::vector<std::string>> categoryNames = {
+        {"offices", {"TechVenture Corp", "Metro Business Center", "Innovation Hub", "Enterprise Solutions", "Global Dynamics", "Summit Partners", "Apex Consulting", "Premier Holdings"}},
+        {"hotels", {"Downtown Marriott", "Grand Plaza Hotel", "Valley Conference Hotel", "Business Suites Inn", "Executive Stay Hotel", "Metro Lodge", "Corporate Inn", "Parkview Hotel"}},
+        {"conference", {"Grand Convention Center", "Metro Events Center", "City Conference Hall", "Business Expo Center", "Summit Meeting Center"}},
+        {"hospitals", {"Regional Medical Center", "St. Mary Hospital", "Community Health Center", "Valley Medical Clinic", "Metro Healthcare", "Sunrise Medical Center"}},
+        {"universities", {"State University", "Metro Technical College", "City Community College", "Regional University", "Business Academy"}},
+        {"schools", {"Central High School", "Lincoln Middle School", "Washington Elementary", "Oak Valley Academy", "Metro Prep School"}},
+        {"industrial", {"Apex Manufacturing", "Metro Industrial Park", "Valley Production Center", "Summit Factory", "Industrial Tech Center"}},
+        {"warehouses", {"Pacific Logistics Center", "Metro Distribution", "Valley Storage Solutions", "Central Fulfillment", "Express Warehouse"}},
+        {"banks", {"First National Bank", "Metro Credit Union", "Valley Savings Bank", "Business Financial Center", "Regional Trust Bank"}},
+        {"government", {"City Hall Complex", "County Administration", "State Services Building", "Federal Office Building", "Municipal Center"}},
+        {"restaurants", {"The Corporate Grill", "Business District Cafe", "Executive Dining", "Metro Bistro", "Downtown Eatery", "Valley Kitchen", "Summit Restaurant"}},
+        {"cafes", {"Metro Coffee House", "Business Brew", "Morning Cup Cafe", "Espresso Corner", "Valley Roasters", "Quick Cafe"}}
+    };
+
+    auto nameIt = categoryNames.find(categoryLower);
+    if (nameIt == categoryNames.end()) {
+        return {};
+    }
+
+    const auto& names = nameIt->second;
+    const auto& tags = tagIt->second;
+
+    std::vector<std::string> streets = {
+        "Main Street", "Commerce Drive", "Business Park Way", "Corporate Boulevard",
+        "Innovation Lane", "Enterprise Road", "Technology Circle", "Professional Parkway"
+    };
+
+    int numResults = std::min(static_cast<int>(names.size()), config_.maxResultsPerQuery);
+
+    for (int i = 0; i < numResults; ++i) {
+        OSMPoi poi;
+        poi.osmId = idDist(gen);
+        poi.osmType = "way";
+        poi.name = names[i % names.size()];
+        poi.latitude = searchArea.center.latitude + latDist(gen);
+        poi.longitude = searchArea.center.longitude + lonDist(gen);
+
+        // Set appropriate tags for this category
+        if (!tags.empty()) {
+            const auto& [tagKey, tagValue] = tags[i % tags.size()];
+            poi.tags[tagKey] = tagValue;
+            if (tagKey == "office") poi.office = tagValue;
+            else if (tagKey == "building") poi.building = tagValue;
+            else if (tagKey == "amenity") poi.amenity = tagValue;
+            else if (tagKey == "tourism") poi.tourism = tagValue;
+        }
+
+        // Address
+        poi.houseNumber = std::to_string(numDist(gen));
+        poi.street = streets[i % streets.size()];
+        poi.city = searchArea.center.city.empty() ? "Sample City" : searchArea.center.city;
+        poi.state = searchArea.center.state.empty() ? "ST" : searchArea.center.state;
+        poi.postcode = searchArea.center.postalCode.empty() ? "12345" : searchArea.center.postalCode;
+        poi.country = "USA";
+
+        // Contact info
+        poi.phone = "(555) " + std::to_string(100 + i) + "-" + std::to_string(1000 + i * 111);
+        std::string domain = poi.name.substr(0, poi.name.find(' '));
+        std::transform(domain.begin(), domain.end(), domain.begin(), ::tolower);
+        // Remove special chars from domain
+        domain.erase(std::remove_if(domain.begin(), domain.end(), [](char c) { return !std::isalnum(c); }), domain.end());
+        poi.website = "www." + domain + ".com";
+        poi.email = "info@" + domain + ".com";
+
+        pois.push_back(poi);
+    }
+
+    return pois;
+}
+
 } // namespace Services
 } // namespace FranchiseAI
