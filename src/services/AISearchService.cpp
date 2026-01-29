@@ -14,6 +14,7 @@ AISearchService::AISearchService() {
     googleAPI_.setConfig(config_.googleConfig);
     bbbAPI_.setConfig(config_.bbbConfig);
     demographicsAPI_.setConfig(config_.demographicsConfig);
+    osmAPI_.setConfig(config_.osmConfig);
 
     // Initialize AI engine if configured
     if (config_.aiEngineConfig.provider != AIProvider::LOCAL &&
@@ -26,6 +27,7 @@ AISearchService::AISearchService(const AISearchConfig& config) : config_(config)
     googleAPI_.setConfig(config_.googleConfig);
     bbbAPI_.setConfig(config_.bbbConfig);
     demographicsAPI_.setConfig(config_.demographicsConfig);
+    osmAPI_.setConfig(config_.osmConfig);
 
     // Initialize AI engine if configured
     if (config_.aiEngineConfig.provider != AIProvider::LOCAL &&
@@ -43,6 +45,7 @@ void AISearchService::setConfig(const AISearchConfig& config) {
     googleAPI_.setConfig(config_.googleConfig);
     bbbAPI_.setConfig(config_.bbbConfig);
     demographicsAPI_.setConfig(config_.demographicsConfig);
+    osmAPI_.setConfig(config_.osmConfig);
 
     // Update AI engine if configuration changed
     if (config_.aiEngineConfig.provider != AIProvider::LOCAL &&
@@ -189,6 +192,7 @@ void AISearchService::executeSearch(
     SearchProgress progress;
     std::vector<Models::BusinessInfo> googleResults;
     std::vector<Models::BusinessInfo> bbbResults;
+    std::vector<Models::BusinessInfo> osmResults;
     std::vector<Models::DemographicData> demographicResults;
 
     // Step 1: Google My Business search
@@ -200,27 +204,53 @@ void AISearchService::executeSearch(
         googleResults = googleAPI_.searchBusinessesSync(query);
         progress.googleComplete = true;
         progress.googleResultCount = static_cast<int>(googleResults.size());
-        progress.percentComplete = 35;
+        progress.percentComplete = 25;
         if (progressCallback) progressCallback(progress);
     }
 
-    // Step 2: BBB search
+    // Step 2: OpenStreetMap search
+    if (query.includeOpenStreetMap && !cancelRequested_) {
+        progress.currentStep = "Searching OpenStreetMap...";
+        progress.percentComplete = 30;
+        if (progressCallback) progressCallback(progress);
+
+        // Use coordinates if available, otherwise use a default
+        double lat = query.latitude != 0 ? query.latitude : 39.7392;  // Default: Denver
+        double lon = query.longitude != 0 ? query.longitude : -104.9903;
+
+        // If no coordinates but location string, try to geocode
+        if (query.latitude == 0 && query.longitude == 0 && !query.location.empty()) {
+            osmAPI_.geocodeAddress(query.location,
+                [&lat, &lon](double foundLat, double foundLon, const std::string&) {
+                    lat = foundLat;
+                    lon = foundLon;
+                });
+        }
+
+        osmResults = osmAPI_.searchBusinessesSync(lat, lon, query.radiusMiles);
+        progress.osmComplete = true;
+        progress.osmResultCount = static_cast<int>(osmResults.size());
+        progress.percentComplete = 45;
+        if (progressCallback) progressCallback(progress);
+    }
+
+    // Step 3: BBB search
     if (query.includeBBB && !cancelRequested_) {
         progress.currentStep = "Searching Better Business Bureau...";
-        progress.percentComplete = 40;
+        progress.percentComplete = 50;
         if (progressCallback) progressCallback(progress);
 
         bbbResults = bbbAPI_.searchBusinessesSync(query);
         progress.bbbComplete = true;
         progress.bbbResultCount = static_cast<int>(bbbResults.size());
-        progress.percentComplete = 60;
+        progress.percentComplete = 65;
         if (progressCallback) progressCallback(progress);
     }
 
-    // Step 3: Demographics search
+    // Step 4: Demographics search
     if (query.includeDemographics && !cancelRequested_) {
         progress.currentStep = "Analyzing demographic data...";
-        progress.percentComplete = 65;
+        progress.percentComplete = 70;
         if (progressCallback) progressCallback(progress);
 
         std::string zipCode = query.zipCode.empty() ? "62701" : query.zipCode;
@@ -231,13 +261,13 @@ void AISearchService::executeSearch(
         if (progressCallback) progressCallback(progress);
     }
 
-    // Step 4: Aggregate and analyze results
+    // Step 5: Aggregate and analyze results
     if (!cancelRequested_) {
         progress.currentStep = "Performing AI analysis...";
         progress.percentComplete = 85;
         if (progressCallback) progressCallback(progress);
 
-        auto results = aggregateResults(googleResults, bbbResults, demographicResults, query);
+        auto results = aggregateResults(googleResults, bbbResults, osmResults, demographicResults, query);
 
         auto endTime = std::chrono::high_resolution_clock::now();
         results.searchDuration = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -269,6 +299,7 @@ void AISearchService::executeSearch(
 Models::SearchResults AISearchService::aggregateResults(
     const std::vector<Models::BusinessInfo>& googleResults,
     const std::vector<Models::BusinessInfo>& bbbResults,
+    const std::vector<Models::BusinessInfo>& osmResults,
     const std::vector<Models::DemographicData>& demographicResults,
     const Models::SearchQuery& query
 ) {
@@ -281,6 +312,24 @@ Models::SearchResults AISearchService::aggregateResults(
         results.items.push_back(item);
     }
     results.googleResults = static_cast<int>(googleResults.size());
+
+    // Add OpenStreetMap results (merge with existing if possible)
+    for (const auto& business : osmResults) {
+        bool merged = false;
+        for (auto& item : results.items) {
+            if (item.business && item.business->name == business.name) {
+                mergeBusinessData(*item.business, business);
+                item.sources.push_back(Models::DataSource::OPENSTREETMAP);
+                merged = true;
+                break;
+            }
+        }
+        if (!merged) {
+            auto item = createResultItem(business, query);
+            results.items.push_back(item);
+        }
+    }
+    results.osmResults = static_cast<int>(osmResults.size());
 
     // Add BBB results (merge with existing if possible)
     for (const auto& business : bbbResults) {

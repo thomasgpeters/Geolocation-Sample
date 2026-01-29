@@ -35,6 +35,7 @@ set(SERVICE_SOURCES
     src/services/GoogleMyBusinessAPI.cpp
     src/services/BBBAPI.cpp
     src/services/DemographicsAPI.cpp
+    src/services/OpenStreetMapAPI.cpp
     src/services/AISearchService.cpp
     src/services/AIEngine.cpp
     src/services/OpenAIEngine.cpp

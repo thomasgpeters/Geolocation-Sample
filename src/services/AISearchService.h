@@ -12,6 +12,7 @@
 #include "GoogleMyBusinessAPI.h"
 #include "BBBAPI.h"
 #include "DemographicsAPI.h"
+#include "OpenStreetMapAPI.h"
 #include "AIEngine.h"
 
 namespace FranchiseAI {
@@ -25,6 +26,7 @@ struct AISearchConfig {
     GoogleAPIConfig googleConfig;
     BBBAPIConfig bbbConfig;
     DemographicsAPIConfig demographicsConfig;
+    OSMAPIConfig osmConfig;
 
     // AI Engine configuration
     AIEngineConfig aiEngineConfig;
@@ -47,17 +49,19 @@ struct SearchProgress {
     bool googleComplete = false;
     bool bbbComplete = false;
     bool demographicsComplete = false;
+    bool osmComplete = false;
     bool analysisComplete = false;
 
     int googleResultCount = 0;
     int bbbResultCount = 0;
     int demographicsResultCount = 0;
+    int osmResultCount = 0;
 
     std::string currentStep;
     int percentComplete = 0;
 
     bool isComplete() const {
-        return googleComplete && bbbComplete && demographicsComplete && analysisComplete;
+        return googleComplete && bbbComplete && demographicsComplete && osmComplete && analysisComplete;
     }
 };
 
@@ -155,6 +159,7 @@ public:
     GoogleMyBusinessAPI& getGoogleAPI() { return googleAPI_; }
     BBBAPI& getBBBAPI() { return bbbAPI_; }
     DemographicsAPI& getDemographicsAPI() { return demographicsAPI_; }
+    OpenStreetMapAPI& getOSMAPI() { return osmAPI_; }
 
     // AI Engine access
     AIEngine* getAIEngine() { return aiEngine_.get(); }
@@ -172,6 +177,7 @@ private:
     GoogleMyBusinessAPI googleAPI_;
     BBBAPI bbbAPI_;
     DemographicsAPI demographicsAPI_;
+    OpenStreetMapAPI osmAPI_;
 
     // AI Engine for analysis
     std::unique_ptr<AIEngine> aiEngine_;
@@ -193,6 +199,7 @@ private:
     Models::SearchResults aggregateResults(
         const std::vector<Models::BusinessInfo>& googleResults,
         const std::vector<Models::BusinessInfo>& bbbResults,
+        const std::vector<Models::BusinessInfo>& osmResults,
         const std::vector<Models::DemographicData>& demographicResults,
         const Models::SearchQuery& query
     );

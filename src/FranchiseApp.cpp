@@ -3,6 +3,11 @@
 #include <Wt/WCssStyleSheet.h>
 #include <Wt/WText.h>
 #include <Wt/WMessageBox.h>
+#include <Wt/WLineEdit.h>
+#include <Wt/WPushButton.h>
+#include <Wt/WBreak.h>
+#include <sstream>
+#include <iomanip>
 
 namespace FranchiseAI {
 
@@ -402,20 +407,177 @@ void FranchiseApp::showDemographicsPage() {
     title->setStyleClass("page-title");
 
     auto subtitle = header->addWidget(std::make_unique<Wt::WText>(
-        "Explore demographic data and market potential in your service area"
+        "Explore OpenStreetMap data and market potential in your service area"
     ));
     subtitle->setStyleClass("page-subtitle");
 
-    auto placeholder = container->addWidget(std::make_unique<Wt::WContainerWidget>());
-    placeholder->setStyleClass("placeholder-content");
+    // Search section
+    auto searchSection = container->addWidget(std::make_unique<Wt::WContainerWidget>());
+    searchSection->setStyleClass("settings-section");
 
-    auto icon = placeholder->addWidget(std::make_unique<Wt::WText>("📍"));
-    icon->setStyleClass("placeholder-icon");
+    auto searchLabel = searchSection->addWidget(std::make_unique<Wt::WText>("Enter a location to analyze:"));
+    searchLabel->setStyleClass("section-title");
 
-    auto text = placeholder->addWidget(std::make_unique<Wt::WText>(
-        "Demographics visualization and mapping features coming soon."
-    ));
-    text->setStyleClass("placeholder-text");
+    auto searchRow = searchSection->addWidget(std::make_unique<Wt::WContainerWidget>());
+    searchRow->setStyleClass("actions-grid");
+
+    auto locationInput = searchRow->addWidget(std::make_unique<Wt::WLineEdit>());
+    locationInput->setPlaceholderText("e.g., Denver, CO or New York, NY");
+    locationInput->setStyleClass("form-control");
+    locationInput->setText("Denver, CO");
+
+    auto radiusInput = searchRow->addWidget(std::make_unique<Wt::WLineEdit>("10"));
+    radiusInput->setStyleClass("form-control");
+
+    auto analyzeBtn = searchRow->addWidget(std::make_unique<Wt::WPushButton>("Analyze Area (km radius)"));
+    analyzeBtn->setStyleClass("btn btn-primary");
+
+    // Results container
+    auto resultsContainer = container->addWidget(std::make_unique<Wt::WContainerWidget>());
+    resultsContainer->setStyleClass("demographics-results");
+
+    // Function to display statistics
+    auto displayStatsFunc = [](Wt::WContainerWidget* resultsContainer, const Services::OSMAreaStats& stats) {
+        resultsContainer->clear();
+
+        // Market Score Card Section
+        auto scoreSection = resultsContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
+        scoreSection->setStyleClass("settings-section");
+
+        auto scoreHeader = scoreSection->addWidget(std::make_unique<Wt::WText>("Market Potential Score"));
+        scoreHeader->setStyleClass("section-title");
+
+        auto scoreValue = scoreSection->addWidget(std::make_unique<Wt::WText>(
+            std::to_string(stats.marketPotentialScore) + "/100 - " + stats.getMarketQualityDescription()
+        ));
+        scoreValue->setStyleClass("page-subtitle");
+
+        // Stats Grid Section
+        auto statsSection = resultsContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
+        statsSection->setStyleClass("settings-section");
+
+        auto statsHeader = statsSection->addWidget(std::make_unique<Wt::WText>("Business Categories in Area"));
+        statsHeader->setStyleClass("section-title");
+
+        auto statsGrid = statsSection->addWidget(std::make_unique<Wt::WContainerWidget>());
+        statsGrid->setStyleClass("stats-grid");
+
+        std::vector<std::tuple<std::string, int, std::string>> statItems = {
+            {"Offices", stats.offices, "Corporate offices & business centers"},
+            {"Hotels", stats.hotels, "Hotels & lodging"},
+            {"Conference", stats.conferenceVenues, "Conference & event venues"},
+            {"Hospitals", stats.hospitals, "Healthcare facilities"},
+            {"Universities", stats.universities, "Higher education"},
+            {"Schools", stats.schools, "K-12 education"},
+            {"Industrial", stats.industrialBuildings, "Manufacturing & industrial"},
+            {"Warehouses", stats.warehouses, "Storage & distribution"},
+            {"Banks", stats.banks, "Financial institutions"},
+            {"Government", stats.governmentBuildings, "Government offices"},
+            {"Restaurants", stats.restaurants, "Food service"},
+            {"Cafes", stats.cafes, "Coffee shops & cafes"}
+        };
+
+        for (const auto& [label, count, desc] : statItems) {
+            auto card = statsGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
+            card->setStyleClass("stat-card");
+
+            auto valueText = card->addWidget(std::make_unique<Wt::WText>(std::to_string(count)));
+            valueText->setStyleClass("stat-value");
+
+            auto labelText = card->addWidget(std::make_unique<Wt::WText>(label));
+            labelText->setStyleClass("stat-label");
+        }
+
+        // Summary section
+        auto summarySection = resultsContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
+        summarySection->setStyleClass("settings-section");
+
+        auto summaryTitle = summarySection->addWidget(std::make_unique<Wt::WText>("Area Summary"));
+        summaryTitle->setStyleClass("section-title");
+
+        std::ostringstream summary;
+        summary << "Total Points of Interest: " << stats.totalPois;
+        auto totalText = summarySection->addWidget(std::make_unique<Wt::WText>(summary.str()));
+        totalText->setStyleClass("section-description");
+
+        std::ostringstream density;
+        density << std::fixed << std::setprecision(1);
+        density << "Business Density: " << stats.businessDensityPerSqKm << " POIs per square km";
+        auto densityText = summarySection->addWidget(std::make_unique<Wt::WText>(density.str()));
+        densityText->setStyleClass("section-description");
+
+        // Insights section
+        auto insightsSection = resultsContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
+        insightsSection->setStyleClass("settings-section");
+
+        auto insightsTitle = insightsSection->addWidget(std::make_unique<Wt::WText>("Catering Opportunity Insights"));
+        insightsTitle->setStyleClass("section-title");
+
+        std::vector<std::string> insights;
+        if (stats.offices > 20) {
+            insights.push_back("Strong corporate presence - target office buildings for regular catering");
+        }
+        if (stats.conferenceVenues > 2) {
+            insights.push_back("Conference venues available - opportunity for event catering");
+        }
+        if (stats.hotels > 5) {
+            insights.push_back("Multiple hotels in area - potential for hotel catering partnerships");
+        }
+        if (stats.hospitals > 1) {
+            insights.push_back("Healthcare facilities present - consider hospital cafeteria services");
+        }
+        if (stats.industrialBuildings + stats.warehouses > 10) {
+            insights.push_back("Industrial area - employee meal programs may be valuable");
+        }
+        if (stats.universities > 0) {
+            insights.push_back("Educational institutions nearby - campus catering opportunities");
+        }
+        if (insights.empty()) {
+            insights.push_back("Moderate catering potential - consider expanding search radius");
+        }
+
+        for (const auto& insight : insights) {
+            auto insightText = insightsSection->addWidget(std::make_unique<Wt::WText>("• " + insight));
+            insightText->setStyleClass("section-description");
+        }
+
+        // Attribution
+        auto attribution = resultsContainer->addWidget(std::make_unique<Wt::WText>(
+            "Data source: OpenStreetMap contributors (openstreetmap.org)"
+        ));
+        attribution->setStyleClass("section-description");
+    };
+
+    // Display default Denver stats
+    auto& osmAPI = searchService_->getOSMAPI();
+    auto defaultStats = osmAPI.getAreaStatisticsSync(39.7392, -104.9903, 10.0);
+    displayStatsFunc(resultsContainer, defaultStats);
+
+    // Connect analyze button
+    analyzeBtn->clicked().connect([this, locationInput, radiusInput, resultsContainer, displayStatsFunc]() {
+        std::string location = locationInput->text().toUTF8();
+        double radius = 10.0;
+        try {
+            radius = std::stod(radiusInput->text().toUTF8());
+        } catch (...) {
+            radius = 10.0;
+        }
+
+        if (location.empty()) {
+            location = "Denver, CO";
+        }
+
+        auto& osmAPI = searchService_->getOSMAPI();
+        double lat = 39.7392, lon = -104.9903;
+
+        osmAPI.geocodeAddress(location, [&lat, &lon](double foundLat, double foundLon, const std::string&) {
+            lat = foundLat;
+            lon = foundLon;
+        });
+
+        auto stats = osmAPI.getAreaStatisticsSync(lat, lon, radius);
+        displayStatsFunc(resultsContainer, stats);
+    });
 }
 
 void FranchiseApp::showReportsPage() {
