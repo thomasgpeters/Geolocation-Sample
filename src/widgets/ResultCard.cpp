@@ -38,10 +38,10 @@ void ResultCard::createHeader() {
     auto titleSection = leftSection->addWidget(std::make_unique<Wt::WContainerWidget>());
     titleSection->setStyleClass("title-section");
 
-    auto title = titleSection->addWidget(std::make_unique<Wt::WText>(item_.getTitle()));
+    auto title = titleSection->addWidget(std::make_unique<Wt::WText>(item_.getTitle(), Wt::TextFormat::Plain));
     title->setStyleClass("card-title");
 
-    auto subtitle = titleSection->addWidget(std::make_unique<Wt::WText>(item_.getSubtitle()));
+    auto subtitle = titleSection->addWidget(std::make_unique<Wt::WText>(item_.getSubtitle(), Wt::TextFormat::Plain));
     subtitle->setStyleClass("card-subtitle");
 
     // Type badge
@@ -188,7 +188,7 @@ void ResultCard::createInsights() {
     auto insightsIcon = insightsContainer->addWidget(std::make_unique<Wt::WText>("🤖 "));
     insightsIcon->setStyleClass("insights-icon");
 
-    auto insightsText = insightsContainer->addWidget(std::make_unique<Wt::WText>(item_.aiSummary));
+    auto insightsText = insightsContainer->addWidget(std::make_unique<Wt::WText>(item_.aiSummary, Wt::TextFormat::Plain));
     insightsText->setStyleClass("insights-text");
 }
 
@@ -228,8 +228,8 @@ void ResultCard::createExpandedDetails() {
             auto item = highlightsList->addWidget(std::make_unique<Wt::WContainerWidget>());
             item->setStyleClass("highlight-item");
 
-            auto bullet = item->addWidget(std::make_unique<Wt::WText>("• "));
-            auto text = item->addWidget(std::make_unique<Wt::WText>(highlight));
+            auto bullet = item->addWidget(std::make_unique<Wt::WText>("- ", Wt::TextFormat::Plain));
+            auto text = item->addWidget(std::make_unique<Wt::WText>(highlight, Wt::TextFormat::Plain));
         }
     }
 
@@ -249,9 +249,9 @@ void ResultCard::createExpandedDetails() {
             auto item = actionsList->addWidget(std::make_unique<Wt::WContainerWidget>());
             item->setStyleClass("action-item");
 
-            auto number = item->addWidget(std::make_unique<Wt::WText>(std::to_string(actionNum++) + ". "));
+            auto number = item->addWidget(std::make_unique<Wt::WText>(std::to_string(actionNum++) + ". ", Wt::TextFormat::Plain));
             number->setStyleClass("action-number");
-            auto text = item->addWidget(std::make_unique<Wt::WText>(action));
+            auto text = item->addWidget(std::make_unique<Wt::WText>(action, Wt::TextFormat::Plain));
         }
     }
 
@@ -272,21 +272,21 @@ void ResultCard::createExpandedDetails() {
             auto phoneItem = contactGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
             phoneItem->setStyleClass("contact-item");
             auto phoneIcon = phoneItem->addWidget(std::make_unique<Wt::WText>("📞 "));
-            auto phoneText = phoneItem->addWidget(std::make_unique<Wt::WText>(contact.primaryPhone));
+            auto phoneText = phoneItem->addWidget(std::make_unique<Wt::WText>(contact.primaryPhone, Wt::TextFormat::Plain));
         }
 
         if (!contact.email.empty()) {
             auto emailItem = contactGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
             emailItem->setStyleClass("contact-item");
             auto emailIcon = emailItem->addWidget(std::make_unique<Wt::WText>("✉️ "));
-            auto emailText = emailItem->addWidget(std::make_unique<Wt::WText>(contact.email));
+            auto emailText = emailItem->addWidget(std::make_unique<Wt::WText>(contact.email, Wt::TextFormat::Plain));
         }
 
         if (!contact.website.empty()) {
             auto webItem = contactGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
             webItem->setStyleClass("contact-item");
             auto webIcon = webItem->addWidget(std::make_unique<Wt::WText>("🌐 "));
-            auto webText = webItem->addWidget(std::make_unique<Wt::WText>(contact.website));
+            auto webText = webItem->addWidget(std::make_unique<Wt::WText>(contact.website, Wt::TextFormat::Plain));
         }
     }
 
@@ -300,7 +300,7 @@ void ResultCard::createExpandedDetails() {
 
         for (const auto& source : item_.sources) {
             auto sourceBadge = sourcesSection->addWidget(std::make_unique<Wt::WText>(
-                Models::dataSourceToString(source)
+                Models::dataSourceToString(source), Wt::TextFormat::Plain
             ));
             sourceBadge->setStyleClass("source-badge");
         }
