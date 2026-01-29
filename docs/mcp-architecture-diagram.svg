@@ -1,0 +1,328 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" width="1200" height="900">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a252f;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0d1317;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="apiLogicGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#27ae60;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1e8449;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="mcpGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#3498db;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2980b9;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="serviceGrad1" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#9b59b6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7d3c98;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="serviceGrad2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#e74c3c;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#c0392b;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="serviceGrad3" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#f39c12;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#d68910;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="serviceGrad4" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1abc9c;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#16a085;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="serviceGrad5" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#e91e63;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#c2185b;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="aiGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="clientGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#34495e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2c3e50;stop-opacity:1" />
+    </linearGradient>
+
+    <!-- Drop shadow filter -->
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="3" dy="4" stdDeviation="4" flood-opacity="0.25"/>
+    </filter>
+
+    <!-- Glow effect for AI -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Arrow marker -->
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#7f8c8d"/>
+    </marker>
+    <marker id="arrowheadBlue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#3498db"/>
+    </marker>
+    <marker id="arrowheadGreen" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#27ae60"/>
+    </marker>
+
+    <!-- Database icon -->
+    <symbol id="dbIcon" viewBox="0 0 40 50">
+      <ellipse cx="20" cy="8" rx="16" ry="5" fill="currentColor" opacity="0.9"/>
+      <path d="M4 8 v32 a16 5 0 0 0 32 0 v-32" fill="currentColor" opacity="0.7"/>
+      <ellipse cx="20" cy="40" rx="16" ry="5" fill="currentColor" opacity="0.8"/>
+    </symbol>
+
+    <!-- API icon -->
+    <symbol id="apiIcon" viewBox="0 0 50 50">
+      <rect x="5" y="5" width="40" height="40" rx="5" fill="currentColor" opacity="0.9"/>
+      <text x="25" y="32" text-anchor="middle" font-family="monospace" font-size="14" font-weight="bold" fill="#fff">API</text>
+    </symbol>
+
+    <!-- Gear icon -->
+    <symbol id="gearIcon" viewBox="0 0 50 50">
+      <circle cx="25" cy="25" r="8" fill="none" stroke="#fff" stroke-width="3"/>
+      <g fill="#fff">
+        <rect x="23" y="2" width="4" height="10" rx="1"/>
+        <rect x="23" y="38" width="4" height="10" rx="1"/>
+        <rect x="2" y="23" width="10" height="4" rx="1"/>
+        <rect x="38" y="23" width="10" height="4" rx="1"/>
+        <rect x="7" y="7" width="4" height="10" rx="1" transform="rotate(45 9 12)"/>
+        <rect x="39" y="7" width="4" height="10" rx="1" transform="rotate(-45 41 12)"/>
+        <rect x="7" y="33" width="4" height="10" rx="1" transform="rotate(-45 9 38)"/>
+        <rect x="39" y="33" width="4" height="10" rx="1" transform="rotate(45 41 38)"/>
+      </g>
+    </symbol>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="900" fill="#f5f7fa"/>
+
+  <!-- Title -->
+  <rect x="0" y="0" width="1200" height="65" fill="url(#headerGrad)"/>
+  <text x="600" y="42" text-anchor="middle" font-family="Arial, sans-serif" font-size="26" font-weight="bold" fill="#fff">
+    MCP Architecture: ApiLogicServer AI Search Aggregation
+  </text>
+
+  <!-- Subtitle -->
+  <text x="600" y="95" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#666">
+    Model Context Protocol (MCP) with 5 Data Services for Intelligent Prospect Discovery
+  </text>
+
+  <!-- Client Layer (Top) -->
+  <g filter="url(#shadow)">
+    <rect x="450" y="120" width="300" height="70" rx="10" fill="url(#clientGrad)"/>
+    <text x="600" y="150" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#fff">
+      C++ ERB Frontend Client
+    </text>
+    <text x="600" y="172" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#bdc3c7">
+      Natural Language Query Interface
+    </text>
+  </g>
+
+  <!-- Arrow from Client to ApiLogicServer -->
+  <path d="M600 190 L600 240" stroke="#7f8c8d" stroke-width="3" marker-end="url(#arrowhead)" fill="none"/>
+  <text x="620" y="220" font-family="Arial, sans-serif" font-size="11" fill="#7f8c8d">REST/JSON</text>
+
+  <!-- Central MCP Hub Area -->
+  <rect x="200" y="250" width="800" height="280" rx="15" fill="#e8f6f3" stroke="#1abc9c" stroke-width="2" stroke-dasharray="8,4"/>
+  <text x="600" y="275" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#16a085">
+    MCP Layer — Model Context Protocol
+  </text>
+
+  <!-- ApiLogicServer (Central Hub) -->
+  <g filter="url(#shadow)">
+    <rect x="400" y="300" width="400" height="200" rx="15" fill="url(#apiLogicGrad)"/>
+
+    <!-- Inner structure -->
+    <rect x="420" y="320" width="360" height="40" rx="5" fill="rgba(255,255,255,0.15)"/>
+    <text x="600" y="347" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#fff">
+      ApiLogicServer
+    </text>
+
+    <!-- AI Engine Section -->
+    <g filter="url(#glow)">
+      <rect x="440" y="375" width="150" height="55" rx="8" fill="url(#aiGrad)"/>
+      <text x="515" y="398" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#fff">AI Search Engine</text>
+      <text x="515" y="418" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="rgba(255,255,255,0.8)">Query Understanding</text>
+    </g>
+
+    <!-- Aggregator Section -->
+    <rect x="610" y="375" width="170" height="55" rx="8" fill="rgba(255,255,255,0.2)"/>
+    <text x="695" y="398" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#fff">Response Aggregator</text>
+    <text x="695" y="418" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="rgba(255,255,255,0.8)">Merge &amp; Dedupe</text>
+
+    <!-- MCP Router -->
+    <rect x="440" y="440" width="340" height="45" rx="5" fill="rgba(0,0,0,0.2)"/>
+    <text x="610" y="468" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#fff">
+      MCP Tool Router &amp; Context Manager
+    </text>
+  </g>
+
+  <!-- MCP Protocol Labels -->
+  <text x="280" y="410" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#16a085" font-weight="bold">
+    MCP Protocol
+  </text>
+  <text x="920" y="410" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#16a085" font-weight="bold">
+    MCP Protocol
+  </text>
+
+  <!-- Data Services Row -->
+  <!-- Service 1: OpenStreetMap -->
+  <g filter="url(#shadow)">
+    <rect x="60" y="580" width="180" height="140" rx="10" fill="url(#serviceGrad1)"/>
+    <text x="150" y="610" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#fff">
+      OpenStreetMap
+    </text>
+    <text x="150" y="630" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="rgba(255,255,255,0.8)">
+      MCP Data Service
+    </text>
+    <rect x="80" y="645" width="140" height="60" rx="5" fill="rgba(0,0,0,0.2)"/>
+    <text x="150" y="665" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#fff">Geolocation Data</text>
+    <text x="150" y="680" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#fff">POI Queries</text>
+    <text x="150" y="695" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#fff">Overpass API</text>
+  </g>
+
+  <!-- Service 2: Wikidata -->
+  <g filter="url(#shadow)">
+    <rect x="270" y="580" width="180" height="140" rx="10" fill="url(#serviceGrad2)"/>
+    <text x="360" y="610" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#fff">
+      Wikidata
+    </text>
+    <text x="360" y="630" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="rgba(255,255,255,0.8)">
+      MCP Data Service
+    </text>
+    <rect x="290" y="645" width="140" height="60" rx="5" fill="rgba(0,0,0,0.2)"/>
+    <text x="360" y="665" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#fff">Entity Enrichment</text>
+    <text x="360" y="680" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#fff">SPARQL Queries</text>
+    <text x="360" y="695" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#fff">Knowledge Graph</text>
+  </g>
+
+  <!-- Service 3: Business Directory -->
+  <g filter="url(#shadow)">
+    <rect x="480" y="580" width="180" height="140" rx="10" fill="url(#serviceGrad3)"/>
+    <text x="570" y="610" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#fff">
+      Business Directory
+    </text>
+    <text x="570" y="630" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="rgba(255,255,255,0.8)">
+      MCP Data Service
+    </text>
+    <rect x="500" y="645" width="140" height="60" rx="5" fill="rgba(0,0,0,0.2)"/>
+    <text x="570" y="665" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#fff">Company Profiles</text>
+    <text x="570" y="680" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#fff">Contact Info</text>
+    <text x="570" y="695" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#fff">Industry Codes</text>
+  </g>
+
+  <!-- Service 4: Demographics API -->
+  <g filter="url(#shadow)">
+    <rect x="690" y="580" width="180" height="140" rx="10" fill="url(#serviceGrad4)"/>
+    <text x="780" y="610" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#fff">
+      Demographics API
+    </text>
+    <text x="780" y="630" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="rgba(255,255,255,0.8)">
+      MCP Data Service
+    </text>
+    <rect x="710" y="645" width="140" height="60" rx="5" fill="rgba(0,0,0,0.2)"/>
+    <text x="780" y="665" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#fff">Census Data</text>
+    <text x="780" y="680" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#fff">Income Levels</text>
+    <text x="780" y="695" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#fff">Population Density</text>
+  </g>
+
+  <!-- Service 5: Web Enrichment -->
+  <g filter="url(#shadow)">
+    <rect x="900" y="580" width="180" height="140" rx="10" fill="url(#serviceGrad5)"/>
+    <text x="990" y="610" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#fff">
+      Web Enrichment
+    </text>
+    <text x="990" y="630" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="rgba(255,255,255,0.8)">
+      MCP Data Service
+    </text>
+    <rect x="920" y="645" width="140" height="60" rx="5" fill="rgba(0,0,0,0.2)"/>
+    <text x="990" y="665" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#fff">Reviews &amp; Ratings</text>
+    <text x="990" y="680" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#fff">Social Signals</text>
+    <text x="990" y="695" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#fff">Website Scraping</text>
+  </g>
+
+  <!-- Connection lines from ApiLogicServer to Services -->
+  <!-- To Service 1 -->
+  <path d="M450 500 L150 575" stroke="#9b59b6" stroke-width="2" marker-end="url(#arrowhead)" fill="none"/>
+  <!-- To Service 2 -->
+  <path d="M500 500 L360 575" stroke="#e74c3c" stroke-width="2" marker-end="url(#arrowhead)" fill="none"/>
+  <!-- To Service 3 -->
+  <path d="M600 500 L570 575" stroke="#f39c12" stroke-width="2" marker-end="url(#arrowhead)" fill="none"/>
+  <!-- To Service 4 -->
+  <path d="M700 500 L780 575" stroke="#1abc9c" stroke-width="2" marker-end="url(#arrowhead)" fill="none"/>
+  <!-- To Service 5 -->
+  <path d="M750 500 L990 575" stroke="#e91e63" stroke-width="2" marker-end="url(#arrowhead)" fill="none"/>
+
+  <!-- Response arrows (dashed, going up) -->
+  <path d="M150 580 L440 505" stroke="#9b59b6" stroke-width="2" stroke-dasharray="5,3" fill="none"/>
+  <path d="M360 580 L490 505" stroke="#e74c3c" stroke-width="2" stroke-dasharray="5,3" fill="none"/>
+  <path d="M570 580 L595 505" stroke="#f39c12" stroke-width="2" stroke-dasharray="5,3" fill="none"/>
+  <path d="M780 580 L710 505" stroke="#1abc9c" stroke-width="2" stroke-dasharray="5,3" fill="none"/>
+  <path d="M990 580 L760 505" stroke="#e91e63" stroke-width="2" stroke-dasharray="5,3" fill="none"/>
+
+  <!-- Data Flow Labels -->
+  <g font-family="Arial, sans-serif" font-size="10" fill="#555">
+    <text x="280" y="545" transform="rotate(-25 280 545)">tool_call</text>
+    <text x="420" y="545" transform="rotate(-15 420 545)">tool_call</text>
+    <text x="580" y="550">tool_call</text>
+    <text x="720" y="545" transform="rotate(15 720 545)">tool_call</text>
+    <text x="860" y="545" transform="rotate(25 860 545)">tool_call</text>
+  </g>
+
+  <!-- Legend Box -->
+  <g filter="url(#shadow)">
+    <rect x="60" y="750" width="500" height="130" rx="10" fill="#fff" stroke="#ddd" stroke-width="1"/>
+    <text x="80" y="780" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#333">Data Flow Legend</text>
+
+    <!-- Request arrow -->
+    <line x1="80" y1="805" x2="130" y2="805" stroke="#7f8c8d" stroke-width="2" marker-end="url(#arrowhead)"/>
+    <text x="145" y="810" font-family="Arial, sans-serif" font-size="11" fill="#555">MCP Tool Request (tool_call)</text>
+
+    <!-- Response arrow -->
+    <line x1="80" y1="835" x2="130" y2="835" stroke="#7f8c8d" stroke-width="2" stroke-dasharray="5,3"/>
+    <text x="145" y="840" font-family="Arial, sans-serif" font-size="11" fill="#555">MCP Tool Response (tool_result)</text>
+
+    <!-- Aggregated response -->
+    <rect x="80" y="855" width="50" height="15" rx="3" fill="url(#aiGrad)"/>
+    <text x="145" y="867" font-family="Arial, sans-serif" font-size="11" fill="#555">AI-Processed &amp; Aggregated Response</text>
+  </g>
+
+  <!-- MCP Protocol Details Box -->
+  <g filter="url(#shadow)">
+    <rect x="600" y="750" width="540" height="130" rx="10" fill="#fff" stroke="#ddd" stroke-width="1"/>
+    <text x="620" y="780" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#333">MCP Protocol Features</text>
+
+    <g font-family="Arial, sans-serif" font-size="11" fill="#555">
+      <circle cx="630" cy="805" r="4" fill="#3498db"/>
+      <text x="645" y="810">Standardized tool definitions (JSON Schema)</text>
+
+      <circle cx="630" cy="830" r="4" fill="#27ae60"/>
+      <text x="645" y="835">Async parallel requests to all data services</text>
+
+      <circle cx="630" cy="855" r="4" fill="#9b59b6"/>
+      <text x="645" y="860">Context preservation across tool calls</text>
+
+      <circle cx="900" cy="805" r="4" fill="#e74c3c"/>
+      <text x="915" y="810">Error handling &amp; retry</text>
+
+      <circle cx="900" cy="830" r="4" fill="#f39c12"/>
+      <text x="915" y="835">Response streaming</text>
+
+      <circle cx="900" cy="855" r="4" fill="#1abc9c"/>
+      <text x="915" y="860">Rate limiting &amp; caching</text>
+    </g>
+  </g>
+
+  <!-- Aggregation Flow Indicator -->
+  <g>
+    <rect x="420" y="505" width="360" height="25" rx="5" fill="#27ae60" opacity="0.1"/>
+    <text x="600" y="522" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#1e8449" font-weight="bold">
+      ← Responses Merged, Deduplicated, Scored →
+    </text>
+  </g>
+
+</svg>
