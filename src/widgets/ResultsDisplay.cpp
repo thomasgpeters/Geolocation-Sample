@@ -239,6 +239,7 @@ void ResultsDisplay::updateSummary(const Models::SearchResults& results) {
     }
 
     if (analysisText_ && !results.aiOverallAnalysis.empty()) {
+        analysisText_->setTextFormat(Wt::TextFormat::Plain);
         analysisText_->setText(results.aiOverallAnalysis);
     }
 }

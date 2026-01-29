@@ -619,7 +619,7 @@ std::vector<OSMPoi> OpenStreetMapAPI::generateDemoPOIs(
         {"Apex Manufacturing Plant", "building", "industrial", "Industrial manufacturing facility"},
         {"Healthcare Associates Clinic", "amenity", "clinic", "Medical clinic and offices"},
         {"Community Foundation Center", "office", "ngo", "Non-profit organization"},
-        {"Smith & Associates Law Firm", "office", "lawyer", "Corporate law firm"},
+        {"Smith and Associates Law Firm", "office", "lawyer", "Corporate law firm"},
         {"Regional Tech Park", "office", "it", "Technology business park"},
         {"Sunrise Senior Care Center", "amenity", "hospital", "Healthcare and senior services"},
         {"Enterprise Solutions Inc", "office", "company", "Business consulting firm"},
