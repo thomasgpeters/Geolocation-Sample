@@ -35,6 +35,7 @@ enum class DataSource {
     GOOGLE_MY_BUSINESS,
     BBB,
     DEMOGRAPHICS,
+    OPENSTREETMAP,
     MANUAL_ENTRY,
     IMPORTED
 };
@@ -204,6 +205,7 @@ inline std::string dataSourceToString(DataSource source) {
         case DataSource::GOOGLE_MY_BUSINESS: return "Google My Business";
         case DataSource::BBB: return "Better Business Bureau";
         case DataSource::DEMOGRAPHICS: return "Demographics Data";
+        case DataSource::OPENSTREETMAP: return "OpenStreetMap";
         case DataSource::MANUAL_ENTRY: return "Manual Entry";
         case DataSource::IMPORTED: return "Imported";
         default: return "Unknown";

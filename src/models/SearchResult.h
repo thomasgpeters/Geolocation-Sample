@@ -88,6 +88,7 @@ struct SearchQuery {
     bool includeGoogleMyBusiness = true;
     bool includeBBB = true;
     bool includeDemographics = true;
+    bool includeOpenStreetMap = true;
 
     // Sorting
     enum class SortBy {
@@ -124,6 +125,7 @@ public:
     int googleResults = 0;
     int bbbResults = 0;
     int demographicResults = 0;
+    int osmResults = 0;
 
     // Search metadata
     std::chrono::milliseconds searchDuration{0};

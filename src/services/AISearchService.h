@@ -12,7 +12,10 @@
 #include "GoogleMyBusinessAPI.h"
 #include "BBBAPI.h"
 #include "DemographicsAPI.h"
+#include "OpenStreetMapAPI.h"
+#include "GeocodingService.h"
 #include "AIEngine.h"
+#include "models/GeoLocation.h"
 
 namespace FranchiseAI {
 namespace Services {
@@ -25,6 +28,8 @@ struct AISearchConfig {
     GoogleAPIConfig googleConfig;
     BBBAPIConfig bbbConfig;
     DemographicsAPIConfig demographicsConfig;
+    OSMAPIConfig osmConfig;
+    GeocodingConfig geocodingConfig;
 
     // AI Engine configuration
     AIEngineConfig aiEngineConfig;
@@ -47,17 +52,19 @@ struct SearchProgress {
     bool googleComplete = false;
     bool bbbComplete = false;
     bool demographicsComplete = false;
+    bool osmComplete = false;
     bool analysisComplete = false;
 
     int googleResultCount = 0;
     int bbbResultCount = 0;
     int demographicsResultCount = 0;
+    int osmResultCount = 0;
 
     std::string currentStep;
     int percentComplete = 0;
 
     bool isComplete() const {
-        return googleComplete && bbbComplete && demographicsComplete && analysisComplete;
+        return googleComplete && bbbComplete && demographicsComplete && osmComplete && analysisComplete;
     }
 };
 
@@ -155,6 +162,23 @@ public:
     GoogleMyBusinessAPI& getGoogleAPI() { return googleAPI_; }
     BBBAPI& getBBBAPI() { return bbbAPI_; }
     DemographicsAPI& getDemographicsAPI() { return demographicsAPI_; }
+    OpenStreetMapAPI& getOSMAPI() { return osmAPI_; }
+    IGeocodingService& getGeocodingService() { return *geocodingService_; }
+
+    /**
+     * @brief Geocode an address to GeoLocation
+     * @param address Address string (city, state or full address)
+     * @return GeoLocation with coordinates
+     */
+    Models::GeoLocation geocodeAddress(const std::string& address);
+
+    /**
+     * @brief Create a search area from address and radius
+     * @param address Address string
+     * @param radiusMiles Search radius in miles
+     * @return SearchArea ready for API queries
+     */
+    Models::SearchArea createSearchArea(const std::string& address, double radiusMiles);
 
     // AI Engine access
     AIEngine* getAIEngine() { return aiEngine_.get(); }
@@ -172,6 +196,8 @@ private:
     GoogleMyBusinessAPI googleAPI_;
     BBBAPI bbbAPI_;
     DemographicsAPI demographicsAPI_;
+    OpenStreetMapAPI osmAPI_;
+    std::unique_ptr<IGeocodingService> geocodingService_;
 
     // AI Engine for analysis
     std::unique_ptr<AIEngine> aiEngine_;
@@ -193,6 +219,7 @@ private:
     Models::SearchResults aggregateResults(
         const std::vector<Models::BusinessInfo>& googleResults,
         const std::vector<Models::BusinessInfo>& bbbResults,
+        const std::vector<Models::BusinessInfo>& osmResults,
         const std::vector<Models::DemographicData>& demographicResults,
         const Models::SearchQuery& query
     );
