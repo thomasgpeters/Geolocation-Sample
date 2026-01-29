@@ -6,82 +6,102 @@
     <title>FranchiseAI: Intelligent Prospect Discovery Platform</title>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             line-height: 1.6;
+            color: #333;
             max-width: 900px;
             margin: 0 auto;
-            padding: 40px;
-            color: #333;
+            padding: 40px 20px;
+            background: #fff;
         }
         h1 {
-            font-size: 36px;
-            color: #1a1a1a;
-            margin-bottom: 10px;
+            font-size: 2.5em;
+            color: #1a1a2e;
+            margin-bottom: 0.5em;
         }
         h2 {
-            font-size: 28px;
-            color: #2c3e50;
-            border-bottom: 2px solid #3498db;
+            font-size: 1.8em;
+            color: #16213e;
+            border-bottom: 3px solid #0f4c75;
             padding-bottom: 10px;
-            margin-top: 50px;
+            margin-top: 2em;
         }
         h3 {
-            font-size: 22px;
-            color: #34495e;
-        }
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            margin: 20px 0;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 12px;
-            text-align: left;
-        }
-        th {
-            background-color: #3498db;
-            color: white;
-        }
-        tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-        blockquote {
-            border-left: 4px solid #3498db;
-            margin: 20px 0;
-            padding: 15px 20px;
-            background-color: #f8f9fa;
-            font-style: italic;
-        }
-        ul, ol {
-            margin: 15px 0;
-        }
-        li {
-            margin: 8px 0;
-        }
-        strong {
-            color: #2c3e50;
-        }
-        hr {
-            border: none;
-            border-top: 3px solid #3498db;
-            margin: 40px 0;
+            font-size: 1.4em;
+            color: #1b262c;
+            margin-top: 1.5em;
         }
         .slide {
             page-break-after: always;
             margin-bottom: 60px;
+            padding-bottom: 40px;
+            border-bottom: 2px dashed #ccc;
+        }
+        .slide:last-child {
+            border-bottom: none;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.95em;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px 15px;
+            text-align: left;
+        }
+        th {
+            background: #0f4c75;
+            color: white;
+            font-weight: 600;
+        }
+        tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        tr:hover {
+            background: #e8f4f8;
+        }
+        ul, ol {
+            margin: 15px 0;
+            padding-left: 25px;
+        }
+        li {
+            margin: 8px 0;
+        }
+        blockquote {
+            border-left: 4px solid #0f4c75;
+            margin: 20px 0;
+            padding: 15px 20px;
+            background: #f8f9fa;
+            font-style: italic;
+            color: #555;
+        }
+        strong {
+            color: #1a1a2e;
+        }
+        .highlight {
+            background: #ffe066;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+        .metric-value {
+            font-weight: bold;
+            color: #0f4c75;
+        }
+        .subtitle {
+            font-size: 1.2em;
+            color: #666;
+            margin-top: -10px;
         }
     </style>
 </head>
 <body>
 
-<div class="slide">
-    <h1>FranchiseAI: Intelligent Prospect Discovery Platform</h1>
-    <h2>Proposal Presentation</h2>
-</div>
+<h1>FranchiseAI: Intelligent Prospect Discovery Platform</h1>
+<p class="subtitle">Proposal Presentation</p>
 
-<hr>
-
+<!-- SLIDE 1 -->
 <div class="slide">
     <h2>Slide 1: The Problem</h2>
     <h3>Franchise Sales Teams Waste 40% of Their Time Finding Leads</h3>
@@ -102,30 +122,29 @@
         </tr>
         <tr>
             <td>Hours per week on manual research</td>
-            <td>15-20 hrs</td>
+            <td class="metric-value">15-20 hrs</td>
         </tr>
         <tr>
             <td>Lead quality from manual search</td>
-            <td>~20% qualified</td>
+            <td class="metric-value">~20% qualified</td>
         </tr>
         <tr>
             <td>Market coverage</td>
-            <td>&lt;30% of potential prospects</td>
+            <td class="metric-value">&lt;30% of potential prospects</td>
         </tr>
         <tr>
             <td>Cost per qualified lead</td>
-            <td>$45-75</td>
+            <td class="metric-value">$45-75</td>
         </tr>
     </table>
 
     <blockquote>
-        <p>"Our reps spend more time searching than selling."</p>
-        <p>— Regional Franchise Director</p>
+        "Our reps spend more time searching than selling."<br>
+        — Regional Franchise Director
     </blockquote>
 </div>
 
-<hr>
-
+<!-- SLIDE 2 -->
 <div class="slide">
     <h2>Slide 2: The Solution</h2>
     <h3>AI-Powered Prospect Discovery in Seconds, Not Hours</h3>
@@ -162,8 +181,7 @@
     </ol>
 </div>
 
-<hr>
-
+<!-- SLIDE 3 -->
 <div class="slide">
     <h2>Slide 3: Key Features</h2>
     <h3>Intelligent Search That Understands Your Business</h3>
@@ -211,8 +229,7 @@
     </ul>
 </div>
 
-<hr>
-
+<!-- SLIDE 4 -->
 <div class="slide">
     <h2>Slide 4: Competitive Advantage</h2>
     <h3>Why FranchiseAI Wins</h3>
@@ -226,43 +243,43 @@
         </tr>
         <tr>
             <td><strong>Time to generate 100 leads</strong></td>
-            <td>2 minutes</td>
+            <td class="metric-value">2 minutes</td>
             <td>30 minutes</td>
             <td>8+ hours</td>
         </tr>
         <tr>
             <td><strong>Data sources searched</strong></td>
-            <td>5+ simultaneously</td>
+            <td class="metric-value">5+ simultaneously</td>
             <td>1-2</td>
             <td>1 at a time</td>
         </tr>
         <tr>
             <td><strong>AI-powered scoring</strong></td>
-            <td>Yes</td>
+            <td class="metric-value">Yes</td>
             <td>Limited</td>
             <td>No</td>
         </tr>
         <tr>
             <td><strong>Natural language search</strong></td>
-            <td>Yes</td>
+            <td class="metric-value">Yes</td>
             <td>No</td>
             <td>No</td>
         </tr>
         <tr>
             <td><strong>Cost per lead</strong></td>
-            <td>$5-10</td>
+            <td class="metric-value">$5-10</td>
             <td>$25-40</td>
             <td>$45-75</td>
         </tr>
         <tr>
             <td><strong>Market coverage</strong></td>
-            <td>90%+</td>
+            <td class="metric-value">90%+</td>
             <td>40-60%</td>
             <td>&lt;30%</td>
         </tr>
         <tr>
             <td><strong>Self-hosted option</strong></td>
-            <td>Yes</td>
+            <td class="metric-value">Yes</td>
             <td>No</td>
             <td>N/A</td>
         </tr>
@@ -276,10 +293,9 @@
     </ul>
 </div>
 
-<hr>
-
+<!-- SLIDE 5 -->
 <div class="slide">
-    <h2>Slide 5: Target Market & Value Proposition</h2>
+    <h2>Slide 5: Target Market &amp; Value Proposition</h2>
     <h3>Who This Is For</h3>
 
     <p><strong>Primary Market:</strong></p>
@@ -297,13 +313,11 @@
     </ul>
 
     <h3>Value Proposition</h3>
-
     <blockquote>
-        <p><strong>"Find more qualified prospects in less time, at lower cost, with complete market coverage."</strong></p>
+        <strong>"Find more qualified prospects in less time, at lower cost, with complete market coverage."</strong>
     </blockquote>
 
     <p><strong>For a typical franchise with 5 sales reps:</strong></p>
-
     <table>
         <tr>
             <th>Metric</th>
@@ -315,33 +329,32 @@
             <td>Hours/week on prospecting</td>
             <td>75 hrs</td>
             <td>15 hrs</td>
-            <td><strong>60 hrs saved</strong></td>
+            <td class="metric-value">60 hrs saved</td>
         </tr>
         <tr>
             <td>Qualified leads/month</td>
             <td>200</td>
             <td>600</td>
-            <td><strong>3x increase</strong></td>
+            <td class="metric-value">3x increase</td>
         </tr>
         <tr>
             <td>Cost per qualified lead</td>
             <td>$60</td>
             <td>$12</td>
-            <td><strong>80% reduction</strong></td>
+            <td class="metric-value">80% reduction</td>
         </tr>
         <tr>
             <td>Territory coverage</td>
             <td>25%</td>
             <td>90%</td>
-            <td><strong>3.6x improvement</strong></td>
+            <td class="metric-value">3.6x improvement</td>
         </tr>
     </table>
 </div>
 
-<hr>
-
+<!-- SLIDE 6 -->
 <div class="slide">
-    <h2>Slide 6: Execution Plan & ROI</h2>
+    <h2>Slide 6: Execution Plan &amp; ROI</h2>
     <h3>Implementation Roadmap</h3>
 
     <table>
@@ -380,7 +393,6 @@
     <p><strong>Total Timeline: 20 weeks (5 months)</strong></p>
 
     <h3>Estimated Investment</h3>
-
     <table>
         <tr>
             <th>Category</th>
@@ -400,7 +412,7 @@
         </tr>
         <tr>
             <td><strong>Total Year 1</strong></td>
-            <td><strong>$168,000 - $236,000</strong></td>
+            <td class="metric-value"><strong>$168,000 - $236,000</strong></td>
         </tr>
     </table>
 
@@ -415,7 +427,6 @@
     </ul>
 
     <p><strong>ROI Calculation:</strong></p>
-
     <table>
         <tr>
             <th>Metric</th>
@@ -425,32 +436,31 @@
         <tr>
             <td>Annual leads generated</td>
             <td>50 locations × 100 leads × 12 months</td>
-            <td>60,000 leads</td>
+            <td class="metric-value">60,000 leads</td>
         </tr>
         <tr>
             <td>Cost savings per lead</td>
             <td>$60 - $12 = $48 saved</td>
-            <td>$48</td>
+            <td class="metric-value">$48</td>
         </tr>
         <tr>
             <td><strong>Annual savings</strong></td>
             <td>60,000 × $48</td>
-            <td><strong>$2,880,000</strong></td>
+            <td class="metric-value"><strong>$2,880,000</strong></td>
         </tr>
         <tr>
             <td>Time savings</td>
             <td>250 users × 12 hrs/week × 50 weeks</td>
-            <td>150,000 hours</td>
+            <td class="metric-value">150,000 hours</td>
         </tr>
         <tr>
             <td><strong>Productivity value</strong> (@ $35/hr)</td>
             <td>150,000 × $35</td>
-            <td><strong>$5,250,000</strong></td>
+            <td class="metric-value"><strong>$5,250,000</strong></td>
         </tr>
     </table>
 
     <h3>Summary</h3>
-
     <table>
         <tr>
             <th>Investment</th>
@@ -460,15 +470,14 @@
         <tr>
             <td>$200,000 (Year 1)</td>
             <td>$2.88M - $5.25M value</td>
-            <td><strong>14x - 26x</strong></td>
+            <td class="metric-value"><strong>14x - 26x</strong></td>
         </tr>
     </table>
 
     <p><strong>Payback Period: 4-6 weeks after deployment</strong></p>
 </div>
 
-<hr>
-
+<!-- NEXT STEPS -->
 <div class="slide">
     <h2>Next Steps</h2>
 
@@ -478,11 +487,11 @@
         <li><strong>Pilot Program</strong> — Deploy to 5 locations for 30-day validation</li>
         <li><strong>Full Rollout</strong> — Scale to all franchise locations</li>
     </ol>
+
+    <p style="margin-top: 60px; text-align: center; color: #666;">
+        <em>Contact: [Your Name] | [Email] | [Phone]</em>
+    </p>
 </div>
-
-<hr>
-
-<p><em>Contact: [Your Name] | [Email] | [Phone]</em></p>
 
 </body>
 </html>
