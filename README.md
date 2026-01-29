@@ -9,6 +9,7 @@ A modular C++ application using the Wt (Witty) web framework that enables franch
   - Google My Business - Business listings and ratings
   - Better Business Bureau (BBB) - Accreditation and complaint data
   - Demographics Data - Population, income, and business statistics
+  - OpenStreetMap - Free, open-source geolocation and POI data
 - **Smart Scoring**: AI-driven catering potential scoring for each prospect
 - **Modern UI**: Responsive sidebar navigation with a professional dashboard
 - **Prospect Management**: Save, export, and manage discovered prospects
@@ -38,7 +39,8 @@ The application helps franchise owners find potential clients interested in cate
 │   │   ├── AISearchService.cpp/h       # AI search aggregator
 │   │   ├── GoogleMyBusinessAPI.cpp/h   # Google Places API
 │   │   ├── BBBAPI.cpp/h               # BBB API service
-│   │   └── DemographicsAPI.cpp/h      # Demographics API
+│   │   ├── DemographicsAPI.cpp/h      # Demographics API
+│   │   └── OpenStreetMapAPI.cpp/h     # OpenStreetMap/Overpass API
 │   └── widgets/                # UI components
 │       ├── Sidebar.cpp/h           # Navigation sidebar
 │       ├── Navigation.cpp/h        # Top navigation bar
@@ -125,7 +127,12 @@ Main search interface with:
 Manage saved prospects (placeholder for future implementation).
 
 ### Demographics
-Explore demographic data and market potential (placeholder).
+Explore area data powered by OpenStreetMap:
+- **Location Search**: Enter any city/location and search radius
+- **Market Potential Score**: 0-100 scoring based on business composition
+- **Business Categories**: Count of offices, hotels, conference venues, hospitals, universities, warehouses, etc.
+- **Catering Insights**: AI-generated recommendations based on area composition
+- **Area Summary**: Total POIs and business density metrics
 
 ### Reports
 View analytics and generate reports (placeholder).
@@ -145,6 +152,46 @@ export CENSUS_API_KEY="your-census-api-key"
 
 Note: The application includes demo data generation for testing without API keys.
 
+### OpenStreetMap Integration
+
+The OpenStreetMap integration uses the free Overpass API and requires no API key. It provides:
+
+- **POI Search**: Find businesses and points of interest by location and radius
+- **Geocoding**: Convert addresses to coordinates via Nominatim
+- **Area Statistics**: Aggregate counts of business types in an area
+- **Business Type Mapping**: Automatic mapping of OSM tags to application business types
+
+**Supported OSM Tags → Business Types:**
+
+| OSM Tag | Business Type |
+|---------|---------------|
+| `office=company`, `office=corporate` | Corporate Office |
+| `office=it`, `office=telecommunication` | Tech Company |
+| `office=financial`, `office=insurance` | Financial Services |
+| `office=lawyer` | Law Firm |
+| `office=government` | Government Office |
+| `amenity=conference_centre` | Conference Center |
+| `tourism=hotel` | Hotel |
+| `amenity=hospital`, `healthcare=*` | Medical Facility |
+| `amenity=university`, `amenity=college` | Educational Institution |
+| `building=warehouse` | Warehouse |
+| `building=industrial` | Manufacturing |
+| `amenity=coworking_space` | Coworking Space |
+
+**Configuration Options (OSMAPIConfig):**
+
+```cpp
+struct OSMAPIConfig {
+    std::string overpassEndpoint = "https://overpass-api.de/api/interpreter";
+    std::string nominatimEndpoint = "https://nominatim.openstreetmap.org";
+    int requestTimeoutMs = 30000;
+    bool enableCaching = true;
+    int cacheDurationMinutes = 1440;  // 24 hours
+    int maxResultsPerQuery = 100;
+    std::string userAgent = "FranchiseAI/1.0";
+};
+```
+
 ## Architecture
 
 ### Models Layer
@@ -157,6 +204,7 @@ Note: The application includes demo data generation for testing without API keys
 - `GoogleMyBusinessAPI`: Interface to Google Places API
 - `BBBAPI`: Interface to Better Business Bureau API
 - `DemographicsAPI`: Interface to Census and economic data APIs
+- `OpenStreetMapAPI`: Interface to OpenStreetMap Overpass API for geolocation and POI data
 
 ### UI Layer (Wt Widgets)
 - `Sidebar`: Main navigation with collapsible menu
