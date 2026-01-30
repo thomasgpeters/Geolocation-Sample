@@ -576,9 +576,13 @@ void FranchiseApp::showDemographicsPage() {
             auto valueBtn = card->addWidget(std::make_unique<Wt::WPushButton>(std::to_string(count)));
             valueBtn->setStyleClass("stat-value-btn");
 
+            // Copy to local variables for lambda capture (structured bindings can't be captured directly)
+            std::string categoryLabel = label;
+            int categoryCount = count;
+
             // Connect click handler for drill-down
-            valueBtn->clicked().connect([showDrillDownFunc, label, count]() {
-                showDrillDownFunc(label, count);
+            valueBtn->clicked().connect([showDrillDownFunc, categoryLabel, categoryCount]() {
+                showDrillDownFunc(categoryLabel, categoryCount);
             });
 
             auto labelText = card->addWidget(std::make_unique<Wt::WText>(label));
