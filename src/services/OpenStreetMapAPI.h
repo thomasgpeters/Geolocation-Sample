@@ -268,6 +268,26 @@ public:
     OSMAreaStats getAreaStatisticsSync(const Models::SearchArea& searchArea);
 
     /**
+     * @brief Search POIs by category name (e.g., "offices", "hotels", "restaurants")
+     * @param searchArea Search area with center and radius
+     * @param category Category name matching Demographics stats (e.g., "offices", "hotels")
+     * @param callback Callback with POI results
+     */
+    void searchByCategory(
+        const Models::SearchArea& searchArea,
+        const std::string& category,
+        POICallback callback
+    );
+
+    /**
+     * @brief Search POIs by category (sync)
+     */
+    std::vector<OSMPoi> searchByCategorySync(
+        const Models::SearchArea& searchArea,
+        const std::string& category
+    );
+
+    /**
      * @brief Search for POIs using SearchArea
      */
     void searchNearby(

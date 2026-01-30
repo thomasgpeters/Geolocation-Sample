@@ -437,9 +437,96 @@ void FranchiseApp::showDemographicsPage() {
     auto resultsContainer = container->addWidget(std::make_unique<Wt::WContainerWidget>());
     resultsContainer->setStyleClass("demographics-results");
 
+    // Drill-down container for business list (initially hidden)
+    auto drillDownContainer = container->addWidget(std::make_unique<Wt::WContainerWidget>());
+    drillDownContainer->setStyleClass("settings-section drilldown-container hidden");
+
+    // Store current search area for drill-down queries
+    auto currentSearchArea = std::make_shared<Models::SearchArea>();
+
+    // Function to show drill-down business list
+    auto showDrillDownFunc = [this, drillDownContainer, currentSearchArea](const std::string& category, int count) {
+        drillDownContainer->clear();
+        drillDownContainer->setStyleClass("settings-section drilldown-container");
+
+        // Header with back button
+        auto headerRow = drillDownContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
+        headerRow->setStyleClass("drilldown-header");
+
+        auto backBtn = headerRow->addWidget(std::make_unique<Wt::WPushButton>("< Back to Overview"));
+        backBtn->setStyleClass("btn btn-outline");
+        backBtn->clicked().connect([drillDownContainer] {
+            drillDownContainer->setStyleClass("settings-section drilldown-container hidden");
+        });
+
+        auto titleText = headerRow->addWidget(std::make_unique<Wt::WText>(
+            category + " (" + std::to_string(count) + " found)", Wt::TextFormat::Plain
+        ));
+        titleText->setStyleClass("section-title");
+
+        // Fetch businesses for this category
+        auto& osmAPI = searchService_->getOSMAPI();
+        auto pois = osmAPI.searchByCategorySync(*currentSearchArea, category);
+
+        if (pois.empty()) {
+            auto emptyText = drillDownContainer->addWidget(std::make_unique<Wt::WText>("No businesses found in this category."));
+            emptyText->setStyleClass("section-description");
+            return;
+        }
+
+        // Business list
+        auto listContainer = drillDownContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
+        listContainer->setStyleClass("business-list");
+
+        for (const auto& poi : pois) {
+            auto itemCard = listContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
+            itemCard->setStyleClass("business-item-card");
+
+            // Business name
+            auto nameText = itemCard->addWidget(std::make_unique<Wt::WText>(poi.name, Wt::TextFormat::Plain));
+            nameText->setStyleClass("business-item-name");
+
+            // Address
+            std::string address = poi.houseNumber + " " + poi.street;
+            if (!poi.city.empty()) address += ", " + poi.city;
+            if (!poi.state.empty()) address += ", " + poi.state;
+            if (!poi.postcode.empty()) address += " " + poi.postcode;
+            auto addressText = itemCard->addWidget(std::make_unique<Wt::WText>(address, Wt::TextFormat::Plain));
+            addressText->setStyleClass("business-item-address");
+
+            // Contact info row
+            auto contactRow = itemCard->addWidget(std::make_unique<Wt::WContainerWidget>());
+            contactRow->setStyleClass("business-item-contact");
+
+            if (!poi.phone.empty()) {
+                auto phoneText = contactRow->addWidget(std::make_unique<Wt::WText>("📞 " + poi.phone, Wt::TextFormat::Plain));
+                phoneText->setStyleClass("contact-info");
+            }
+            if (!poi.website.empty()) {
+                auto webText = contactRow->addWidget(std::make_unique<Wt::WText>("🌐 " + poi.website, Wt::TextFormat::Plain));
+                webText->setStyleClass("contact-info");
+            }
+            if (!poi.email.empty()) {
+                auto emailText = contactRow->addWidget(std::make_unique<Wt::WText>("✉️ " + poi.email, Wt::TextFormat::Plain));
+                emailText->setStyleClass("contact-info");
+            }
+        }
+
+        // Attribution
+        auto attribution = drillDownContainer->addWidget(std::make_unique<Wt::WText>(
+            "Data source: OpenStreetMap contributors"
+        ));
+        attribution->setStyleClass("section-description");
+    };
+
     // Function to display statistics
-    auto displayStatsFunc = [](Wt::WContainerWidget* resultsContainer, const Services::OSMAreaStats& stats) {
+    auto displayStatsFunc = [currentSearchArea, showDrillDownFunc](
+        Wt::WContainerWidget* resultsContainer,
+        const Services::OSMAreaStats& stats,
+        const Models::SearchArea& searchArea
+    ) {
         resultsContainer->clear();
+        *currentSearchArea = searchArea;  // Store for drill-down
 
         // Market Score Card Section
         auto scoreSection = resultsContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
@@ -459,6 +546,9 @@ void FranchiseApp::showDemographicsPage() {
 
         auto statsHeader = statsSection->addWidget(std::make_unique<Wt::WText>("Business Categories in Area"));
         statsHeader->setStyleClass("section-title");
+
+        auto statsSubHeader = statsSection->addWidget(std::make_unique<Wt::WText>("Click on a count to view businesses in that category"));
+        statsSubHeader->setStyleClass("section-description");
 
         auto statsGrid = statsSection->addWidget(std::make_unique<Wt::WContainerWidget>());
         statsGrid->setStyleClass("stats-grid");
@@ -480,10 +570,16 @@ void FranchiseApp::showDemographicsPage() {
 
         for (const auto& [label, count, desc] : statItems) {
             auto card = statsGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
-            card->setStyleClass("stat-card");
+            card->setStyleClass("stat-card clickable");
 
-            auto valueText = card->addWidget(std::make_unique<Wt::WText>(std::to_string(count)));
-            valueText->setStyleClass("stat-value");
+            // Make the value a clickable button
+            auto valueBtn = card->addWidget(std::make_unique<Wt::WPushButton>(std::to_string(count)));
+            valueBtn->setStyleClass("stat-value-btn");
+
+            // Connect click handler for drill-down
+            valueBtn->clicked().connect([showDrillDownFunc, label, count]() {
+                showDrillDownFunc(label, count);
+            });
 
             auto labelText = card->addWidget(std::make_unique<Wt::WText>(label));
             labelText->setStyleClass("stat-label");
@@ -538,7 +634,7 @@ void FranchiseApp::showDemographicsPage() {
         }
 
         for (const auto& insight : insights) {
-            auto insightText = insightsSection->addWidget(std::make_unique<Wt::WText>("• " + insight));
+            auto insightText = insightsSection->addWidget(std::make_unique<Wt::WText>("- " + insight));
             insightText->setStyleClass("section-description");
         }
 
@@ -554,10 +650,10 @@ void FranchiseApp::showDemographicsPage() {
     Models::SearchArea defaultSearchArea(defaultLocation, 10.0);  // 10km radius
     auto& osmAPI = searchService_->getOSMAPI();
     auto defaultStats = osmAPI.getAreaStatisticsSync(defaultSearchArea);
-    displayStatsFunc(resultsContainer, defaultStats);
+    displayStatsFunc(resultsContainer, defaultStats, defaultSearchArea);
 
     // Connect analyze button
-    analyzeBtn->clicked().connect([this, locationInput, radiusInput, resultsContainer, displayStatsFunc]() {
+    analyzeBtn->clicked().connect([this, locationInput, radiusInput, resultsContainer, drillDownContainer, displayStatsFunc]() {
         std::string location = locationInput->text().toUTF8();
         double radiusKm = 10.0;
         try {
@@ -570,6 +666,9 @@ void FranchiseApp::showDemographicsPage() {
             location = "Denver, CO";
         }
 
+        // Hide drill-down when re-analyzing
+        drillDownContainer->setStyleClass("settings-section drilldown-container hidden");
+
         // Use geocodeAddress from AISearchService to get GeoLocation
         Models::GeoLocation geoLocation = searchService_->geocodeAddress(location);
 
@@ -579,7 +678,7 @@ void FranchiseApp::showDemographicsPage() {
         // Get area statistics using SearchArea-based API
         auto& osmAPI = searchService_->getOSMAPI();
         auto stats = osmAPI.getAreaStatisticsSync(searchArea);
-        displayStatsFunc(resultsContainer, stats);
+        displayStatsFunc(resultsContainer, stats, searchArea);
     });
 }
 
