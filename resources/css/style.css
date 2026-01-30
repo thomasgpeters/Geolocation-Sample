@@ -1690,10 +1690,176 @@ html, body {
     margin-bottom: 0;
 }
 
+/* Category selector */
+.category-selector {
+    padding: 16px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-primary);
+}
+
+.category-selector-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.category-dropdown {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 13px;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.category-dropdown:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* Pill tray for selected categories */
 .map-sidebar-content {
-    padding: 20px;
+    padding: 12px;
     flex: 1;
     overflow-y: auto;
+    background: var(--bg-secondary);
+}
+
+.category-pill-tray {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.category-pill-tray-empty {
+    text-align: center;
+    padding: 32px 16px;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+/* Category pill card */
+.category-pill {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 12px;
+    position: relative;
+    transition: all var(--transition-fast);
+}
+
+.category-pill:hover {
+    border-color: var(--primary-light);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.category-pill-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.category-pill-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.category-pill-count {
+    font-size: 11px;
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.category-pill-remove {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 20px;
+    height: 20px;
+    border: none;
+    background: var(--bg-secondary);
+    color: var(--text-muted);
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast);
+    padding: 0;
+}
+
+.category-pill-remove:hover {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.category-pill-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.category-pill-controls label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.category-pill-controls select {
+    flex: 1;
+    padding: 6px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 12px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.category-pill-controls select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+/* Sidebar footer */
+.sidebar-footer {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border-color);
+    background: var(--bg-card);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sidebar-footer-info {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.btn-clear-all {
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 8px;
+}
+
+.btn-clear-all:hover {
+    color: #dc2626;
 }
 
 /* Area Summary - floating footer */
@@ -1794,46 +1960,6 @@ html, body {
     border-bottom: none;
 }
 
-.category-list {
-    display: flex;
-    flex-direction: column;
-}
-
-.category-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 0;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.category-row:last-child {
-    border-bottom: none;
-}
-
-.category-name {
-    font-size: 14px;
-    color: var(--text-primary);
-}
-
-.category-count {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--primary-color);
-    background: var(--primary-light);
-    padding: 4px 12px;
-    border-radius: 20px;
-    min-width: 36px;
-    text-align: center;
-    cursor: pointer;
-    transition: all var(--transition-fast);
-}
-
-.category-count:hover {
-    background: var(--primary-color);
-    color: white;
-    transform: scale(1.05);
-}
 
 /* Legacy map styles (kept for future use) */
 .map-column {

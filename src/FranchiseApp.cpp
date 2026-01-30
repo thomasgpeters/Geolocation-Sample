@@ -864,7 +864,7 @@ void FranchiseApp::showDemographicsPage() {
 
     doJavaScript(initMapJs.str());
 
-    // Category Breakdown sidebar (right side of map)
+    // Categories sidebar (right side of map)
     auto mapSidebar = mapWithSidebar->addWidget(std::make_unique<Wt::WContainerWidget>());
     mapSidebar->setStyleClass("map-sidebar");
 
@@ -874,80 +874,80 @@ void FranchiseApp::showDemographicsPage() {
     auto categoriesTitle = sidebarHeader->addWidget(std::make_unique<Wt::WText>("Categories"));
     categoriesTitle->setStyleClass("stat-title");
 
+    // Category selector dropdown
+    auto categorySelector = mapSidebar->addWidget(std::make_unique<Wt::WContainerWidget>());
+    categorySelector->setStyleClass("category-selector");
+
+    auto selectorLabel = categorySelector->addWidget(std::make_unique<Wt::WText>("Add category to view"));
+    selectorLabel->setStyleClass("category-selector-label");
+
+    auto categoryDropdown = categorySelector->addWidget(std::make_unique<Wt::WComboBox>());
+    categoryDropdown->setStyleClass("category-dropdown");
+    categoryDropdown->addItem("-- Select a category --");
+
+    // Category data: display name, api name, count (shared_ptr for callback capture)
+    auto categories = std::make_shared<std::vector<std::tuple<std::string, std::string, int>>>(std::vector<std::tuple<std::string, std::string, int>>{
+        {"Offices", "offices", stats.offices},
+        {"Hotels", "hotels", stats.hotels},
+        {"Conference Venues", "conference", stats.conferenceVenues},
+        {"Restaurants", "restaurants", stats.restaurants},
+        {"Cafes", "cafes", stats.cafes},
+        {"Hospitals", "hospitals", stats.hospitals},
+        {"Universities", "universities", stats.universities},
+        {"Schools", "schools", stats.schools},
+        {"Industrial", "industrial", stats.industrialBuildings},
+        {"Warehouses", "warehouses", stats.warehouses},
+        {"Banks", "banks", stats.banks},
+        {"Government", "government", stats.governmentBuildings}
+    });
+
+    // Add categories to dropdown
+    for (const auto& [displayName, apiName, count] : *categories) {
+        categoryDropdown->addItem(displayName + " (" + std::to_string(count) + ")");
+    }
+
+    // Pill tray content area
     auto sidebarContent = mapSidebar->addWidget(std::make_unique<Wt::WContainerWidget>());
     sidebarContent->setStyleClass("map-sidebar-content");
 
-    // Category list
-    std::vector<std::pair<std::string, int>> categories = {
-        {"Offices", stats.offices},
-        {"Hotels", stats.hotels},
-        {"Conference Venues", stats.conferenceVenues},
-        {"Restaurants", stats.restaurants},
-        {"Cafes", stats.cafes},
-        {"Hospitals", stats.hospitals},
-        {"Universities", stats.universities},
-        {"Schools", stats.schools},
-        {"Industrial", stats.industrialBuildings},
-        {"Warehouses", stats.warehouses},
-        {"Banks", stats.banks},
-        {"Government", stats.governmentBuildings}
+    auto pillTray = sidebarContent->addWidget(std::make_unique<Wt::WContainerWidget>());
+    pillTray->setStyleClass("category-pill-tray");
+
+    // Empty state message
+    auto emptyMessage = pillTray->addWidget(std::make_unique<Wt::WText>("Select categories from the dropdown above to view POIs on the map"));
+    emptyMessage->setStyleClass("category-pill-tray-empty");
+
+    // Shared state for active category pills
+    struct CategoryPillData {
+        std::string displayName;
+        std::string apiName;
+        int count;
+        int poiLimit;
+        Wt::WContainerWidget* pillWidget;
+        Wt::WComboBox* limitSelect;
     };
+    auto activePills = std::make_shared<std::vector<CategoryPillData>>();
 
-    auto categoryList = sidebarContent->addWidget(std::make_unique<Wt::WContainerWidget>());
-    categoryList->setStyleClass("category-list");
+    // Function to refresh all POI markers
+    auto refreshMarkers = std::make_shared<std::function<void()>>();
+    *refreshMarkers = [this, activePills, currentSearchAreaPtr]() {
+        // Clear existing markers
+        std::ostringstream clearMarkersJs;
+        clearMarkersJs << "if (window.demographicsMarkers) {"
+                      << "  window.demographicsMarkers.forEach(function(m) { m.remove(); });"
+                      << "}"
+                      << "window.demographicsMarkers = [];";
+        doJavaScript(clearMarkersJs.str());
 
-    // Store text widgets for updates
-    auto categoryTexts = std::make_shared<std::vector<std::pair<std::string, Wt::WText*>>>();
-
-    // Map display names to API category names
-    std::map<std::string, std::string> categoryNameMap = {
-        {"Offices", "offices"},
-        {"Hotels", "hotels"},
-        {"Conference Venues", "conference"},
-        {"Restaurants", "restaurants"},
-        {"Cafes", "cafes"},
-        {"Hospitals", "hospitals"},
-        {"Universities", "universities"},
-        {"Schools", "schools"},
-        {"Industrial", "industrial"},
-        {"Warehouses", "warehouses"},
-        {"Banks", "banks"},
-        {"Government", "government"}
-    };
-
-    for (const auto& [name, count] : categories) {
-        auto row = categoryList->addWidget(std::make_unique<Wt::WContainerWidget>());
-        row->setStyleClass("category-row");
-
-        auto nameText = row->addWidget(std::make_unique<Wt::WText>(name));
-        nameText->setStyleClass("category-name");
-
-        auto countText = row->addWidget(std::make_unique<Wt::WText>(std::to_string(count)));
-        countText->setStyleClass("category-count");
-
-        // Make count clickable to show POI markers on map
-        std::string apiCategory = categoryNameMap.count(name) ? categoryNameMap[name] : "";
-        countText->clicked().connect([this, apiCategory, currentSearchAreaPtr]() {
-            if (apiCategory.empty()) return;
-
-            // Clear existing markers
-            std::ostringstream clearMarkersJs;
-            clearMarkersJs << "if (window.demographicsMarkers) {"
-                          << "  window.demographicsMarkers.forEach(function(m) { m.remove(); });"
-                          << "}"
-                          << "window.demographicsMarkers = [];";
-            doJavaScript(clearMarkersJs.str());
-
-            // Get top 10 POIs for this category from the current search area
+        // Add markers for each active category
+        for (const auto& pill : *activePills) {
             auto& osmAPI = searchService_->getOSMAPI();
-            auto pois = osmAPI.searchByCategorySync(*currentSearchAreaPtr, apiCategory);
+            auto pois = osmAPI.searchByCategorySync(*currentSearchAreaPtr, pill.apiName);
 
-            // Add markers for up to 10 POIs
             int markerCount = 0;
             for (const auto& poi : pois) {
-                if (markerCount >= 10) break;
+                if (markerCount >= pill.poiLimit) break;
 
-                // Escape name for JavaScript
                 std::string safeName = poi.name;
                 for (auto& c : safeName) {
                     if (c == '\'' || c == '"' || c == '\\') c = ' ';
@@ -957,23 +957,146 @@ void FranchiseApp::showDemographicsPage() {
                 addMarkerJs << "if (window.demographicsMap && typeof L !== 'undefined') {"
                            << "  var marker = L.marker([" << poi.latitude << ", " << poi.longitude << "])"
                            << "    .addTo(window.demographicsMap)"
-                           << "    .bindPopup('<b>" << safeName << "</b>');"
+                           << "    .bindPopup('<b>" << safeName << "</b><br><small>" << pill.displayName << "</small>');"
                            << "  if (!window.demographicsMarkers) window.demographicsMarkers = [];"
                            << "  window.demographicsMarkers.push(marker);"
                            << "}";
                 doJavaScript(addMarkerJs.str());
                 markerCount++;
             }
+        }
+    };
+
+    // Function to update empty state visibility
+    auto updateEmptyState = [emptyMessage, activePills]() {
+        if (activePills->empty()) {
+            emptyMessage->setHidden(false);
+        } else {
+            emptyMessage->setHidden(true);
+        }
+    };
+
+    // Function to create a pill card for a category
+    auto createPill = std::make_shared<std::function<void(const std::string&, const std::string&, int)>>();
+    *createPill = [this, pillTray, activePills, refreshMarkers, updateEmptyState, createPill](
+        const std::string& displayName, const std::string& apiName, int count) {
+
+        // Check if already added
+        for (const auto& pill : *activePills) {
+            if (pill.apiName == apiName) return;
+        }
+
+        auto pillCard = pillTray->addWidget(std::make_unique<Wt::WContainerWidget>());
+        pillCard->setStyleClass("category-pill");
+
+        // Header with name and count
+        auto pillHeader = pillCard->addWidget(std::make_unique<Wt::WContainerWidget>());
+        pillHeader->setStyleClass("category-pill-header");
+
+        auto pillName = pillHeader->addWidget(std::make_unique<Wt::WText>(displayName));
+        pillName->setStyleClass("category-pill-name");
+
+        auto pillCount = pillHeader->addWidget(std::make_unique<Wt::WText>(std::to_string(count) + " total"));
+        pillCount->setStyleClass("category-pill-count");
+
+        // Remove button
+        auto removeBtn = pillCard->addWidget(std::make_unique<Wt::WPushButton>("×"));
+        removeBtn->setStyleClass("category-pill-remove");
+
+        // POI limit controls
+        auto pillControls = pillCard->addWidget(std::make_unique<Wt::WContainerWidget>());
+        pillControls->setStyleClass("category-pill-controls");
+
+        auto limitLabel = pillControls->addWidget(std::make_unique<Wt::WText>("Show:"));
+
+        auto limitSelect = pillControls->addWidget(std::make_unique<Wt::WComboBox>());
+        limitSelect->addItem("5");
+        limitSelect->addItem("10");
+        limitSelect->addItem("25");
+        limitSelect->addItem("50");
+        limitSelect->addItem("100");
+        limitSelect->setCurrentIndex(1);  // Default to 10
+
+        // Add to active pills
+        CategoryPillData pillData;
+        pillData.displayName = displayName;
+        pillData.apiName = apiName;
+        pillData.count = count;
+        pillData.poiLimit = 10;
+        pillData.pillWidget = pillCard;
+        pillData.limitSelect = limitSelect;
+        activePills->push_back(pillData);
+
+        updateEmptyState();
+        // Note: POI markers are refreshed when user clicks "Analyze Area"
+
+        // Handle POI limit change
+        limitSelect->changed().connect([activePills, apiName, limitSelect]() {
+            int limits[] = {5, 10, 25, 50, 100};
+            int newLimit = limits[limitSelect->currentIndex()];
+            for (auto& pill : *activePills) {
+                if (pill.apiName == apiName) {
+                    pill.poiLimit = newLimit;
+                    break;
+                }
+            }
+            // Note: POI markers are refreshed when user clicks "Analyze Area"
         });
 
-        categoryTexts->push_back({name, countText});
-    }
+        // Handle remove
+        removeBtn->clicked().connect([activePills, pillCard, apiName, updateEmptyState]() {
+            // Remove from active pills
+            activePills->erase(
+                std::remove_if(activePills->begin(), activePills->end(),
+                    [&apiName](const CategoryPillData& p) { return p.apiName == apiName; }),
+                activePills->end()
+            );
+            // Remove widget
+            pillCard->removeFromParent();
+            updateEmptyState();
+            // Note: POI markers are refreshed when user clicks "Analyze Area"
+        });
+    };
 
-    // Attribution at bottom of sidebar
-    auto attribution = sidebarContent->addWidget(std::make_unique<Wt::WText>(
-        "Data: OpenStreetMap"
-    ));
-    attribution->setStyleClass("attribution-small");
+    // Handle dropdown selection
+    categoryDropdown->changed().connect([categoryDropdown, categories, createPill]() {
+        int idx = categoryDropdown->currentIndex();
+        if (idx <= 0) return;  // Skip "Select a category" option
+
+        const auto& [displayName, apiName, count] = (*categories)[idx - 1];
+        (*createPill)(displayName, apiName, count);
+
+        // Reset dropdown
+        categoryDropdown->setCurrentIndex(0);
+    });
+
+    // Sidebar footer
+    auto sidebarFooter = mapSidebar->addWidget(std::make_unique<Wt::WContainerWidget>());
+    sidebarFooter->setStyleClass("sidebar-footer");
+
+    auto footerInfo = sidebarFooter->addWidget(std::make_unique<Wt::WText>("Data: OpenStreetMap"));
+    footerInfo->setStyleClass("sidebar-footer-info");
+
+    auto clearAllBtn = sidebarFooter->addWidget(std::make_unique<Wt::WPushButton>("Clear All"));
+    clearAllBtn->setStyleClass("btn-clear-all");
+    clearAllBtn->clicked().connect([this, activePills, pillTray, emptyMessage, refreshMarkers]() {
+        // Remove all pill widgets
+        for (const auto& pill : *activePills) {
+            if (pill.pillWidget) {
+                pill.pillWidget->removeFromParent();
+            }
+        }
+        activePills->clear();
+        emptyMessage->setHidden(false);
+
+        // Clear markers
+        std::ostringstream clearMarkersJs;
+        clearMarkersJs << "if (window.demographicsMarkers) {"
+                      << "  window.demographicsMarkers.forEach(function(m) { m.remove(); });"
+                      << "}"
+                      << "window.demographicsMarkers = [];";
+        doJavaScript(clearMarkersJs.str());
+    });
 
     // Area Summary footer at bottom
     auto summaryFooter = container->addWidget(std::make_unique<Wt::WContainerWidget>());
@@ -1036,7 +1159,7 @@ void FranchiseApp::showDemographicsPage() {
     // Connect analyze button
     analyzeBtn->clicked().connect([this, locationInput, radiusSelect, currentSearchAreaPtr,
                                    totalPoisText, densityText, locationText,
-                                   radiusText, categoryTexts, getRadiusFromSelect]() {
+                                   radiusText, categoryDropdown, categories, refreshMarkers, getRadiusFromSelect]() {
         std::string location = locationInput->text().toUTF8();
         double radiusKm = getRadiusFromSelect(radiusSelect->currentIndex());
 
@@ -1081,42 +1204,57 @@ void FranchiseApp::showDemographicsPage() {
         newRadiusStr << std::fixed << std::setprecision(0) << radiusKm << " km";
         radiusText->setText(newRadiusStr.str());
 
-        // Update category counts
-        std::map<std::string, int> newCounts = {
-            {"Offices", newStats.offices},
-            {"Hotels", newStats.hotels},
-            {"Conference Venues", newStats.conferenceVenues},
-            {"Restaurants", newStats.restaurants},
-            {"Cafes", newStats.cafes},
-            {"Hospitals", newStats.hospitals},
-            {"Universities", newStats.universities},
-            {"Schools", newStats.schools},
-            {"Industrial", newStats.industrialBuildings},
-            {"Warehouses", newStats.warehouses},
-            {"Banks", newStats.banks},
-            {"Government", newStats.governmentBuildings}
+        // Update category counts in shared data and dropdown
+        *categories = {
+            {"Offices", "offices", newStats.offices},
+            {"Hotels", "hotels", newStats.hotels},
+            {"Conference Venues", "conference", newStats.conferenceVenues},
+            {"Restaurants", "restaurants", newStats.restaurants},
+            {"Cafes", "cafes", newStats.cafes},
+            {"Hospitals", "hospitals", newStats.hospitals},
+            {"Universities", "universities", newStats.universities},
+            {"Schools", "schools", newStats.schools},
+            {"Industrial", "industrial", newStats.industrialBuildings},
+            {"Warehouses", "warehouses", newStats.warehouses},
+            {"Banks", "banks", newStats.banks},
+            {"Government", "government", newStats.governmentBuildings}
         };
 
-        for (auto& [name, textWidget] : *categoryTexts) {
-            if (newCounts.count(name)) {
-                textWidget->setText(std::to_string(newCounts[name]));
-            }
+        // Rebuild dropdown with new counts
+        categoryDropdown->clear();
+        categoryDropdown->addItem("-- Select a category --");
+        for (const auto& [displayName, apiName, count] : *categories) {
+            categoryDropdown->addItem(displayName + " (" + std::to_string(count) + ")");
         }
+
+        // Refresh POI markers for active category pills with new location
+        (*refreshMarkers)();
     });
 
-    // Add blur event to location input to recenter map when user finishes typing
-    locationInput->blurred().connect([this, locationInput]() {
+    // Add blur event to location input to recenter map and refresh POIs
+    locationInput->blurred().connect([this, locationInput, radiusSelect, currentSearchAreaPtr, refreshMarkers, getRadiusFromSelect]() {
         std::string location = locationInput->text().toUTF8();
         if (location.empty()) return;
 
         // Geocode and recenter map
         Models::GeoLocation geoLocation = searchService_->geocodeAddress(location);
         if (geoLocation.hasValidCoordinates()) {
+            double radiusKm = getRadiusFromSelect(radiusSelect->currentIndex());
+            Models::SearchArea searchArea(geoLocation, radiusKm);
+
+            // Update shared state
+            currentSearchLocation_ = location;
+            currentSearchArea_ = searchArea;
+            *currentSearchAreaPtr = searchArea;
+
             std::ostringstream panMapJs;
             panMapJs << "if (window.demographicsMap) {"
                      << "  window.demographicsMap.setView([" << geoLocation.latitude << ", " << geoLocation.longitude << "], 13);"
                      << "}";
             doJavaScript(panMapJs.str());
+
+            // Refresh POI markers for the new location
+            (*refreshMarkers)();
         }
     });
 }
