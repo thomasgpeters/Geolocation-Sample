@@ -10,6 +10,9 @@
 #include <Wt/WComboBox.h>
 #include <Wt/WCheckBox.h>
 #include <Wt/WLeafletMap.h>
+#include <Wt/Json/Object.h>
+#include <Wt/Json/Array.h>
+#include <Wt/Json/Value.h>
 #include <sstream>
 #include <iomanip>
 
@@ -789,24 +792,24 @@ void FranchiseApp::showDemographicsPage() {
     auto mapColumn = columnsContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
     mapColumn->setStyleClass("map-column");
 
-    // Create Leaflet map
-    auto map = mapColumn->addWidget(std::make_unique<Wt::WLeafletMap>());
+    // Create Leaflet map with options
+    Wt::Json::Object options;
+    options["center"] = Wt::Json::Array({
+        Wt::Json::Value(initialSearchArea.center.latitude),
+        Wt::Json::Value(initialSearchArea.center.longitude)
+    });
+    options["zoom"] = Wt::Json::Value(12);
+
+    auto map = mapColumn->addWidget(std::make_unique<Wt::WLeafletMap>(options));
     map->setStyleClass("demographics-map");
 
-    // Set initial map view
-    Wt::WLeafletMap::Coordinate center(
-        initialSearchArea.center.latitude,
-        initialSearchArea.center.longitude
-    );
-    map->panTo(center);
-    map->zoomLevel(12);
-
-    // Add OpenStreetMap tile layer
-    auto tileLayer = std::make_unique<Wt::WLeafletMap::TileLayer>(
+    // Add OpenStreetMap tile layer using the proper API
+    Wt::Json::Object tileOptions;
+    tileOptions["attribution"] = Wt::Json::Value("&copy; OpenStreetMap contributors");
+    map->addTileLayer(
         "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-        "© OpenStreetMap contributors"
+        tileOptions
     );
-    map->addLayer(std::move(tileLayer));
 
     // Right column - Category sidebar
     auto sidebarColumn = columnsContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
@@ -861,10 +864,16 @@ void FranchiseApp::showDemographicsPage() {
     auto categoriesContainer = sidebarColumn->addWidget(std::make_unique<Wt::WContainerWidget>());
     categoriesContainer->setStyleClass("categories-list");
 
+    // Store markers so we can manage them
+    auto markers = std::make_shared<std::vector<Wt::WLeafletMap::LeafletMarker*>>();
+
     // Function to update map markers based on selected categories
-    auto updateMapMarkers = [this, map, currentSearchAreaPtr, categoryCheckboxes]() {
-        // Clear existing markers (by removing and re-adding)
-        // Note: WLeafletMap doesn't have removeAllMarkers, so we'll track them
+    auto updateMapMarkers = [this, map, currentSearchAreaPtr, categoryCheckboxes, markers]() {
+        // Remove existing markers
+        for (auto* marker : *markers) {
+            map->removeMarker(marker);
+        }
+        markers->clear();
 
         auto& osmAPI = searchService_->getOSMAPI();
 
@@ -873,10 +882,12 @@ void FranchiseApp::showDemographicsPage() {
             if (checkbox->isChecked()) {
                 auto pois = osmAPI.searchByCategorySync(*currentSearchAreaPtr, category);
                 for (const auto& poi : pois) {
-                    auto marker = std::make_unique<Wt::WLeafletMap::Marker>(
+                    auto marker = std::make_unique<Wt::WLeafletMap::LeafletMarker>(
                         Wt::WLeafletMap::Coordinate(poi.latitude, poi.longitude)
                     );
+                    auto* markerPtr = marker.get();
                     map->addMarker(std::move(marker));
+                    markers->push_back(markerPtr);
                 }
             }
         }
