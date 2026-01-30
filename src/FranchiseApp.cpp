@@ -9,6 +9,7 @@
 #include <Wt/WBreak.h>
 #include <Wt/WComboBox.h>
 #include <Wt/WCheckBox.h>
+#include <Wt/WLeafletMap.h>
 #include <sstream>
 #include <iomanip>
 
@@ -164,6 +165,18 @@ void FranchiseApp::onQuickSearch(const std::string& query) {
 
 void FranchiseApp::onSearchRequested(const Models::SearchQuery& query) {
     if (!searchService_) return;
+
+    // Store the search context for syncing with Demographics page
+    currentSearchLocation_ = query.location;
+    if (query.latitude != 0 && query.longitude != 0) {
+        Models::GeoLocation location(query.latitude, query.longitude);
+        location.formattedAddress = query.location;
+        currentSearchArea_ = Models::SearchArea::fromMiles(location, query.radiusMiles);
+    } else if (!query.location.empty()) {
+        Models::GeoLocation location = searchService_->geocodeAddress(query.location);
+        currentSearchArea_ = Models::SearchArea::fromMiles(location, query.radiusMiles);
+    }
+    hasActiveSearch_ = true;
 
     // Show loading state
     if (resultsDisplay_) {
@@ -633,9 +646,23 @@ void FranchiseApp::showAISearchPage() {
     searchPanel_->searchRequested().connect(this, &FranchiseApp::onSearchRequested);
     searchPanel_->searchCancelled().connect(this, &FranchiseApp::onSearchCancelled);
 
-    // Pre-populate search panel with franchisee's location and criteria
-    if (franchisee_.isConfigured && franchisee_.hasValidLocation()) {
-        Models::SearchQuery defaultQuery;
+    // Pre-populate search panel with current search state or franchisee's location
+    Models::SearchQuery defaultQuery;
+    if (hasActiveSearch_ && !currentSearchLocation_.empty()) {
+        // Use the current search state (synced from Demographics or previous search)
+        defaultQuery.location = currentSearchLocation_;
+        defaultQuery.latitude = currentSearchArea_.center.latitude;
+        defaultQuery.longitude = currentSearchArea_.center.longitude;
+        defaultQuery.radiusMiles = currentSearchArea_.radiusMiles;
+        if (franchisee_.isConfigured) {
+            defaultQuery.businessTypes = franchisee_.searchCriteria.businessTypes;
+            defaultQuery.minEmployees = franchisee_.searchCriteria.minEmployees;
+            defaultQuery.maxEmployees = franchisee_.searchCriteria.maxEmployees;
+        }
+        defaultQuery.includeOpenStreetMap = true;
+        searchPanel_->setSearchQuery(defaultQuery);
+    } else if (franchisee_.isConfigured && franchisee_.hasValidLocation()) {
+        // Use franchisee location as default
         defaultQuery.location = franchisee_.address;
         defaultQuery.latitude = franchisee_.location.latitude;
         defaultQuery.longitude = franchisee_.location.longitude;
@@ -697,263 +724,228 @@ void FranchiseApp::showDemographicsPage() {
     auto container = workArea_->addWidget(std::make_unique<Wt::WContainerWidget>());
     container->setStyleClass("page-container demographics-page");
 
+    // Header
     auto header = container->addWidget(std::make_unique<Wt::WContainerWidget>());
     header->setStyleClass("page-header");
 
-    auto title = header->addWidget(std::make_unique<Wt::WText>("Demographics Analysis"));
+    auto title = header->addWidget(std::make_unique<Wt::WText>("Demographics Map View"));
     title->setStyleClass("page-title");
 
     auto subtitle = header->addWidget(std::make_unique<Wt::WText>(
-        "Explore OpenStreetMap data and market potential in your service area"
+        "View business locations on the map. Select categories to filter markers."
     ));
     subtitle->setStyleClass("page-subtitle");
 
     // Search section
     auto searchSection = container->addWidget(std::make_unique<Wt::WContainerWidget>());
-    searchSection->setStyleClass("settings-section");
-
-    auto searchLabel = searchSection->addWidget(std::make_unique<Wt::WText>("Enter a location to analyze:"));
-    searchLabel->setStyleClass("section-title");
+    searchSection->setStyleClass("settings-section compact");
 
     auto searchRow = searchSection->addWidget(std::make_unique<Wt::WContainerWidget>());
     searchRow->setStyleClass("actions-grid");
 
     auto locationInput = searchRow->addWidget(std::make_unique<Wt::WLineEdit>());
-    locationInput->setPlaceholderText("e.g., Denver, CO or New York, NY");
+    locationInput->setPlaceholderText("e.g., Denver, CO");
     locationInput->setStyleClass("form-control");
-    locationInput->setText("Denver, CO");
 
-    auto radiusInput = searchRow->addWidget(std::make_unique<Wt::WLineEdit>("10"));
+    // Pre-fill with current search location or franchisee location
+    std::string defaultLocation = "Denver, CO";
+    double defaultRadiusKm = 10.0;
+    Models::SearchArea initialSearchArea;
+
+    if (hasActiveSearch_ && currentSearchArea_.center.hasValidCoordinates()) {
+        defaultLocation = currentSearchLocation_;
+        defaultRadiusKm = currentSearchArea_.radiusKm;
+        initialSearchArea = currentSearchArea_;
+    } else if (franchisee_.isConfigured && franchisee_.hasValidLocation()) {
+        defaultLocation = franchisee_.address;
+        defaultRadiusKm = franchisee_.searchCriteria.radiusMiles * 1.60934;
+        initialSearchArea = Models::SearchArea::fromMiles(
+            franchisee_.location,
+            franchisee_.searchCriteria.radiusMiles
+        );
+    } else {
+        Models::GeoLocation denverLocation(39.7392, -104.9903, "Denver", "CO");
+        initialSearchArea = Models::SearchArea(denverLocation, 10.0);
+    }
+    locationInput->setText(defaultLocation);
+
+    auto radiusInput = searchRow->addWidget(std::make_unique<Wt::WLineEdit>(
+        std::to_string(static_cast<int>(defaultRadiusKm))
+    ));
     radiusInput->setStyleClass("form-control");
+    radiusInput->setWidth(80);
 
-    auto analyzeBtn = searchRow->addWidget(std::make_unique<Wt::WPushButton>("Analyze Area (km radius)"));
+    auto radiusLabel = searchRow->addWidget(std::make_unique<Wt::WText>("km"));
+    radiusLabel->setStyleClass("input-suffix");
+
+    auto analyzeBtn = searchRow->addWidget(std::make_unique<Wt::WPushButton>("Update Map"));
     analyzeBtn->setStyleClass("btn btn-primary");
 
-    // Results container
-    auto resultsContainer = container->addWidget(std::make_unique<Wt::WContainerWidget>());
-    resultsContainer->setStyleClass("demographics-results");
+    // Two-column layout: Map on left, Category sidebar on right
+    auto columnsContainer = container->addWidget(std::make_unique<Wt::WContainerWidget>());
+    columnsContainer->setStyleClass("demographics-columns");
 
-    // Drill-down container for business list (initially hidden)
-    auto drillDownContainer = container->addWidget(std::make_unique<Wt::WContainerWidget>());
-    drillDownContainer->setStyleClass("settings-section drilldown-container hidden");
+    // Left column - Map
+    auto mapColumn = columnsContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
+    mapColumn->setStyleClass("map-column");
 
-    // Store current search area for drill-down queries
-    auto currentSearchArea = std::make_shared<Models::SearchArea>();
+    // Create Leaflet map
+    auto map = mapColumn->addWidget(std::make_unique<Wt::WLeafletMap>());
+    map->setStyleClass("demographics-map");
 
-    // Function to show drill-down business list
-    auto showDrillDownFunc = [this, drillDownContainer, currentSearchArea](const std::string& category, int count) {
-        drillDownContainer->clear();
-        drillDownContainer->setStyleClass("settings-section drilldown-container");
+    // Set initial map view
+    Wt::WLeafletMap::Coordinate center(
+        initialSearchArea.center.latitude,
+        initialSearchArea.center.longitude
+    );
+    map->panTo(center);
+    map->zoomLevel(12);
 
-        // Header with back button
-        auto headerRow = drillDownContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
-        headerRow->setStyleClass("drilldown-header");
+    // Add OpenStreetMap tile layer
+    auto tileLayer = std::make_unique<Wt::WLeafletMap::TileLayer>(
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        "© OpenStreetMap contributors"
+    );
+    map->addLayer(std::move(tileLayer));
 
-        auto backBtn = headerRow->addWidget(std::make_unique<Wt::WPushButton>("< Back to Overview"));
-        backBtn->setStyleClass("btn btn-outline");
-        backBtn->clicked().connect([drillDownContainer] {
-            drillDownContainer->setStyleClass("settings-section drilldown-container hidden");
-        });
+    // Right column - Category sidebar
+    auto sidebarColumn = columnsContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
+    sidebarColumn->setStyleClass("category-sidebar");
 
-        auto titleText = headerRow->addWidget(std::make_unique<Wt::WText>(
-            category + " (" + std::to_string(count) + " found)", Wt::TextFormat::Plain
-        ));
-        titleText->setStyleClass("section-title");
+    auto sidebarTitle = sidebarColumn->addWidget(std::make_unique<Wt::WText>("Filter Categories"));
+    sidebarTitle->setStyleClass("sidebar-title");
 
-        // Fetch businesses for this category
-        auto& osmAPI = searchService_->getOSMAPI();
-        auto pois = osmAPI.searchByCategorySync(*currentSearchArea, category);
-
-        if (pois.empty()) {
-            auto emptyText = drillDownContainer->addWidget(std::make_unique<Wt::WText>("No businesses found in this category."));
-            emptyText->setStyleClass("section-description");
-            return;
-        }
-
-        // Business list
-        auto listContainer = drillDownContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
-        listContainer->setStyleClass("business-list");
-
-        for (const auto& poi : pois) {
-            auto itemCard = listContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
-            itemCard->setStyleClass("business-item-card");
-
-            // Business name
-            auto nameText = itemCard->addWidget(std::make_unique<Wt::WText>(poi.name, Wt::TextFormat::Plain));
-            nameText->setStyleClass("business-item-name");
-
-            // Address
-            std::string address = poi.houseNumber + " " + poi.street;
-            if (!poi.city.empty()) address += ", " + poi.city;
-            if (!poi.state.empty()) address += ", " + poi.state;
-            if (!poi.postcode.empty()) address += " " + poi.postcode;
-            auto addressText = itemCard->addWidget(std::make_unique<Wt::WText>(address, Wt::TextFormat::Plain));
-            addressText->setStyleClass("business-item-address");
-
-            // Contact info row
-            auto contactRow = itemCard->addWidget(std::make_unique<Wt::WContainerWidget>());
-            contactRow->setStyleClass("business-item-contact");
-
-            if (!poi.phone.empty()) {
-                auto phoneText = contactRow->addWidget(std::make_unique<Wt::WText>("📞 " + poi.phone, Wt::TextFormat::Plain));
-                phoneText->setStyleClass("contact-info");
-            }
-            if (!poi.website.empty()) {
-                auto webText = contactRow->addWidget(std::make_unique<Wt::WText>("🌐 " + poi.website, Wt::TextFormat::Plain));
-                webText->setStyleClass("contact-info");
-            }
-            if (!poi.email.empty()) {
-                auto emailText = contactRow->addWidget(std::make_unique<Wt::WText>("✉️ " + poi.email, Wt::TextFormat::Plain));
-                emailText->setStyleClass("contact-info");
-            }
-        }
-
-        // Attribution
-        auto attribution = drillDownContainer->addWidget(std::make_unique<Wt::WText>(
-            "Data source: OpenStreetMap contributors"
-        ));
-        attribution->setStyleClass("section-description");
-    };
-
-    // Function to display statistics
-    auto displayStatsFunc = [currentSearchArea, showDrillDownFunc](
-        Wt::WContainerWidget* resultsContainer,
-        const Services::OSMAreaStats& stats,
-        const Models::SearchArea& searchArea
-    ) {
-        resultsContainer->clear();
-        *currentSearchArea = searchArea;  // Store for drill-down
-
-        // Market Score Card Section
-        auto scoreSection = resultsContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
-        scoreSection->setStyleClass("settings-section");
-
-        auto scoreHeader = scoreSection->addWidget(std::make_unique<Wt::WText>("Market Potential Score"));
-        scoreHeader->setStyleClass("section-title");
-
-        auto scoreValue = scoreSection->addWidget(std::make_unique<Wt::WText>(
-            std::to_string(stats.marketPotentialScore) + "/100 - " + stats.getMarketQualityDescription()
-        ));
-        scoreValue->setStyleClass("page-subtitle");
-
-        // Stats Grid Section
-        auto statsSection = resultsContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
-        statsSection->setStyleClass("settings-section");
-
-        auto statsHeader = statsSection->addWidget(std::make_unique<Wt::WText>("Business Categories in Area"));
-        statsHeader->setStyleClass("section-title");
-
-        auto statsSubHeader = statsSection->addWidget(std::make_unique<Wt::WText>("Click on a count to view businesses in that category"));
-        statsSubHeader->setStyleClass("section-description");
-
-        auto statsGrid = statsSection->addWidget(std::make_unique<Wt::WContainerWidget>());
-        statsGrid->setStyleClass("stats-grid");
-
-        std::vector<std::tuple<std::string, int, std::string>> statItems = {
-            {"Offices", stats.offices, "Corporate offices & business centers"},
-            {"Hotels", stats.hotels, "Hotels & lodging"},
-            {"Conference", stats.conferenceVenues, "Conference & event venues"},
-            {"Hospitals", stats.hospitals, "Healthcare facilities"},
-            {"Universities", stats.universities, "Higher education"},
-            {"Schools", stats.schools, "K-12 education"},
-            {"Industrial", stats.industrialBuildings, "Manufacturing & industrial"},
-            {"Warehouses", stats.warehouses, "Storage & distribution"},
-            {"Banks", stats.banks, "Financial institutions"},
-            {"Government", stats.governmentBuildings, "Government offices"},
-            {"Restaurants", stats.restaurants, "Food service"},
-            {"Cafes", stats.cafes, "Coffee shops & cafes"}
-        };
-
-        for (const auto& [label, count, desc] : statItems) {
-            auto card = statsGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
-            card->setStyleClass("stat-card clickable");
-
-            // Make the value a clickable text link (same size as original)
-            auto valueText = card->addWidget(std::make_unique<Wt::WText>(std::to_string(count)));
-            valueText->setStyleClass("stat-value stat-link");
-
-            // Copy to local variables for lambda capture (structured bindings can't be captured directly)
-            std::string categoryLabel = label;
-            int categoryCount = count;
-
-            // Connect click handler for drill-down
-            valueText->clicked().connect([showDrillDownFunc, categoryLabel, categoryCount]() {
-                showDrillDownFunc(categoryLabel, categoryCount);
-            });
-
-            auto labelText = card->addWidget(std::make_unique<Wt::WText>(label));
-            labelText->setStyleClass("stat-label");
-        }
-
-        // Summary section
-        auto summarySection = resultsContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
-        summarySection->setStyleClass("settings-section");
-
-        auto summaryTitle = summarySection->addWidget(std::make_unique<Wt::WText>("Area Summary"));
-        summaryTitle->setStyleClass("section-title");
-
-        std::ostringstream summary;
-        summary << "Total Points of Interest: " << stats.totalPois;
-        auto totalText = summarySection->addWidget(std::make_unique<Wt::WText>(summary.str()));
-        totalText->setStyleClass("section-description");
-
-        std::ostringstream density;
-        density << std::fixed << std::setprecision(1);
-        density << "Business Density: " << stats.businessDensityPerSqKm << " POIs per square km";
-        auto densityText = summarySection->addWidget(std::make_unique<Wt::WText>(density.str()));
-        densityText->setStyleClass("section-description");
-
-        // Insights section
-        auto insightsSection = resultsContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
-        insightsSection->setStyleClass("settings-section");
-
-        auto insightsTitle = insightsSection->addWidget(std::make_unique<Wt::WText>("Catering Opportunity Insights"));
-        insightsTitle->setStyleClass("section-title");
-
-        std::vector<std::string> insights;
-        if (stats.offices > 20) {
-            insights.push_back("Strong corporate presence - target office buildings for regular catering");
-        }
-        if (stats.conferenceVenues > 2) {
-            insights.push_back("Conference venues available - opportunity for event catering");
-        }
-        if (stats.hotels > 5) {
-            insights.push_back("Multiple hotels in area - potential for hotel catering partnerships");
-        }
-        if (stats.hospitals > 1) {
-            insights.push_back("Healthcare facilities present - consider hospital cafeteria services");
-        }
-        if (stats.industrialBuildings + stats.warehouses > 10) {
-            insights.push_back("Industrial area - employee meal programs may be valuable");
-        }
-        if (stats.universities > 0) {
-            insights.push_back("Educational institutions nearby - campus catering opportunities");
-        }
-        if (insights.empty()) {
-            insights.push_back("Moderate catering potential - consider expanding search radius");
-        }
-
-        for (const auto& insight : insights) {
-            auto insightText = insightsSection->addWidget(std::make_unique<Wt::WText>("- " + insight));
-            insightText->setStyleClass("section-description");
-        }
-
-        // Attribution
-        auto attribution = resultsContainer->addWidget(std::make_unique<Wt::WText>(
-            "Data source: OpenStreetMap contributors (openstreetmap.org)"
-        ));
-        attribution->setStyleClass("section-description");
-    };
-
-    // Display default Denver stats using SearchArea
-    Models::GeoLocation defaultLocation(39.7392, -104.9903, "Denver", "CO");
-    Models::SearchArea defaultSearchArea(defaultLocation, 10.0);  // 10km radius
+    // Get initial stats
     auto& osmAPI = searchService_->getOSMAPI();
-    auto defaultStats = osmAPI.getAreaStatisticsSync(defaultSearchArea);
-    displayStatsFunc(resultsContainer, defaultStats, defaultSearchArea);
+    auto stats = osmAPI.getAreaStatisticsSync(initialSearchArea);
 
-    // Connect analyze button
-    analyzeBtn->clicked().connect([this, locationInput, radiusInput, resultsContainer, drillDownContainer, displayStatsFunc]() {
+    // Store current search area and checkboxes for updates
+    auto currentSearchAreaPtr = std::make_shared<Models::SearchArea>(initialSearchArea);
+    auto categoryCheckboxes = std::make_shared<std::map<std::string, Wt::WCheckBox*>>();
+
+    // Category data with stats
+    std::vector<std::tuple<std::string, int, bool>> categories = {
+        {"Offices", stats.offices, true},
+        {"Hotels", stats.hotels, true},
+        {"Conference", stats.conferenceVenues, true},
+        {"Hospitals", stats.hospitals, false},
+        {"Universities", stats.universities, false},
+        {"Schools", stats.schools, false},
+        {"Industrial", stats.industrialBuildings, false},
+        {"Warehouses", stats.warehouses, false},
+        {"Banks", stats.banks, false},
+        {"Government", stats.governmentBuildings, false},
+        {"Restaurants", stats.restaurants, false},
+        {"Cafes", stats.cafes, false}
+    };
+
+    // Market score display
+    auto scoreContainer = sidebarColumn->addWidget(std::make_unique<Wt::WContainerWidget>());
+    scoreContainer->setStyleClass("market-score-box");
+    auto scoreLabel = scoreContainer->addWidget(std::make_unique<Wt::WText>("Market Score"));
+    scoreLabel->setStyleClass("score-label-small");
+    auto scoreValue = scoreContainer->addWidget(std::make_unique<Wt::WText>(
+        std::to_string(stats.marketPotentialScore) + "/100"
+    ));
+    scoreValue->setStyleClass("score-value-large");
+
+    // Select All / None buttons
+    auto selectBtns = sidebarColumn->addWidget(std::make_unique<Wt::WContainerWidget>());
+    selectBtns->setStyleClass("select-buttons");
+    auto selectAllBtn = selectBtns->addWidget(std::make_unique<Wt::WPushButton>("All"));
+    selectAllBtn->setStyleClass("btn btn-sm btn-outline");
+    auto selectNoneBtn = selectBtns->addWidget(std::make_unique<Wt::WPushButton>("None"));
+    selectNoneBtn->setStyleClass("btn btn-sm btn-outline");
+
+    // Category checkboxes container
+    auto categoriesContainer = sidebarColumn->addWidget(std::make_unique<Wt::WContainerWidget>());
+    categoriesContainer->setStyleClass("categories-list");
+
+    // Function to update map markers based on selected categories
+    auto updateMapMarkers = [this, map, currentSearchAreaPtr, categoryCheckboxes]() {
+        // Clear existing markers (by removing and re-adding)
+        // Note: WLeafletMap doesn't have removeAllMarkers, so we'll track them
+
+        auto& osmAPI = searchService_->getOSMAPI();
+
+        // Collect POIs from selected categories
+        for (const auto& [category, checkbox] : *categoryCheckboxes) {
+            if (checkbox->isChecked()) {
+                auto pois = osmAPI.searchByCategorySync(*currentSearchAreaPtr, category);
+                for (const auto& poi : pois) {
+                    auto marker = std::make_unique<Wt::WLeafletMap::Marker>(
+                        Wt::WLeafletMap::Coordinate(poi.latitude, poi.longitude)
+                    );
+                    map->addMarker(std::move(marker));
+                }
+            }
+        }
+    };
+
+    // Create checkboxes for each category
+    for (const auto& [name, count, defaultChecked] : categories) {
+        auto checkboxRow = categoriesContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
+        checkboxRow->setStyleClass("category-checkbox-row");
+
+        std::string labelText = name + " (" + std::to_string(count) + ")";
+        auto checkbox = checkboxRow->addWidget(std::make_unique<Wt::WCheckBox>(labelText));
+        checkbox->setStyleClass("category-checkbox");
+        checkbox->setChecked(defaultChecked);
+
+        std::string categoryName = name;
+        (*categoryCheckboxes)[categoryName] = checkbox;
+
+        // Update map when checkbox changes
+        checkbox->changed().connect([updateMapMarkers]() {
+            updateMapMarkers();
+        });
+    }
+
+    // Select All button handler
+    selectAllBtn->clicked().connect([categoryCheckboxes, updateMapMarkers]() {
+        for (auto& [name, checkbox] : *categoryCheckboxes) {
+            checkbox->setChecked(true);
+        }
+        updateMapMarkers();
+    });
+
+    // Select None button handler
+    selectNoneBtn->clicked().connect([categoryCheckboxes, updateMapMarkers]() {
+        for (auto& [name, checkbox] : *categoryCheckboxes) {
+            checkbox->setChecked(false);
+        }
+        updateMapMarkers();
+    });
+
+    // Summary stats
+    auto summaryContainer = sidebarColumn->addWidget(std::make_unique<Wt::WContainerWidget>());
+    summaryContainer->setStyleClass("summary-stats-box");
+
+    auto totalPoisText = summaryContainer->addWidget(std::make_unique<Wt::WText>(
+        "Total POIs: " + std::to_string(stats.totalPois)
+    ));
+    totalPoisText->setStyleClass("summary-stat");
+
+    std::ostringstream densityStr;
+    densityStr << std::fixed << std::setprecision(1) << stats.businessDensityPerSqKm;
+    auto densityText = summaryContainer->addWidget(std::make_unique<Wt::WText>(
+        "Density: " + densityStr.str() + "/km²"
+    ));
+    densityText->setStyleClass("summary-stat");
+
+    // Attribution
+    auto attribution = sidebarColumn->addWidget(std::make_unique<Wt::WText>(
+        "Data: OpenStreetMap"
+    ));
+    attribution->setStyleClass("attribution-small");
+
+    // Initial marker load
+    updateMapMarkers();
+
+    // Connect analyze button to update the map and stats
+    analyzeBtn->clicked().connect([this, locationInput, radiusInput, map, currentSearchAreaPtr,
+                                   categoryCheckboxes, scoreValue, totalPoisText, densityText,
+                                   categoriesContainer, updateMapMarkers]() {
         std::string location = locationInput->text().toUTF8();
         double radiusKm = 10.0;
         try {
@@ -966,19 +958,57 @@ void FranchiseApp::showDemographicsPage() {
             location = "Denver, CO";
         }
 
-        // Hide drill-down when re-analyzing
-        drillDownContainer->setStyleClass("settings-section drilldown-container hidden");
-
-        // Use geocodeAddress from AISearchService to get GeoLocation
+        // Geocode the location
         Models::GeoLocation geoLocation = searchService_->geocodeAddress(location);
-
-        // Create SearchArea with the geocoded location
         Models::SearchArea searchArea(geoLocation, radiusKm);
 
-        // Get area statistics using SearchArea-based API
+        // Update shared state
+        currentSearchLocation_ = location;
+        currentSearchArea_ = searchArea;
+        hasActiveSearch_ = true;
+        *currentSearchAreaPtr = searchArea;
+
+        // Update map center
+        Wt::WLeafletMap::Coordinate newCenter(geoLocation.latitude, geoLocation.longitude);
+        map->panTo(newCenter);
+
+        // Get new stats
         auto& osmAPI = searchService_->getOSMAPI();
-        auto stats = osmAPI.getAreaStatisticsSync(searchArea);
-        displayStatsFunc(resultsContainer, stats, searchArea);
+        auto newStats = osmAPI.getAreaStatisticsSync(searchArea);
+
+        // Update score
+        scoreValue->setText(std::to_string(newStats.marketPotentialScore) + "/100");
+
+        // Update summary
+        totalPoisText->setText("Total POIs: " + std::to_string(newStats.totalPois));
+        std::ostringstream densityStr;
+        densityStr << std::fixed << std::setprecision(1) << newStats.businessDensityPerSqKm;
+        densityText->setText("Density: " + densityStr.str() + "/km²");
+
+        // Update category counts in checkboxes
+        std::map<std::string, int> newCounts = {
+            {"Offices", newStats.offices},
+            {"Hotels", newStats.hotels},
+            {"Conference", newStats.conferenceVenues},
+            {"Hospitals", newStats.hospitals},
+            {"Universities", newStats.universities},
+            {"Schools", newStats.schools},
+            {"Industrial", newStats.industrialBuildings},
+            {"Warehouses", newStats.warehouses},
+            {"Banks", newStats.banks},
+            {"Government", newStats.governmentBuildings},
+            {"Restaurants", newStats.restaurants},
+            {"Cafes", newStats.cafes}
+        };
+
+        for (auto& [name, checkbox] : *categoryCheckboxes) {
+            if (newCounts.count(name)) {
+                checkbox->setText(name + " (" + std::to_string(newCounts[name]) + ")");
+            }
+        }
+
+        // Update markers
+        updateMapMarkers();
     });
 }
 
