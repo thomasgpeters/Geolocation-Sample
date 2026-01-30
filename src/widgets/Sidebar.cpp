@@ -9,6 +9,7 @@ Sidebar::Sidebar() {
 
     // Define menu items
     menuItems_ = {
+        {"setup", "Store Setup", "🏪", false},
         {"dashboard", "Dashboard", "📊", false},
         {"ai-search", "AI Search", "🔍", true},
         {"prospects", "My Prospects", "👥", false},
