@@ -1548,14 +1548,92 @@ html, body {
     color: var(--text-secondary);
 }
 
-/* ==================== Demographics Map View ==================== */
+/* ==================== Demographics View ==================== */
 .demographics-columns {
     display: flex;
-    gap: 20px;
-    height: calc(100vh - 280px);
-    min-height: 500px;
+    gap: 24px;
+    min-height: 400px;
 }
 
+.stats-column {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.categories-column {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.stat-card.highlight-card {
+    background: linear-gradient(135deg, var(--primary-light) 0%, #c7d2fe 100%);
+    border: none;
+}
+
+.stat-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+}
+
+.stat-value.large {
+    font-size: 48px;
+    font-weight: 700;
+    color: var(--primary-color);
+}
+
+.stat-line {
+    font-size: 15px;
+    color: var(--text-primary);
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.stat-line:last-child {
+    border-bottom: none;
+}
+
+.category-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.category-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.category-row:last-child {
+    border-bottom: none;
+}
+
+.category-name {
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+.category-count {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--primary-color);
+    background: var(--primary-light);
+    padding: 4px 12px;
+    border-radius: 20px;
+    min-width: 40px;
+    text-align: center;
+}
+
+/* Legacy map styles (kept for future use) */
 .map-column {
     flex: 1;
     min-width: 0;
