@@ -1661,7 +1661,6 @@ html, body {
 
 .map-sidebar-header {
     padding: 16px 20px;
-    border-bottom: 1px solid var(--border-color);
     background: var(--bg-primary);
 }
 
@@ -1693,7 +1692,6 @@ html, body {
 /* Category selector */
 .category-selector {
     padding: 16px;
-    border-bottom: 1px solid var(--border-color);
     background: var(--bg-primary);
 }
 
@@ -1726,16 +1724,19 @@ html, body {
 
 /* Pill tray for selected categories */
 .map-sidebar-content {
-    padding: 12px;
+    padding: 16px;
     flex: 1;
     overflow-y: auto;
-    background: var(--bg-secondary);
+    background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+    border-radius: 12px;
+    margin: 0 12px 12px 12px;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
 }
 
 .category-pill-tray {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
 }
 
 .category-pill-tray-empty {
@@ -1747,17 +1748,19 @@ html, body {
 
 /* Category pill card */
 .category-pill {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    padding: 12px;
+    background: #ffffff;
+    border: none;
+    border-radius: 10px;
+    padding: 14px 16px;
+    padding-right: 36px;
     position: relative;
     transition: all var(--transition-fast);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 .category-pill:hover {
-    border-color: var(--primary-light);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    transform: translateY(-1px);
 }
 
 .category-pill-header {
@@ -1783,16 +1786,17 @@ html, body {
 
 .category-pill-remove {
     position: absolute;
-    top: 8px;
-    right: 8px;
-    width: 20px;
-    height: 20px;
+    top: 10px;
+    right: 10px;
+    width: 22px;
+    height: 22px;
     border: none;
-    background: var(--bg-secondary);
-    color: var(--text-muted);
+    background: #f1f5f9;
+    color: #94a3b8;
     border-radius: 50%;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 14px;
+    font-weight: 500;
     line-height: 1;
     display: flex;
     align-items: center;
@@ -1804,34 +1808,78 @@ html, body {
 .category-pill-remove:hover {
     background: #fee2e2;
     color: #dc2626;
+    transform: scale(1.1);
 }
 
 .category-pill-controls {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
+    margin-top: 8px;
 }
 
 .category-pill-controls label {
     font-size: 11px;
     color: var(--text-secondary);
     white-space: nowrap;
+    font-weight: 500;
 }
 
-.category-pill-controls select {
+.category-pill-slider-container {
     flex: 1;
-    padding: 6px 10px;
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    font-size: 12px;
-    background: var(--bg-primary);
-    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.category-pill-slider {
+    flex: 1;
+    height: 6px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+    border-radius: 3px;
+    outline: none;
     cursor: pointer;
 }
 
-.category-pill-controls select:focus {
-    outline: none;
-    border-color: var(--primary-color);
+.category-pill-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    background: #ffffff;
+    border: 3px solid #6366f1;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(99, 102, 241, 0.3);
+    transition: all 0.15s ease;
+}
+
+.category-pill-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+    box-shadow: 0 3px 10px rgba(99, 102, 241, 0.4);
+}
+
+.category-pill-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    background: #ffffff;
+    border: 3px solid #6366f1;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(99, 102, 241, 0.3);
+}
+
+.category-pill-slider-value {
+    min-width: 36px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: #6366f1;
+    background: #eef2ff;
+    padding: 4px 8px;
+    border-radius: 6px;
 }
 
 /* Sidebar footer */
