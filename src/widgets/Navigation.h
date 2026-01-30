@@ -41,6 +41,12 @@ public:
     void setNotificationCount(int count);
 
     /**
+     * @brief Set the market potential score (shown as badge in header)
+     * @param score Score from 0-100, or -1 to hide
+     */
+    void setMarketScore(int score);
+
+    /**
      * @brief Signal emitted when quick search is submitted
      */
     Wt::Signal<std::string>& quickSearchSubmitted() { return quickSearchSubmitted_; }
@@ -71,6 +77,8 @@ private:
     Wt::WContainerWidget* breadcrumbContainer_ = nullptr;
     Wt::WLineEdit* quickSearchInput_ = nullptr;
     Wt::WText* notificationBadge_ = nullptr;
+    Wt::WContainerWidget* marketScoreContainer_ = nullptr;
+    Wt::WText* marketScoreText_ = nullptr;
     int notificationCount_ = 0;
 };
 
