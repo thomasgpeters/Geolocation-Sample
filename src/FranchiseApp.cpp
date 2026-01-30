@@ -9,6 +9,7 @@
 #include <Wt/WBreak.h>
 #include <Wt/WComboBox.h>
 #include <Wt/WCheckBox.h>
+#include <Wt/WSlider.h>
 #include <sstream>
 #include <iomanip>
 
@@ -924,7 +925,8 @@ void FranchiseApp::showDemographicsPage() {
         int count;
         int poiLimit;
         Wt::WContainerWidget* pillWidget;
-        Wt::WComboBox* limitSelect;
+        Wt::WSlider* limitSlider;
+        Wt::WText* limitValueText;
     };
     auto activePills = std::make_shared<std::vector<CategoryPillData>>();
 
@@ -1003,37 +1005,47 @@ void FranchiseApp::showDemographicsPage() {
         auto removeBtn = pillCard->addWidget(std::make_unique<Wt::WPushButton>("×"));
         removeBtn->setStyleClass("category-pill-remove");
 
-        // POI limit controls
+        // POI limit controls with slider
         auto pillControls = pillCard->addWidget(std::make_unique<Wt::WContainerWidget>());
         pillControls->setStyleClass("category-pill-controls");
 
-        auto limitLabel = pillControls->addWidget(std::make_unique<Wt::WText>("Show:"));
+        auto limitLabel = pillControls->addWidget(std::make_unique<Wt::WText>("POIs:"));
 
-        auto limitSelect = pillControls->addWidget(std::make_unique<Wt::WComboBox>());
-        limitSelect->addItem("5");
-        limitSelect->addItem("10");
-        limitSelect->addItem("25");
-        limitSelect->addItem("50");
-        limitSelect->addItem("100");
-        limitSelect->setCurrentIndex(1);  // Default to 10
+        auto sliderContainer = pillControls->addWidget(std::make_unique<Wt::WContainerWidget>());
+        sliderContainer->setStyleClass("category-pill-slider-container");
+
+        // Slider from 0 to total count (or max 100)
+        int maxValue = std::min(count, 100);
+        int defaultValue = std::min(10, maxValue);
+
+        auto limitSlider = sliderContainer->addWidget(std::make_unique<Wt::WSlider>());
+        limitSlider->setStyleClass("category-pill-slider");
+        limitSlider->setMinimum(0);
+        limitSlider->setMaximum(maxValue);
+        limitSlider->setValue(defaultValue);
+        limitSlider->setTickInterval(0);
+
+        auto limitValueText = sliderContainer->addWidget(std::make_unique<Wt::WText>(std::to_string(defaultValue)));
+        limitValueText->setStyleClass("category-pill-slider-value");
 
         // Add to active pills
         CategoryPillData pillData;
         pillData.displayName = displayName;
         pillData.apiName = apiName;
         pillData.count = count;
-        pillData.poiLimit = 10;
+        pillData.poiLimit = defaultValue;
         pillData.pillWidget = pillCard;
-        pillData.limitSelect = limitSelect;
+        pillData.limitSlider = limitSlider;
+        pillData.limitValueText = limitValueText;
         activePills->push_back(pillData);
 
         updateEmptyState();
         // Note: POI markers are refreshed when user clicks "Analyze Area"
 
-        // Handle POI limit change
-        limitSelect->changed().connect([activePills, apiName, limitSelect]() {
-            int limits[] = {5, 10, 25, 50, 100};
-            int newLimit = limits[limitSelect->currentIndex()];
+        // Handle slider value change
+        limitSlider->valueChanged().connect([activePills, apiName, limitSlider, limitValueText]() {
+            int newLimit = limitSlider->value();
+            limitValueText->setText(std::to_string(newLimit));
             for (auto& pill : *activePills) {
                 if (pill.apiName == apiName) {
                     pill.poiLimit = newLimit;
