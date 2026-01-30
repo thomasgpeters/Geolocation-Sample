@@ -9,10 +9,6 @@
 #include <Wt/WBreak.h>
 #include <Wt/WComboBox.h>
 #include <Wt/WCheckBox.h>
-#include <Wt/WLeafletMap.h>
-#include <Wt/Json/Object.h>
-#include <Wt/Json/Array.h>
-#include <Wt/Json/Value.h>
 #include <sstream>
 #include <iomanip>
 
@@ -804,28 +800,35 @@ void FranchiseApp::showDemographicsPage() {
     // Store for updates
     auto currentSearchAreaPtr = std::make_shared<Models::SearchArea>(initialSearchArea);
 
-    // Map section - OpenStreetMap view
+    // Map section - OpenStreetMap view using iframe embed
     auto mapContainer = container->addWidget(std::make_unique<Wt::WContainerWidget>());
     mapContainer->setStyleClass("map-container");
 
-    // Create Leaflet map with options
-    Wt::Json::Object mapOptions;
-    mapOptions["center"] = Wt::Json::Array({
-        Wt::Json::Value(initialSearchArea.center.latitude),
-        Wt::Json::Value(initialSearchArea.center.longitude)
-    });
-    mapOptions["zoom"] = Wt::Json::Value(12);
+    // Create OpenStreetMap embed URL
+    double lat = initialSearchArea.center.latitude;
+    double lon = initialSearchArea.center.longitude;
+    int zoom = 13;
 
-    auto map = mapContainer->addWidget(std::make_unique<Wt::WLeafletMap>(mapOptions));
-    map->setStyleClass("demographics-map");
+    std::ostringstream mapUrl;
+    mapUrl << "https://www.openstreetmap.org/export/embed.html?bbox="
+           << (lon - 0.05) << "%2C" << (lat - 0.03) << "%2C"
+           << (lon + 0.05) << "%2C" << (lat + 0.03)
+           << "&layer=mapnik&marker=" << lat << "%2C" << lon;
 
-    // Add OpenStreetMap tile layer
-    Wt::Json::Object tileOptions;
-    tileOptions["attribution"] = Wt::Json::Value("&copy; OpenStreetMap contributors");
-    map->addTileLayer(
-        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-        tileOptions
-    );
+    // Use WText with iframe HTML
+    std::ostringstream iframeHtml;
+    iframeHtml << "<iframe width=\"100%\" height=\"350\" frameborder=\"0\" scrolling=\"no\" "
+               << "marginheight=\"0\" marginwidth=\"0\" "
+               << "src=\"" << mapUrl.str() << "\" "
+               << "style=\"border: 1px solid #e2e8f0; border-radius: 12px;\">"
+               << "</iframe>";
+
+    auto mapFrame = mapContainer->addWidget(std::make_unique<Wt::WText>(iframeHtml.str()));
+    mapFrame->setTextFormat(Wt::TextFormat::UnsafeXHTML);
+
+    // Store map URL for updates
+    auto currentMapUrl = std::make_shared<std::string>(mapUrl.str());
+    auto mapFramePtr = mapFrame;
 
     // Two-column layout: Stats on left, Categories on right
     auto columnsContainer = container->addWidget(std::make_unique<Wt::WContainerWidget>());
@@ -932,7 +935,7 @@ void FranchiseApp::showDemographicsPage() {
     // Connect analyze button
     analyzeBtn->clicked().connect([this, locationInput, radiusInput, currentSearchAreaPtr,
                                    scoreValue, totalPoisText, densityText, locationText,
-                                   radiusText, categoryTexts, map]() {
+                                   radiusText, categoryTexts, mapFramePtr]() {
         std::string location = locationInput->text().toUTF8();
         double radiusKm = 10.0;
         try {
@@ -955,9 +958,22 @@ void FranchiseApp::showDemographicsPage() {
         hasActiveSearch_ = true;
         *currentSearchAreaPtr = searchArea;
 
-        // Update map center
-        Wt::WLeafletMap::Coordinate newCenter(geoLocation.latitude, geoLocation.longitude);
-        map->panTo(newCenter);
+        // Update map iframe with new location
+        double newLat = geoLocation.latitude;
+        double newLon = geoLocation.longitude;
+        std::ostringstream newMapUrl;
+        newMapUrl << "https://www.openstreetmap.org/export/embed.html?bbox="
+                  << (newLon - 0.05) << "%2C" << (newLat - 0.03) << "%2C"
+                  << (newLon + 0.05) << "%2C" << (newLat + 0.03)
+                  << "&layer=mapnik&marker=" << newLat << "%2C" << newLon;
+
+        std::ostringstream newIframeHtml;
+        newIframeHtml << "<iframe width=\"100%\" height=\"350\" frameborder=\"0\" scrolling=\"no\" "
+                      << "marginheight=\"0\" marginwidth=\"0\" "
+                      << "src=\"" << newMapUrl.str() << "\" "
+                      << "style=\"border: 1px solid #e2e8f0; border-radius: 12px;\">"
+                      << "</iframe>";
+        mapFramePtr->setText(newIframeHtml.str());
 
         // Get new stats
         auto& osmAPI = searchService_->getOSMAPI();
