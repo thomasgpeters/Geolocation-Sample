@@ -9,6 +9,7 @@
 #include "widgets/SearchPanel.h"
 #include "widgets/ResultsDisplay.h"
 #include "services/AISearchService.h"
+#include "models/Franchisee.h"
 
 namespace FranchiseAI {
 
@@ -22,6 +23,16 @@ class FranchiseApp : public Wt::WApplication {
 public:
     explicit FranchiseApp(const Wt::WEnvironment& env);
     ~FranchiseApp() override = default;
+
+    /**
+     * @brief Get the current franchisee
+     */
+    const Models::Franchisee& getFranchisee() const { return franchisee_; }
+
+    /**
+     * @brief Check if franchisee is configured
+     */
+    bool isFranchiseeConfigured() const { return franchisee_.isConfigured; }
 
 private:
     void setupUI();
@@ -43,13 +54,21 @@ private:
     void onAddToProspects(const std::string& id);
     void onExportResults();
 
+    // Franchisee setup
+    void onFranchiseeSetupComplete(const Models::Franchisee& franchisee);
+    void updateHeaderWithFranchisee();
+
     // Page rendering
+    void showSetupPage();
     void showDashboardPage();
     void showAISearchPage();
     void showProspectsPage();
     void showDemographicsPage();
     void showReportsPage();
     void showSettingsPage();
+
+    // Franchisee data
+    Models::Franchisee franchisee_;
 
     // Services
     std::unique_ptr<Services::AISearchService> searchService_;
