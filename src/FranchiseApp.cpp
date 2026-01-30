@@ -741,15 +741,12 @@ void FranchiseApp::showDemographicsPage() {
     container->setStyleClass("page-container demographics-page");
 
     // Search section
-    auto searchSection = container->addWidget(std::make_unique<Wt::WContainerWidget>());
-    searchSection->setStyleClass("settings-section compact");
-
-    auto searchRow = searchSection->addWidget(std::make_unique<Wt::WContainerWidget>());
-    searchRow->setStyleClass("actions-grid");
+    auto searchRow = container->addWidget(std::make_unique<Wt::WContainerWidget>());
+    searchRow->setStyleClass("demographics-search-row");
 
     auto locationInput = searchRow->addWidget(std::make_unique<Wt::WLineEdit>());
-    locationInput->setPlaceholderText("e.g., Denver, CO");
-    locationInput->setStyleClass("form-control");
+    locationInput->setPlaceholderText("Enter city, address, or location...");
+    locationInput->setStyleClass("form-control location-input");
 
     // Pre-fill with current search location or franchisee location
     std::string defaultLocation = "Denver, CO";
@@ -773,17 +770,24 @@ void FranchiseApp::showDemographicsPage() {
     }
     locationInput->setText(defaultLocation);
 
-    auto radiusInput = searchRow->addWidget(std::make_unique<Wt::WLineEdit>(
-        std::to_string(static_cast<int>(defaultRadiusKm))
-    ));
-    radiusInput->setStyleClass("form-control");
-    radiusInput->setWidth(80);
+    // Radius dropdown
+    auto radiusSelect = searchRow->addWidget(std::make_unique<Wt::WComboBox>());
+    radiusSelect->setStyleClass("form-control radius-select");
+    radiusSelect->addItem("5 km");
+    radiusSelect->addItem("10 km");
+    radiusSelect->addItem("25 km");
+    radiusSelect->addItem("40 km");
+    radiusSelect->addItem("50 km");
 
-    auto radiusLabel = searchRow->addWidget(std::make_unique<Wt::WText>("km"));
-    radiusLabel->setStyleClass("input-suffix");
+    // Set default selection based on defaultRadiusKm
+    if (defaultRadiusKm <= 5) radiusSelect->setCurrentIndex(0);
+    else if (defaultRadiusKm <= 10) radiusSelect->setCurrentIndex(1);
+    else if (defaultRadiusKm <= 25) radiusSelect->setCurrentIndex(2);
+    else if (defaultRadiusKm <= 40) radiusSelect->setCurrentIndex(3);
+    else radiusSelect->setCurrentIndex(4);
 
     auto analyzeBtn = searchRow->addWidget(std::make_unique<Wt::WPushButton>("Analyze Area"));
-    analyzeBtn->setStyleClass("btn btn-primary");
+    analyzeBtn->setStyleClass("btn btn-primary analyze-btn");
 
     // Get initial stats
     auto& osmAPI = searchService_->getOSMAPI();
@@ -867,7 +871,7 @@ void FranchiseApp::showDemographicsPage() {
     auto sidebarHeader = mapSidebar->addWidget(std::make_unique<Wt::WContainerWidget>());
     sidebarHeader->setStyleClass("map-sidebar-header");
 
-    auto categoriesTitle = sidebarHeader->addWidget(std::make_unique<Wt::WText>("Category Breakdown"));
+    auto categoriesTitle = sidebarHeader->addWidget(std::make_unique<Wt::WText>("Categories"));
     categoriesTitle->setStyleClass("stat-title");
 
     auto sidebarContent = mapSidebar->addWidget(std::make_unique<Wt::WContainerWidget>());
@@ -895,6 +899,22 @@ void FranchiseApp::showDemographicsPage() {
     // Store text widgets for updates
     auto categoryTexts = std::make_shared<std::vector<std::pair<std::string, Wt::WText*>>>();
 
+    // Map display names to API category names
+    std::map<std::string, std::string> categoryNameMap = {
+        {"Offices", "offices"},
+        {"Hotels", "hotels"},
+        {"Conference Venues", "conference"},
+        {"Restaurants", "restaurants"},
+        {"Cafes", "cafes"},
+        {"Hospitals", "hospitals"},
+        {"Universities", "universities"},
+        {"Schools", "schools"},
+        {"Industrial", "industrial"},
+        {"Warehouses", "warehouses"},
+        {"Banks", "banks"},
+        {"Government", "government"}
+    };
+
     for (const auto& [name, count] : categories) {
         auto row = categoryList->addWidget(std::make_unique<Wt::WContainerWidget>());
         row->setStyleClass("category-row");
@@ -904,6 +924,47 @@ void FranchiseApp::showDemographicsPage() {
 
         auto countText = row->addWidget(std::make_unique<Wt::WText>(std::to_string(count)));
         countText->setStyleClass("category-count");
+
+        // Make count clickable to show POI markers on map
+        std::string apiCategory = categoryNameMap.count(name) ? categoryNameMap[name] : "";
+        countText->clicked().connect([this, apiCategory, currentSearchAreaPtr]() {
+            if (apiCategory.empty()) return;
+
+            // Clear existing markers
+            std::ostringstream clearMarkersJs;
+            clearMarkersJs << "if (window.demographicsMarkers) {"
+                          << "  window.demographicsMarkers.forEach(function(m) { m.remove(); });"
+                          << "}"
+                          << "window.demographicsMarkers = [];";
+            doJavaScript(clearMarkersJs.str());
+
+            // Get top 10 POIs for this category from the current search area
+            auto& osmAPI = searchService_->getOSMAPI();
+            auto pois = osmAPI.searchByCategorySync(*currentSearchAreaPtr, apiCategory);
+
+            // Add markers for up to 10 POIs
+            int markerCount = 0;
+            for (const auto& poi : pois) {
+                if (markerCount >= 10) break;
+
+                // Escape name for JavaScript
+                std::string safeName = poi.name;
+                for (auto& c : safeName) {
+                    if (c == '\'' || c == '"' || c == '\\') c = ' ';
+                }
+
+                std::ostringstream addMarkerJs;
+                addMarkerJs << "if (window.demographicsMap && typeof L !== 'undefined') {"
+                           << "  var marker = L.marker([" << poi.latitude << ", " << poi.longitude << "])"
+                           << "    .addTo(window.demographicsMap)"
+                           << "    .bindPopup('<b>" << safeName << "</b>');"
+                           << "  if (!window.demographicsMarkers) window.demographicsMarkers = [];"
+                           << "  window.demographicsMarkers.push(marker);"
+                           << "}";
+                doJavaScript(addMarkerJs.str());
+                markerCount++;
+            }
+        });
 
         categoryTexts->push_back({name, countText});
     }
@@ -948,17 +1009,24 @@ void FranchiseApp::showDemographicsPage() {
     ));
     radiusText->setStyleClass("stat-line");
 
-    // Connect analyze button
-    analyzeBtn->clicked().connect([this, locationInput, radiusInput, currentSearchAreaPtr,
-                                   totalPoisText, densityText, locationText,
-                                   radiusText, categoryTexts]() {
-        std::string location = locationInput->text().toUTF8();
-        double radiusKm = 10.0;
-        try {
-            radiusKm = std::stod(radiusInput->text().toUTF8());
-        } catch (...) {
-            radiusKm = 10.0;
+    // Helper function to get radius from dropdown selection
+    auto getRadiusFromSelect = [](int index) -> double {
+        switch (index) {
+            case 0: return 5.0;
+            case 1: return 10.0;
+            case 2: return 25.0;
+            case 3: return 40.0;
+            case 4: return 50.0;
+            default: return 10.0;
         }
+    };
+
+    // Connect analyze button
+    analyzeBtn->clicked().connect([this, locationInput, radiusSelect, currentSearchAreaPtr,
+                                   totalPoisText, densityText, locationText,
+                                   radiusText, categoryTexts, getRadiusFromSelect]() {
+        std::string location = locationInput->text().toUTF8();
+        double radiusKm = getRadiusFromSelect(radiusSelect->currentIndex());
 
         if (location.empty()) {
             location = "Denver, CO";
@@ -1021,6 +1089,22 @@ void FranchiseApp::showDemographicsPage() {
             if (newCounts.count(name)) {
                 textWidget->setText(std::to_string(newCounts[name]));
             }
+        }
+    });
+
+    // Add blur event to location input to recenter map when user finishes typing
+    locationInput->blurred().connect([this, locationInput]() {
+        std::string location = locationInput->text().toUTF8();
+        if (location.empty()) return;
+
+        // Geocode and recenter map
+        Models::GeoLocation geoLocation = searchService_->geocodeAddress(location);
+        if (geoLocation.hasValidCoordinates()) {
+            std::ostringstream panMapJs;
+            panMapJs << "if (window.demographicsMap) {"
+                     << "  window.demographicsMap.setView([" << geoLocation.latitude << ", " << geoLocation.longitude << "], 13);"
+                     << "}";
+            doJavaScript(panMapJs.str());
         }
     });
 }

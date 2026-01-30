@@ -1654,12 +1654,33 @@ html, body {
     background: var(--bg-primary);
 }
 
+/* Demographics search controls */
+.demographics-search-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.demographics-search-row .location-input {
+    flex: 1;
+    min-width: 250px;
+}
+
+.demographics-search-row .radius-select {
+    width: 100px;
+}
+
+.demographics-search-row .analyze-btn {
+    margin-left: auto;
+}
+
 .map-sidebar-header .stat-title {
     margin-bottom: 0;
 }
 
 .map-sidebar-content {
-    padding: 0;
+    padding: 16px;
     flex: 1;
     overflow-y: auto;
 }
@@ -1738,14 +1759,22 @@ html, body {
 }
 
 .category-count {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--primary-color);
     background: var(--primary-light);
     padding: 4px 12px;
     border-radius: 20px;
-    min-width: 40px;
+    min-width: 36px;
     text-align: center;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.category-count:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: scale(1.05);
 }
 
 /* Legacy map styles (kept for future use) */
