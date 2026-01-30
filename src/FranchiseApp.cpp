@@ -924,11 +924,29 @@ void FranchiseApp::showDemographicsPage() {
         std::string apiName;
         int count;
         int poiLimit;
+        std::string color;  // Pastel color for pill and markers
         Wt::WContainerWidget* pillWidget;
         Wt::WSlider* limitSlider;
         Wt::WText* limitValueText;
     };
     auto activePills = std::make_shared<std::vector<CategoryPillData>>();
+
+    // Pastel colors for post-it note effect
+    std::vector<std::string> pastelColors = {
+        "#FFE5B4", // Peach
+        "#BAFFC9", // Mint
+        "#BAE1FF", // Light Blue
+        "#FFFFBA", // Light Yellow
+        "#FFB3BA", // Light Pink
+        "#E0BBE4", // Light Purple
+        "#D4F0F0", // Light Teal
+        "#FFC8A2", // Light Orange
+        "#C9C9FF", // Lavender
+        "#CAFFBF", // Light Lime
+        "#FDFFB6", // Cream
+        "#A0C4FF"  // Sky Blue
+    };
+    auto usedColorIndex = std::make_shared<int>(0);
 
     // Function to refresh all POI markers
     auto refreshMarkers = std::make_shared<std::function<void()>>();
@@ -942,22 +960,39 @@ void FranchiseApp::showDemographicsPage() {
         doJavaScript(clearMarkersJs.str());
 
         // Add markers for each active category
-        for (const auto& pill : *activePills) {
+        for (auto& pill : *activePills) {
+            // Read current slider value directly
+            int currentLimit = pill.limitSlider ? pill.limitSlider->value() : pill.poiLimit;
+
             auto& osmAPI = searchService_->getOSMAPI();
             auto pois = osmAPI.searchByCategorySync(*currentSearchAreaPtr, pill.apiName);
 
+            // Convert pastel color to darker solid color for markers
+            std::string markerColor = pill.color;
+            // Make it more saturated/darker for visibility
+
             int markerCount = 0;
             for (const auto& poi : pois) {
-                if (markerCount >= pill.poiLimit) break;
+                if (markerCount >= currentLimit) break;
 
                 std::string safeName = poi.name;
                 for (auto& c : safeName) {
                     if (c == '\'' || c == '"' || c == '\\') c = ' ';
                 }
 
+                // Create colored circle marker
                 std::ostringstream addMarkerJs;
                 addMarkerJs << "if (window.demographicsMap && typeof L !== 'undefined') {"
-                           << "  var marker = L.marker([" << poi.latitude << ", " << poi.longitude << "])"
+                           << "  var markerIcon = L.divIcon({"
+                           << "    className: 'custom-marker',"
+                           << "    html: '<div style=\"background-color: " << pill.color << "; "
+                           << "      width: 24px; height: 24px; border-radius: 50%; "
+                           << "      border: 3px solid rgba(0,0,0,0.3); "
+                           << "      box-shadow: 0 2px 5px rgba(0,0,0,0.3);\"></div>',"
+                           << "    iconSize: [24, 24],"
+                           << "    iconAnchor: [12, 12]"
+                           << "  });"
+                           << "  var marker = L.marker([" << poi.latitude << ", " << poi.longitude << "], {icon: markerIcon})"
                            << "    .addTo(window.demographicsMap)"
                            << "    .bindPopup('<b>" << safeName << "</b><br><small>" << pill.displayName << "</small>');"
                            << "  if (!window.demographicsMarkers) window.demographicsMarkers = [];"
@@ -980,7 +1015,7 @@ void FranchiseApp::showDemographicsPage() {
 
     // Function to create a pill card for a category
     auto createPill = std::make_shared<std::function<void(const std::string&, const std::string&, int)>>();
-    *createPill = [this, pillTray, activePills, refreshMarkers, updateEmptyState, createPill](
+    *createPill = [this, pillTray, activePills, refreshMarkers, updateEmptyState, createPill, pastelColors, usedColorIndex](
         const std::string& displayName, const std::string& apiName, int count) {
 
         // Check if already added
@@ -988,8 +1023,15 @@ void FranchiseApp::showDemographicsPage() {
             if (pill.apiName == apiName) return;
         }
 
+        // Get next color from palette
+        std::string pillColor = pastelColors[*usedColorIndex % pastelColors.size()];
+        (*usedColorIndex)++;
+
         auto pillCard = pillTray->addWidget(std::make_unique<Wt::WContainerWidget>());
         pillCard->setStyleClass("category-pill");
+
+        // Apply pastel background color like a post-it note
+        pillCard->decorationStyle().setBackgroundColor(Wt::WColor(pillColor));
 
         // Header with name and count
         auto pillHeader = pillCard->addWidget(std::make_unique<Wt::WContainerWidget>());
@@ -1051,6 +1093,7 @@ void FranchiseApp::showDemographicsPage() {
         pillData.apiName = apiName;
         pillData.count = count;
         pillData.poiLimit = defaultValue;
+        pillData.color = pillColor;
         pillData.pillWidget = pillCard;
         pillData.limitSlider = limitSlider;
         pillData.limitValueText = limitValueText;
