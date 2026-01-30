@@ -864,7 +864,7 @@ void FranchiseApp::showDemographicsPage() {
 
     doJavaScript(initMapJs.str());
 
-    // Category Breakdown sidebar (right side of map)
+    // Categories sidebar (right side of map)
     auto mapSidebar = mapWithSidebar->addWidget(std::make_unique<Wt::WContainerWidget>());
     mapSidebar->setStyleClass("map-sidebar");
 
@@ -874,80 +874,84 @@ void FranchiseApp::showDemographicsPage() {
     auto categoriesTitle = sidebarHeader->addWidget(std::make_unique<Wt::WText>("Categories"));
     categoriesTitle->setStyleClass("stat-title");
 
+    // POI limit control
+    auto poiLimitControl = mapSidebar->addWidget(std::make_unique<Wt::WContainerWidget>());
+    poiLimitControl->setStyleClass("poi-limit-control");
+
+    auto poiLimitLabel = poiLimitControl->addWidget(std::make_unique<Wt::WText>("POIs per category"));
+    poiLimitLabel->setStyleClass("poi-limit-label");
+
+    auto poiLimitSelect = poiLimitControl->addWidget(std::make_unique<Wt::WComboBox>());
+    poiLimitSelect->setStyleClass("poi-limit-select");
+    poiLimitSelect->addItem("5 POIs");
+    poiLimitSelect->addItem("10 POIs");
+    poiLimitSelect->addItem("25 POIs");
+    poiLimitSelect->addItem("50 POIs");
+    poiLimitSelect->addItem("100 POIs");
+    poiLimitSelect->setCurrentIndex(1);  // Default to 10
+
     auto sidebarContent = mapSidebar->addWidget(std::make_unique<Wt::WContainerWidget>());
     sidebarContent->setStyleClass("map-sidebar-content");
 
-    // Category list
-    std::vector<std::pair<std::string, int>> categories = {
-        {"Offices", stats.offices},
-        {"Hotels", stats.hotels},
-        {"Conference Venues", stats.conferenceVenues},
-        {"Restaurants", stats.restaurants},
-        {"Cafes", stats.cafes},
-        {"Hospitals", stats.hospitals},
-        {"Universities", stats.universities},
-        {"Schools", stats.schools},
-        {"Industrial", stats.industrialBuildings},
-        {"Warehouses", stats.warehouses},
-        {"Banks", stats.banks},
-        {"Government", stats.governmentBuildings}
+    // Category list with stats
+    std::vector<std::tuple<std::string, std::string, int>> categories = {
+        {"Offices", "offices", stats.offices},
+        {"Hotels", "hotels", stats.hotels},
+        {"Conference Venues", "conference", stats.conferenceVenues},
+        {"Restaurants", "restaurants", stats.restaurants},
+        {"Cafes", "cafes", stats.cafes},
+        {"Hospitals", "hospitals", stats.hospitals},
+        {"Universities", "universities", stats.universities},
+        {"Schools", "schools", stats.schools},
+        {"Industrial", "industrial", stats.industrialBuildings},
+        {"Warehouses", "warehouses", stats.warehouses},
+        {"Banks", "banks", stats.banks},
+        {"Government", "government", stats.governmentBuildings}
     };
 
     auto categoryList = sidebarContent->addWidget(std::make_unique<Wt::WContainerWidget>());
     categoryList->setStyleClass("category-list");
 
-    // Store text widgets for updates
+    // Shared state for checkboxes and their categories
+    auto categoryCheckboxes = std::make_shared<std::vector<std::tuple<Wt::WCheckBox*, std::string, Wt::WContainerWidget*>>>();
     auto categoryTexts = std::make_shared<std::vector<std::pair<std::string, Wt::WText*>>>();
 
-    // Map display names to API category names
-    std::map<std::string, std::string> categoryNameMap = {
-        {"Offices", "offices"},
-        {"Hotels", "hotels"},
-        {"Conference Venues", "conference"},
-        {"Restaurants", "restaurants"},
-        {"Cafes", "cafes"},
-        {"Hospitals", "hospitals"},
-        {"Universities", "universities"},
-        {"Schools", "schools"},
-        {"Industrial", "industrial"},
-        {"Warehouses", "warehouses"},
-        {"Banks", "banks"},
-        {"Government", "government"}
+    // Helper to get POI limit from dropdown
+    auto getPoiLimit = [poiLimitSelect]() -> int {
+        switch (poiLimitSelect->currentIndex()) {
+            case 0: return 5;
+            case 1: return 10;
+            case 2: return 25;
+            case 3: return 50;
+            case 4: return 100;
+            default: return 10;
+        }
     };
 
-    for (const auto& [name, count] : categories) {
-        auto row = categoryList->addWidget(std::make_unique<Wt::WContainerWidget>());
-        row->setStyleClass("category-row");
+    // Function to refresh POI markers for all checked categories
+    auto refreshMarkers = std::make_shared<std::function<void()>>();
+    *refreshMarkers = [this, categoryCheckboxes, currentSearchAreaPtr, getPoiLimit]() {
+        // Clear existing markers
+        std::ostringstream clearMarkersJs;
+        clearMarkersJs << "if (window.demographicsMarkers) {"
+                      << "  window.demographicsMarkers.forEach(function(m) { m.remove(); });"
+                      << "}"
+                      << "window.demographicsMarkers = [];";
+        doJavaScript(clearMarkersJs.str());
 
-        auto nameText = row->addWidget(std::make_unique<Wt::WText>(name));
-        nameText->setStyleClass("category-name");
+        int poiLimit = getPoiLimit();
 
-        auto countText = row->addWidget(std::make_unique<Wt::WText>(std::to_string(count)));
-        countText->setStyleClass("category-count");
+        // Add markers for each checked category
+        for (const auto& [checkbox, apiCategory, row] : *categoryCheckboxes) {
+            if (!checkbox->isChecked()) continue;
 
-        // Make count clickable to show POI markers on map
-        std::string apiCategory = categoryNameMap.count(name) ? categoryNameMap[name] : "";
-        countText->clicked().connect([this, apiCategory, currentSearchAreaPtr]() {
-            if (apiCategory.empty()) return;
-
-            // Clear existing markers
-            std::ostringstream clearMarkersJs;
-            clearMarkersJs << "if (window.demographicsMarkers) {"
-                          << "  window.demographicsMarkers.forEach(function(m) { m.remove(); });"
-                          << "}"
-                          << "window.demographicsMarkers = [];";
-            doJavaScript(clearMarkersJs.str());
-
-            // Get top 10 POIs for this category from the current search area
             auto& osmAPI = searchService_->getOSMAPI();
             auto pois = osmAPI.searchByCategorySync(*currentSearchAreaPtr, apiCategory);
 
-            // Add markers for up to 10 POIs
             int markerCount = 0;
             for (const auto& poi : pois) {
-                if (markerCount >= 10) break;
+                if (markerCount >= poiLimit) break;
 
-                // Escape name for JavaScript
                 std::string safeName = poi.name;
                 for (auto& c : safeName) {
                     if (c == '\'' || c == '"' || c == '\\') c = ' ';
@@ -964,16 +968,83 @@ void FranchiseApp::showDemographicsPage() {
                 doJavaScript(addMarkerJs.str());
                 markerCount++;
             }
+        }
+    };
+
+    // Create category rows with checkboxes
+    for (const auto& [displayName, apiCategory, count] : categories) {
+        auto row = categoryList->addWidget(std::make_unique<Wt::WContainerWidget>());
+        row->setStyleClass("category-row");
+
+        auto checkbox = row->addWidget(std::make_unique<Wt::WCheckBox>());
+        checkbox->setStyleClass("category-checkbox");
+
+        auto nameText = row->addWidget(std::make_unique<Wt::WText>(displayName));
+        nameText->setStyleClass("category-name");
+
+        auto countText = row->addWidget(std::make_unique<Wt::WText>(std::to_string(count)));
+        countText->setStyleClass("category-count");
+
+        // Store for updates
+        categoryCheckboxes->push_back({checkbox, apiCategory, row});
+        categoryTexts->push_back({displayName, countText});
+
+        // Toggle checkbox when clicking row
+        row->clicked().connect([checkbox, row, refreshMarkers]() {
+            checkbox->setChecked(!checkbox->isChecked());
+            if (checkbox->isChecked()) {
+                row->setStyleClass("category-row checked");
+            } else {
+                row->setStyleClass("category-row");
+            }
+            (*refreshMarkers)();
         });
 
-        categoryTexts->push_back({name, countText});
+        // Handle checkbox change directly
+        checkbox->changed().connect([checkbox, row, refreshMarkers]() {
+            if (checkbox->isChecked()) {
+                row->setStyleClass("category-row checked");
+            } else {
+                row->setStyleClass("category-row");
+            }
+            (*refreshMarkers)();
+        });
     }
 
-    // Attribution at bottom of sidebar
-    auto attribution = sidebarContent->addWidget(std::make_unique<Wt::WText>(
-        "Data: OpenStreetMap"
-    ));
-    attribution->setStyleClass("attribution-small");
+    // When POI limit changes, refresh markers
+    poiLimitSelect->changed().connect([refreshMarkers]() {
+        (*refreshMarkers)();
+    });
+
+    // Sidebar footer with actions
+    auto sidebarActions = mapSidebar->addWidget(std::make_unique<Wt::WContainerWidget>());
+    sidebarActions->setStyleClass("sidebar-actions");
+
+    auto selectAllBtn = sidebarActions->addWidget(std::make_unique<Wt::WPushButton>("Select All"));
+    selectAllBtn->setStyleClass("btn btn-outline");
+    selectAllBtn->clicked().connect([categoryCheckboxes, refreshMarkers]() {
+        for (auto& [checkbox, apiCategory, row] : *categoryCheckboxes) {
+            checkbox->setChecked(true);
+            row->setStyleClass("category-row checked");
+        }
+        (*refreshMarkers)();
+    });
+
+    auto clearAllBtn = sidebarActions->addWidget(std::make_unique<Wt::WPushButton>("Clear All"));
+    clearAllBtn->setStyleClass("btn btn-outline");
+    clearAllBtn->clicked().connect([this, categoryCheckboxes]() {
+        for (auto& [checkbox, apiCategory, row] : *categoryCheckboxes) {
+            checkbox->setChecked(false);
+            row->setStyleClass("category-row");
+        }
+        // Clear markers
+        std::ostringstream clearMarkersJs;
+        clearMarkersJs << "if (window.demographicsMarkers) {"
+                      << "  window.demographicsMarkers.forEach(function(m) { m.remove(); });"
+                      << "}"
+                      << "window.demographicsMarkers = [];";
+        doJavaScript(clearMarkersJs.str());
+    });
 
     // Area Summary footer at bottom
     auto summaryFooter = container->addWidget(std::make_unique<Wt::WContainerWidget>());
@@ -1036,7 +1107,7 @@ void FranchiseApp::showDemographicsPage() {
     // Connect analyze button
     analyzeBtn->clicked().connect([this, locationInput, radiusSelect, currentSearchAreaPtr,
                                    totalPoisText, densityText, locationText,
-                                   radiusText, categoryTexts, getRadiusFromSelect]() {
+                                   radiusText, categoryTexts, refreshMarkers, getRadiusFromSelect]() {
         std::string location = locationInput->text().toUTF8();
         double radiusKm = getRadiusFromSelect(radiusSelect->currentIndex());
 
@@ -1102,6 +1173,9 @@ void FranchiseApp::showDemographicsPage() {
                 textWidget->setText(std::to_string(newCounts[name]));
             }
         }
+
+        // Refresh POI markers for checked categories with new location
+        (*refreshMarkers)();
     });
 
     // Add blur event to location input to recenter map when user finishes typing
