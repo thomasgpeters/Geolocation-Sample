@@ -975,39 +975,51 @@ void FranchiseApp::showDemographicsPage() {
     ));
     attribution->setStyleClass("attribution-small");
 
-    // Area Summary section below the map
-    auto summaryCard = container->addWidget(std::make_unique<Wt::WContainerWidget>());
-    summaryCard->setStyleClass("stat-card");
+    // Area Summary footer at bottom
+    auto summaryFooter = container->addWidget(std::make_unique<Wt::WContainerWidget>());
+    summaryFooter->setStyleClass("area-summary-footer");
 
-    auto summaryTitle = summaryCard->addWidget(std::make_unique<Wt::WText>("Area Summary"));
+    auto summaryTitle = summaryFooter->addWidget(std::make_unique<Wt::WText>("Area Summary"));
     summaryTitle->setStyleClass("stat-title");
 
-    auto summaryGrid = summaryCard->addWidget(std::make_unique<Wt::WContainerWidget>());
-    summaryGrid->setStyleClass("summary-grid");
+    auto summaryStats = summaryFooter->addWidget(std::make_unique<Wt::WContainerWidget>());
+    summaryStats->setStyleClass("summary-stats");
 
-    auto totalPoisText = summaryGrid->addWidget(std::make_unique<Wt::WText>(
-        "Total Points of Interest: " + std::to_string(stats.totalPois)
-    ));
-    totalPoisText->setStyleClass("stat-line");
+    // POIs stat
+    auto poisItem = summaryStats->addWidget(std::make_unique<Wt::WContainerWidget>());
+    poisItem->setStyleClass("summary-stat-item");
+    auto poisLabel = poisItem->addWidget(std::make_unique<Wt::WText>("POIs"));
+    poisLabel->setStyleClass("stat-label");
+    auto totalPoisText = poisItem->addWidget(std::make_unique<Wt::WText>(std::to_string(stats.totalPois)));
+    totalPoisText->setStyleClass("stat-value");
 
+    // Density stat
+    auto densityItem = summaryStats->addWidget(std::make_unique<Wt::WContainerWidget>());
+    densityItem->setStyleClass("summary-stat-item");
+    auto densityLabel = densityItem->addWidget(std::make_unique<Wt::WText>("Density"));
+    densityLabel->setStyleClass("stat-label");
     std::ostringstream densityStr;
-    densityStr << std::fixed << std::setprecision(1) << stats.businessDensityPerSqKm;
-    auto densityText = summaryGrid->addWidget(std::make_unique<Wt::WText>(
-        "Business Density: " + densityStr.str() + " per km²"
-    ));
-    densityText->setStyleClass("stat-line");
+    densityStr << std::fixed << std::setprecision(1) << stats.businessDensityPerSqKm << "/km²";
+    auto densityText = densityItem->addWidget(std::make_unique<Wt::WText>(densityStr.str()));
+    densityText->setStyleClass("stat-value");
 
-    auto locationText = summaryGrid->addWidget(std::make_unique<Wt::WText>(
-        "Location: " + defaultLocation
-    ));
-    locationText->setStyleClass("stat-line");
+    // Location stat
+    auto locationItem = summaryStats->addWidget(std::make_unique<Wt::WContainerWidget>());
+    locationItem->setStyleClass("summary-stat-item");
+    auto locationLabel = locationItem->addWidget(std::make_unique<Wt::WText>("Location"));
+    locationLabel->setStyleClass("stat-label");
+    auto locationText = locationItem->addWidget(std::make_unique<Wt::WText>(defaultLocation));
+    locationText->setStyleClass("stat-value");
 
+    // Radius stat
+    auto radiusItem = summaryStats->addWidget(std::make_unique<Wt::WContainerWidget>());
+    radiusItem->setStyleClass("summary-stat-item");
+    auto radiusLabel = radiusItem->addWidget(std::make_unique<Wt::WText>("Radius"));
+    radiusLabel->setStyleClass("stat-label");
     std::ostringstream radiusStr;
-    radiusStr << std::fixed << std::setprecision(1) << defaultRadiusKm;
-    auto radiusText = summaryGrid->addWidget(std::make_unique<Wt::WText>(
-        "Search Radius: " + radiusStr.str() + " km"
-    ));
-    radiusText->setStyleClass("stat-line");
+    radiusStr << std::fixed << std::setprecision(0) << defaultRadiusKm << " km";
+    auto radiusText = radiusItem->addWidget(std::make_unique<Wt::WText>(radiusStr.str()));
+    radiusText->setStyleClass("stat-value");
 
     // Helper function to get radius from dropdown selection
     auto getRadiusFromSelect = [](int index) -> double {
@@ -1056,18 +1068,18 @@ void FranchiseApp::showDemographicsPage() {
         // Update market score in navigation header
         navigation_->setMarketScore(newStats.marketPotentialScore);
 
-        // Update summary
-        totalPoisText->setText("Total Points of Interest: " + std::to_string(newStats.totalPois));
+        // Update summary stats
+        totalPoisText->setText(std::to_string(newStats.totalPois));
 
         std::ostringstream newDensityStr;
-        newDensityStr << std::fixed << std::setprecision(1) << newStats.businessDensityPerSqKm;
-        densityText->setText("Business Density: " + newDensityStr.str() + " per km²");
+        newDensityStr << std::fixed << std::setprecision(1) << newStats.businessDensityPerSqKm << "/km²";
+        densityText->setText(newDensityStr.str());
 
-        locationText->setText("Location: " + location);
+        locationText->setText(location);
 
         std::ostringstream newRadiusStr;
-        newRadiusStr << std::fixed << std::setprecision(1) << radiusKm;
-        radiusText->setText("Search Radius: " + newRadiusStr.str() + " km");
+        newRadiusStr << std::fixed << std::setprecision(0) << radiusKm << " km";
+        radiusText->setText(newRadiusStr.str());
 
         // Update category counts
         std::map<std::string, int> newCounts = {
