@@ -818,20 +818,24 @@ void FranchiseApp::showDemographicsPage() {
 
     // Initialize Leaflet map via JavaScript after widget is rendered
     std::ostringstream initMapJs;
-    initMapJs << "setTimeout(function() {"
-              << "  if (typeof L !== 'undefined') {"
-              << "    var mapEl = document.getElementById('" << mapId << "');"
-              << "    if (mapEl && !mapEl._leaflet_map) {"
-              << "      var map = L.map('" << mapId << "').setView([" << initLat << ", " << initLon << "], 13);"
-              << "      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {"
-              << "        maxZoom: 19,"
-              << "        attribution: '&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors'"
-              << "      }).addTo(map);"
-              << "      mapEl._leaflet_map = map;"
-              << "      window.demographicsMap = map;"
-              << "    }"
-              << "  }"
-              << "}, 100);";
+    initMapJs << "function initDemographicsMap() {"
+              << "  var mapEl = document.getElementById('" << mapId << "');"
+              << "  if (!mapEl) { setTimeout(initDemographicsMap, 100); return; }"
+              << "  if (mapEl._leaflet_map) return;"
+              << "  if (typeof L === 'undefined') { setTimeout(initDemographicsMap, 100); return; }"
+              << "  var map = L.map('" << mapId << "', {"
+              << "    center: [" << initLat << ", " << initLon << "],"
+              << "    zoom: 13"
+              << "  });"
+              << "  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {"
+              << "    maxZoom: 19,"
+              << "    attribution: '&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors'"
+              << "  }).addTo(map);"
+              << "  mapEl._leaflet_map = map;"
+              << "  window.demographicsMap = map;"
+              << "  setTimeout(function() { map.invalidateSize(); }, 200);"
+              << "}"
+              << "setTimeout(initDemographicsMap, 150);";
 
     // Require Leaflet script and initialize map
     require("scripts/leaflet.js");
