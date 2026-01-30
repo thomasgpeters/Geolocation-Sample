@@ -66,6 +66,16 @@ void Navigation::createRightSection() {
     auto rightSection = addWidget(std::make_unique<Wt::WContainerWidget>());
     rightSection->setStyleClass("nav-right");
 
+    // Market Score badge (hidden by default)
+    marketScoreContainer_ = rightSection->addWidget(std::make_unique<Wt::WContainerWidget>());
+    marketScoreContainer_->setStyleClass("market-score-container hidden");
+
+    auto scoreLabel = marketScoreContainer_->addWidget(std::make_unique<Wt::WText>("Market Score"));
+    scoreLabel->setStyleClass("market-score-label");
+
+    marketScoreText_ = marketScoreContainer_->addWidget(std::make_unique<Wt::WText>("--"));
+    marketScoreText_->setStyleClass("market-score-value");
+
     // Help button
     auto helpBtn = rightSection->addWidget(std::make_unique<Wt::WPushButton>("❓"));
     helpBtn->setStyleClass("nav-icon-btn");
@@ -135,6 +145,27 @@ void Navigation::setNotificationCount(int count) {
 void Navigation::onQuickSearch() {
     if (quickSearchInput_ && !quickSearchInput_->text().empty()) {
         quickSearchSubmitted_.emit(quickSearchInput_->text().toUTF8());
+    }
+}
+
+void Navigation::setMarketScore(int score) {
+    if (!marketScoreContainer_ || !marketScoreText_) return;
+
+    if (score < 0) {
+        marketScoreContainer_->setStyleClass("market-score-container hidden");
+    } else {
+        marketScoreText_->setText(std::to_string(score) + "/100");
+
+        // Color code based on score
+        std::string colorClass = "market-score-container";
+        if (score >= 70) {
+            colorClass += " score-high";
+        } else if (score >= 40) {
+            colorClass += " score-medium";
+        } else {
+            colorClass += " score-low";
+        }
+        marketScoreContainer_->setStyleClass(colorClass);
     }
 }
 

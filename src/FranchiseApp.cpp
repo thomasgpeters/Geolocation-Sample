@@ -323,6 +323,7 @@ void FranchiseApp::showSetupPage() {
     workArea_->clear();
     navigation_->setPageTitle("Store Setup");
     navigation_->setBreadcrumbs({"Home", "Setup"});
+    navigation_->setMarketScore(-1);  // Hide market score on non-demographics pages
 
     auto container = workArea_->addWidget(std::make_unique<Wt::WContainerWidget>());
     container->setStyleClass("page-container setup-page");
@@ -542,6 +543,7 @@ void FranchiseApp::showDashboardPage() {
     workArea_->clear();
     navigation_->setPageTitle("Dashboard");
     navigation_->setBreadcrumbs({"Home", "Dashboard"});
+    navigation_->setMarketScore(-1);
 
     auto container = workArea_->addWidget(std::make_unique<Wt::WContainerWidget>());
     container->setStyleClass("page-container dashboard-page");
@@ -617,6 +619,7 @@ void FranchiseApp::showAISearchPage() {
     workArea_->clear();
     navigation_->setPageTitle("AI Search");
     navigation_->setBreadcrumbs({"Home", "AI Search"});
+    navigation_->setMarketScore(-1);
 
     auto container = workArea_->addWidget(std::make_unique<Wt::WContainerWidget>());
     container->setStyleClass("page-container search-page");
@@ -700,6 +703,7 @@ void FranchiseApp::showProspectsPage() {
     workArea_->clear();
     navigation_->setPageTitle("My Prospects");
     navigation_->setBreadcrumbs({"Home", "Prospects"});
+    navigation_->setMarketScore(-1);
 
     auto container = workArea_->addWidget(std::make_unique<Wt::WContainerWidget>());
     container->setStyleClass("page-container prospects-page");
@@ -735,18 +739,6 @@ void FranchiseApp::showDemographicsPage() {
 
     auto container = workArea_->addWidget(std::make_unique<Wt::WContainerWidget>());
     container->setStyleClass("page-container demographics-page");
-
-    // Header
-    auto header = container->addWidget(std::make_unique<Wt::WContainerWidget>());
-    header->setStyleClass("page-header");
-
-    auto title = header->addWidget(std::make_unique<Wt::WText>("Demographics Analysis"));
-    title->setStyleClass("page-title");
-
-    auto subtitle = header->addWidget(std::make_unique<Wt::WText>(
-        "View your search area on the map with business statistics below."
-    ));
-    subtitle->setStyleClass("page-subtitle");
 
     // Search section
     auto searchSection = container->addWidget(std::make_unique<Wt::WContainerWidget>());
@@ -797,11 +789,18 @@ void FranchiseApp::showDemographicsPage() {
     auto& osmAPI = searchService_->getOSMAPI();
     auto stats = osmAPI.getAreaStatisticsSync(initialSearchArea);
 
+    // Set market score in navigation header
+    navigation_->setMarketScore(stats.marketPotentialScore);
+
     // Store for updates
     auto currentSearchAreaPtr = std::make_shared<Models::SearchArea>(initialSearchArea);
 
-    // Map section - OpenStreetMap view using HTML5 DIV and Leaflet.js
-    auto mapContainer = container->addWidget(std::make_unique<Wt::WContainerWidget>());
+    // Map with sidebar layout
+    auto mapWithSidebar = container->addWidget(std::make_unique<Wt::WContainerWidget>());
+    mapWithSidebar->setStyleClass("map-with-sidebar");
+
+    // Map container (left side)
+    auto mapContainer = mapWithSidebar->addWidget(std::make_unique<Wt::WContainerWidget>());
     mapContainer->setStyleClass("map-container");
 
     // Create map div with unique ID
@@ -861,66 +860,18 @@ void FranchiseApp::showDemographicsPage() {
 
     doJavaScript(initMapJs.str());
 
-    // Two-column layout: Stats on left, Categories on right
-    auto columnsContainer = container->addWidget(std::make_unique<Wt::WContainerWidget>());
-    columnsContainer->setStyleClass("demographics-columns");
+    // Category Breakdown sidebar (right side of map)
+    auto mapSidebar = mapWithSidebar->addWidget(std::make_unique<Wt::WContainerWidget>());
+    mapSidebar->setStyleClass("map-sidebar");
 
-    // Left column - Market Score and Summary
-    auto leftColumn = columnsContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
-    leftColumn->setStyleClass("stats-column");
+    auto sidebarHeader = mapSidebar->addWidget(std::make_unique<Wt::WContainerWidget>());
+    sidebarHeader->setStyleClass("map-sidebar-header");
 
-    // Market Score Card
-    auto scoreCard = leftColumn->addWidget(std::make_unique<Wt::WContainerWidget>());
-    scoreCard->setStyleClass("stat-card highlight-card");
-
-    auto scoreTitle = scoreCard->addWidget(std::make_unique<Wt::WText>("Market Potential Score"));
-    scoreTitle->setStyleClass("stat-title");
-
-    auto scoreValue = scoreCard->addWidget(std::make_unique<Wt::WText>(
-        std::to_string(stats.marketPotentialScore) + "/100"
-    ));
-    scoreValue->setStyleClass("stat-value large");
-
-    // Summary Stats Card
-    auto summaryCard = leftColumn->addWidget(std::make_unique<Wt::WContainerWidget>());
-    summaryCard->setStyleClass("stat-card");
-
-    auto summaryTitle = summaryCard->addWidget(std::make_unique<Wt::WText>("Area Summary"));
-    summaryTitle->setStyleClass("stat-title");
-
-    auto totalPoisText = summaryCard->addWidget(std::make_unique<Wt::WText>(
-        "Total Points of Interest: " + std::to_string(stats.totalPois)
-    ));
-    totalPoisText->setStyleClass("stat-line");
-
-    std::ostringstream densityStr;
-    densityStr << std::fixed << std::setprecision(1) << stats.businessDensityPerSqKm;
-    auto densityText = summaryCard->addWidget(std::make_unique<Wt::WText>(
-        "Business Density: " + densityStr.str() + " per km²"
-    ));
-    densityText->setStyleClass("stat-line");
-
-    auto locationText = summaryCard->addWidget(std::make_unique<Wt::WText>(
-        "Location: " + defaultLocation
-    ));
-    locationText->setStyleClass("stat-line");
-
-    std::ostringstream radiusStr;
-    radiusStr << std::fixed << std::setprecision(1) << defaultRadiusKm;
-    auto radiusText = summaryCard->addWidget(std::make_unique<Wt::WText>(
-        "Search Radius: " + radiusStr.str() + " km"
-    ));
-    radiusText->setStyleClass("stat-line");
-
-    // Right column - Category Breakdown
-    auto rightColumn = columnsContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
-    rightColumn->setStyleClass("categories-column");
-
-    auto categoriesCard = rightColumn->addWidget(std::make_unique<Wt::WContainerWidget>());
-    categoriesCard->setStyleClass("stat-card");
-
-    auto categoriesTitle = categoriesCard->addWidget(std::make_unique<Wt::WText>("Category Breakdown"));
+    auto categoriesTitle = sidebarHeader->addWidget(std::make_unique<Wt::WText>("Category Breakdown"));
     categoriesTitle->setStyleClass("stat-title");
+
+    auto sidebarContent = mapSidebar->addWidget(std::make_unique<Wt::WContainerWidget>());
+    sidebarContent->setStyleClass("map-sidebar-content");
 
     // Category list
     std::vector<std::pair<std::string, int>> categories = {
@@ -938,7 +889,7 @@ void FranchiseApp::showDemographicsPage() {
         {"Government", stats.governmentBuildings}
     };
 
-    auto categoryList = categoriesCard->addWidget(std::make_unique<Wt::WContainerWidget>());
+    auto categoryList = sidebarContent->addWidget(std::make_unique<Wt::WContainerWidget>());
     categoryList->setStyleClass("category-list");
 
     // Store text widgets for updates
@@ -957,15 +908,49 @@ void FranchiseApp::showDemographicsPage() {
         categoryTexts->push_back({name, countText});
     }
 
-    // Attribution
-    auto attribution = rightColumn->addWidget(std::make_unique<Wt::WText>(
-        "Data source: OpenStreetMap"
+    // Attribution at bottom of sidebar
+    auto attribution = sidebarContent->addWidget(std::make_unique<Wt::WText>(
+        "Data: OpenStreetMap"
     ));
     attribution->setStyleClass("attribution-small");
 
+    // Area Summary section below the map
+    auto summaryCard = container->addWidget(std::make_unique<Wt::WContainerWidget>());
+    summaryCard->setStyleClass("stat-card");
+
+    auto summaryTitle = summaryCard->addWidget(std::make_unique<Wt::WText>("Area Summary"));
+    summaryTitle->setStyleClass("stat-title");
+
+    auto summaryGrid = summaryCard->addWidget(std::make_unique<Wt::WContainerWidget>());
+    summaryGrid->setStyleClass("summary-grid");
+
+    auto totalPoisText = summaryGrid->addWidget(std::make_unique<Wt::WText>(
+        "Total Points of Interest: " + std::to_string(stats.totalPois)
+    ));
+    totalPoisText->setStyleClass("stat-line");
+
+    std::ostringstream densityStr;
+    densityStr << std::fixed << std::setprecision(1) << stats.businessDensityPerSqKm;
+    auto densityText = summaryGrid->addWidget(std::make_unique<Wt::WText>(
+        "Business Density: " + densityStr.str() + " per km²"
+    ));
+    densityText->setStyleClass("stat-line");
+
+    auto locationText = summaryGrid->addWidget(std::make_unique<Wt::WText>(
+        "Location: " + defaultLocation
+    ));
+    locationText->setStyleClass("stat-line");
+
+    std::ostringstream radiusStr;
+    radiusStr << std::fixed << std::setprecision(1) << defaultRadiusKm;
+    auto radiusText = summaryGrid->addWidget(std::make_unique<Wt::WText>(
+        "Search Radius: " + radiusStr.str() + " km"
+    ));
+    radiusText->setStyleClass("stat-line");
+
     // Connect analyze button
     analyzeBtn->clicked().connect([this, locationInput, radiusInput, currentSearchAreaPtr,
-                                   scoreValue, totalPoisText, densityText, locationText,
+                                   totalPoisText, densityText, locationText,
                                    radiusText, categoryTexts]() {
         std::string location = locationInput->text().toUTF8();
         double radiusKm = 10.0;
@@ -1000,8 +985,8 @@ void FranchiseApp::showDemographicsPage() {
         auto& osmAPI = searchService_->getOSMAPI();
         auto newStats = osmAPI.getAreaStatisticsSync(searchArea);
 
-        // Update score
-        scoreValue->setText(std::to_string(newStats.marketPotentialScore) + "/100");
+        // Update market score in navigation header
+        navigation_->setMarketScore(newStats.marketPotentialScore);
 
         // Update summary
         totalPoisText->setText("Total Points of Interest: " + std::to_string(newStats.totalPois));
@@ -1044,6 +1029,7 @@ void FranchiseApp::showReportsPage() {
     workArea_->clear();
     navigation_->setPageTitle("Reports");
     navigation_->setBreadcrumbs({"Home", "Reports"});
+    navigation_->setMarketScore(-1);
 
     auto container = workArea_->addWidget(std::make_unique<Wt::WContainerWidget>());
     container->setStyleClass("page-container reports-page");
@@ -1070,6 +1056,7 @@ void FranchiseApp::showSettingsPage() {
     workArea_->clear();
     navigation_->setPageTitle("Settings");
     navigation_->setBreadcrumbs({"Home", "Settings"});
+    navigation_->setMarketScore(-1);
 
     auto container = workArea_->addWidget(std::make_unique<Wt::WContainerWidget>());
     container->setStyleClass("page-container settings-page");

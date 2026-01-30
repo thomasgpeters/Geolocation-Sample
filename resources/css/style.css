@@ -355,6 +355,59 @@ html, body {
     display: none;
 }
 
+/* Market Score Badge in Navigation */
+.market-score-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--bg-primary);
+    border-radius: var(--border-radius);
+    margin-right: 12px;
+}
+
+.market-score-container.hidden {
+    display: none;
+}
+
+.market-score-container.score-high {
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+}
+
+.market-score-container.score-medium {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+}
+
+.market-score-container.score-low {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+}
+
+.market-score-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+}
+
+.market-score-value {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.market-score-container.score-high .market-score-value {
+    color: #059669;
+}
+
+.market-score-container.score-medium .market-score-value {
+    color: #d97706;
+}
+
+.market-score-container.score-low .market-score-value {
+    color: #dc2626;
+}
+
 /* ==================== Work Area ==================== */
 .work-area {
     flex: 1;
@@ -1549,19 +1602,28 @@ html, body {
 }
 
 /* ==================== Demographics View ==================== */
-.map-container {
+.map-with-sidebar {
+    display: flex;
+    gap: 0;
     margin-bottom: 24px;
+    border-radius: var(--border-radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+}
+
+.map-container {
+    flex: 1;
     position: relative;
+    min-height: 500px;
 }
 
 .demographics-map {
     width: 100%;
-    height: 350px;
-    min-height: 350px;
+    height: 500px;
+    min-height: 500px;
     position: relative;
     z-index: 1;
-    border-radius: var(--border-radius-lg);
-    border: 1px solid var(--border-color);
     background: #f0f0f0;
 }
 
@@ -1569,17 +1631,43 @@ html, body {
 .demographics-map .leaflet-container {
     width: 100%;
     height: 100%;
-    border-radius: var(--border-radius-lg);
 }
 
 .demographics-map .leaflet-tile-pane {
-    border-radius: var(--border-radius-lg);
+    /* No border radius needed now */
+}
+
+.map-sidebar {
+    width: 280px;
+    min-width: 280px;
+    background: var(--bg-card);
+    border-left: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    max-height: 500px;
+}
+
+.map-sidebar-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-primary);
+}
+
+.map-sidebar-header .stat-title {
+    margin-bottom: 0;
+}
+
+.map-sidebar-content {
+    padding: 0;
+    flex: 1;
+    overflow-y: auto;
 }
 
 .demographics-columns {
     display: flex;
     gap: 24px;
-    min-height: 300px;
+    min-height: 200px;
 }
 
 .stats-column {
