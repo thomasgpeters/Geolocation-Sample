@@ -1018,12 +1018,13 @@ void FranchiseApp::showDemographicsPage() {
         int maxValue = std::min(count, 100);
         int defaultValue = std::min(10, maxValue);
 
-        auto limitSlider = sliderContainer->addWidget(std::make_unique<Wt::WSlider>());
+        auto limitSlider = sliderContainer->addWidget(std::make_unique<Wt::WSlider>(Wt::Orientation::Horizontal));
         limitSlider->setStyleClass("category-pill-slider");
+        limitSlider->setNativeControl(true);
         limitSlider->setMinimum(0);
         limitSlider->setMaximum(maxValue);
         limitSlider->setValue(defaultValue);
-        limitSlider->setTickInterval(0);
+        limitSlider->resize(Wt::WLength::Auto, 24);
 
         auto limitValueText = sliderContainer->addWidget(std::make_unique<Wt::WText>(std::to_string(defaultValue)));
         limitValueText->setStyleClass("category-pill-slider-value");
