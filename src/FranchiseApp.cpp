@@ -9,7 +9,6 @@
 #include <Wt/WBreak.h>
 #include <Wt/WComboBox.h>
 #include <Wt/WCheckBox.h>
-#include <Wt/WLeafletMap.h>
 #include <sstream>
 #include <iomanip>
 
@@ -801,31 +800,42 @@ void FranchiseApp::showDemographicsPage() {
     // Store for updates
     auto currentSearchAreaPtr = std::make_shared<Models::SearchArea>(initialSearchArea);
 
-    // Map section - OpenStreetMap view using WLeafletMap
+    // Map section - OpenStreetMap view using HTML5 DIV and Leaflet.js
     auto mapContainer = container->addWidget(std::make_unique<Wt::WContainerWidget>());
     mapContainer->setStyleClass("map-container");
 
-    // Create WLeafletMap
-    auto map = mapContainer->addWidget(std::make_unique<Wt::WLeafletMap>());
-    map->setStyleClass("demographics-map");
+    // Create map div with unique ID
+    auto mapDiv = mapContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
+    mapDiv->setStyleClass("demographics-map");
+    std::string mapId = mapDiv->id();
 
-    // Set initial position and zoom via JavaScript
-    Wt::WLeafletMap::Coordinate center(
-        initialSearchArea.center.latitude,
-        initialSearchArea.center.longitude
-    );
-    map->panTo(center);
+    // Load Leaflet CSS
+    useStyleSheet("css/leaflet.css");
 
-    // Set zoom level via doJavaScript (setZoom not available in Wt API)
-    map->doJavaScript(map->jsRef() + ".map.setView(["
-        + std::to_string(initialSearchArea.center.latitude) + ","
-        + std::to_string(initialSearchArea.center.longitude) + "], 13);");
+    // Store coordinates for JavaScript
+    double initLat = initialSearchArea.center.latitude;
+    double initLon = initialSearchArea.center.longitude;
 
-    // Add OpenStreetMap tile layer
-    map->addTileLayer(
-        "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-        {{"attribution", "&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors"}}
-    );
+    // Initialize Leaflet map via JavaScript after widget is rendered
+    std::ostringstream initMapJs;
+    initMapJs << "setTimeout(function() {"
+              << "  if (typeof L !== 'undefined') {"
+              << "    var mapEl = document.getElementById('" << mapId << "');"
+              << "    if (mapEl && !mapEl._leaflet_map) {"
+              << "      var map = L.map('" << mapId << "').setView([" << initLat << ", " << initLon << "], 13);"
+              << "      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {"
+              << "        maxZoom: 19,"
+              << "        attribution: '&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors'"
+              << "      }).addTo(map);"
+              << "      mapEl._leaflet_map = map;"
+              << "      window.demographicsMap = map;"
+              << "    }"
+              << "  }"
+              << "}, 100);";
+
+    // Require Leaflet script and initialize map
+    require("scripts/leaflet.js");
+    doJavaScript(initMapJs.str());
 
     // Two-column layout: Stats on left, Categories on right
     auto columnsContainer = container->addWidget(std::make_unique<Wt::WContainerWidget>());
@@ -932,7 +942,7 @@ void FranchiseApp::showDemographicsPage() {
     // Connect analyze button
     analyzeBtn->clicked().connect([this, locationInput, radiusInput, currentSearchAreaPtr,
                                    scoreValue, totalPoisText, densityText, locationText,
-                                   radiusText, categoryTexts, map]() {
+                                   radiusText, categoryTexts]() {
         std::string location = locationInput->text().toUTF8();
         double radiusKm = 10.0;
         try {
@@ -955,9 +965,12 @@ void FranchiseApp::showDemographicsPage() {
         hasActiveSearch_ = true;
         *currentSearchAreaPtr = searchArea;
 
-        // Update map to new location
-        Wt::WLeafletMap::Coordinate newCenter(geoLocation.latitude, geoLocation.longitude);
-        map->panTo(newCenter);
+        // Update map to new location via JavaScript
+        std::ostringstream panMapJs;
+        panMapJs << "if (window.demographicsMap) {"
+                 << "  window.demographicsMap.setView([" << geoLocation.latitude << ", " << geoLocation.longitude << "], 13);"
+                 << "}";
+        doJavaScript(panMapJs.str());
 
         // Get new stats
         auto& osmAPI = searchService_->getOSMAPI();
