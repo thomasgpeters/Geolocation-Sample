@@ -809,33 +809,49 @@ void FranchiseApp::showDemographicsPage() {
     mapDiv->setStyleClass("demographics-map");
     std::string mapId = mapDiv->id();
 
-    // Load Leaflet CSS
-    useStyleSheet("css/leaflet.css");
-
     // Store coordinates for JavaScript
     double initLat = initialSearchArea.center.latitude;
     double initLon = initialSearchArea.center.longitude;
 
-    // Initialize Leaflet map via JavaScript after widget is rendered
+    // Initialize Leaflet map via JavaScript - load CSS dynamically first
     std::ostringstream initMapJs;
-    initMapJs << "function initDemographicsMap() {"
-              << "  var mapEl = document.getElementById('" << mapId << "');"
-              << "  if (!mapEl) { setTimeout(initDemographicsMap, 100); return; }"
-              << "  if (mapEl._leaflet_map) return;"
-              << "  if (typeof L === 'undefined') { setTimeout(initDemographicsMap, 100); return; }"
-              << "  var map = L.map('" << mapId << "', {"
-              << "    center: [" << initLat << ", " << initLon << "],"
-              << "    zoom: 13"
-              << "  });"
-              << "  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {"
-              << "    maxZoom: 19,"
-              << "    attribution: '&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors'"
-              << "  }).addTo(map);"
-              << "  mapEl._leaflet_map = map;"
-              << "  window.demographicsMap = map;"
-              << "  setTimeout(function() { map.invalidateSize(); }, 200);"
-              << "}"
-              << "setTimeout(initDemographicsMap, 150);";
+    initMapJs << "(function() {"
+              // First, ensure Leaflet CSS is loaded
+              << "  if (!document.getElementById('leaflet-css')) {"
+              << "    var link = document.createElement('link');"
+              << "    link.id = 'leaflet-css';"
+              << "    link.rel = 'stylesheet';"
+              << "    link.href = 'css/leaflet.css';"
+              << "    document.head.appendChild(link);"
+              << "  }"
+              // Define init function
+              << "  function initDemographicsMap() {"
+              << "    var mapEl = document.getElementById('" << mapId << "');"
+              << "    if (!mapEl) { setTimeout(initDemographicsMap, 100); return; }"
+              << "    if (mapEl._leaflet_map) return;"
+              << "    if (typeof L === 'undefined') { setTimeout(initDemographicsMap, 100); return; }"
+              // Check if CSS is loaded by testing a Leaflet class
+              << "    var testDiv = document.createElement('div');"
+              << "    testDiv.className = 'leaflet-container';"
+              << "    document.body.appendChild(testDiv);"
+              << "    var style = window.getComputedStyle(testDiv);"
+              << "    document.body.removeChild(testDiv);"
+              << "    if (style.position !== 'relative') { setTimeout(initDemographicsMap, 100); return; }"
+              // Create the map
+              << "    var map = L.map('" << mapId << "', {"
+              << "      center: [" << initLat << ", " << initLon << "],"
+              << "      zoom: 13"
+              << "    });"
+              << "    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {"
+              << "      maxZoom: 19,"
+              << "      attribution: '&copy; OpenStreetMap contributors'"
+              << "    }).addTo(map);"
+              << "    mapEl._leaflet_map = map;"
+              << "    window.demographicsMap = map;"
+              << "    setTimeout(function() { map.invalidateSize(); }, 300);"
+              << "  }"
+              << "  setTimeout(initDemographicsMap, 200);"
+              << "})();";
 
     // Require Leaflet script and initialize map
     require("scripts/leaflet.js");
