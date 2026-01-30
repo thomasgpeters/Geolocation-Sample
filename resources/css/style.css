@@ -1549,10 +1549,21 @@ html, body {
 }
 
 /* ==================== Demographics View ==================== */
+.map-container {
+    margin-bottom: 24px;
+}
+
+.demographics-map {
+    width: 100%;
+    height: 350px;
+    border-radius: var(--border-radius-lg);
+    border: 1px solid var(--border-color);
+}
+
 .demographics-columns {
     display: flex;
     gap: 24px;
-    min-height: 400px;
+    min-height: 300px;
 }
 
 .stats-column {

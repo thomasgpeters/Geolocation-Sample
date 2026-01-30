@@ -9,6 +9,10 @@
 #include <Wt/WBreak.h>
 #include <Wt/WComboBox.h>
 #include <Wt/WCheckBox.h>
+#include <Wt/WLeafletMap.h>
+#include <Wt/Json/Object.h>
+#include <Wt/Json/Array.h>
+#include <Wt/Json/Value.h>
 #include <sstream>
 #include <iomanip>
 
@@ -744,7 +748,7 @@ void FranchiseApp::showDemographicsPage() {
     title->setStyleClass("page-title");
 
     auto subtitle = header->addWidget(std::make_unique<Wt::WText>(
-        "View business statistics and category breakdown for your search area."
+        "View your search area on the map with business statistics below."
     ));
     subtitle->setStyleClass("page-subtitle");
 
@@ -799,6 +803,29 @@ void FranchiseApp::showDemographicsPage() {
 
     // Store for updates
     auto currentSearchAreaPtr = std::make_shared<Models::SearchArea>(initialSearchArea);
+
+    // Map section - OpenStreetMap view
+    auto mapContainer = container->addWidget(std::make_unique<Wt::WContainerWidget>());
+    mapContainer->setStyleClass("map-container");
+
+    // Create Leaflet map with options
+    Wt::Json::Object mapOptions;
+    mapOptions["center"] = Wt::Json::Array({
+        Wt::Json::Value(initialSearchArea.center.latitude),
+        Wt::Json::Value(initialSearchArea.center.longitude)
+    });
+    mapOptions["zoom"] = Wt::Json::Value(12);
+
+    auto map = mapContainer->addWidget(std::make_unique<Wt::WLeafletMap>(mapOptions));
+    map->setStyleClass("demographics-map");
+
+    // Add OpenStreetMap tile layer
+    Wt::Json::Object tileOptions;
+    tileOptions["attribution"] = Wt::Json::Value("&copy; OpenStreetMap contributors");
+    map->addTileLayer(
+        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        tileOptions
+    );
 
     // Two-column layout: Stats on left, Categories on right
     auto columnsContainer = container->addWidget(std::make_unique<Wt::WContainerWidget>());
@@ -905,7 +932,7 @@ void FranchiseApp::showDemographicsPage() {
     // Connect analyze button
     analyzeBtn->clicked().connect([this, locationInput, radiusInput, currentSearchAreaPtr,
                                    scoreValue, totalPoisText, densityText, locationText,
-                                   radiusText, categoryTexts]() {
+                                   radiusText, categoryTexts, map]() {
         std::string location = locationInput->text().toUTF8();
         double radiusKm = 10.0;
         try {
@@ -927,6 +954,10 @@ void FranchiseApp::showDemographicsPage() {
         currentSearchArea_ = searchArea;
         hasActiveSearch_ = true;
         *currentSearchAreaPtr = searchArea;
+
+        // Update map center
+        Wt::WLeafletMap::Coordinate newCenter(geoLocation.latitude, geoLocation.longitude);
+        map->panTo(newCenter);
 
         // Get new stats
         auto& osmAPI = searchService_->getOSMAPI();
