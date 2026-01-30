@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<server>
+    <application-settings location="*">
+        <!-- Leaflet Map Configuration -->
+        <properties>
+            <!-- Use unpkg CDN for Leaflet -->
+            <property name="leafletJSURL">https://unpkg.com/leaflet@1.9.4/dist/leaflet.js</property>
+            <property name="leafletCSSURL">https://unpkg.com/leaflet@1.9.4/dist/leaflet.css</property>
+        </properties>
+    </application-settings>
+</server>
