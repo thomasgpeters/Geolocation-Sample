@@ -10,9 +10,6 @@
 #include <Wt/WComboBox.h>
 #include <Wt/WCheckBox.h>
 #include <Wt/WLeafletMap.h>
-#include <Wt/Json/Object.h>
-#include <Wt/Json/Array.h>
-#include <Wt/Json/Value.h>
 #include <sstream>
 #include <iomanip>
 
@@ -804,27 +801,26 @@ void FranchiseApp::showDemographicsPage() {
     // Store for updates
     auto currentSearchAreaPtr = std::make_shared<Models::SearchArea>(initialSearchArea);
 
-    // Map section - OpenStreetMap view
+    // Map section - OpenStreetMap view using WLeafletMap
     auto mapContainer = container->addWidget(std::make_unique<Wt::WContainerWidget>());
     mapContainer->setStyleClass("map-container");
 
-    // Create Leaflet map with options
-    Wt::Json::Object mapOptions;
-    mapOptions["center"] = Wt::Json::Array({
-        Wt::Json::Value(initialSearchArea.center.latitude),
-        Wt::Json::Value(initialSearchArea.center.longitude)
-    });
-    mapOptions["zoom"] = Wt::Json::Value(12);
-
-    auto map = mapContainer->addWidget(std::make_unique<Wt::WLeafletMap>(mapOptions));
+    // Create WLeafletMap
+    auto map = mapContainer->addWidget(std::make_unique<Wt::WLeafletMap>());
     map->setStyleClass("demographics-map");
 
+    // Set initial position
+    Wt::WLeafletMap::Coordinate center(
+        initialSearchArea.center.latitude,
+        initialSearchArea.center.longitude
+    );
+    map->panTo(center);
+    map->setZoom(13);
+
     // Add OpenStreetMap tile layer
-    Wt::Json::Object tileOptions;
-    tileOptions["attribution"] = Wt::Json::Value("&copy; OpenStreetMap contributors");
     map->addTileLayer(
-        "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-        tileOptions
+        "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+        {{"attribution", "&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors"}}
     );
 
     // Two-column layout: Stats on left, Categories on right
@@ -955,7 +951,7 @@ void FranchiseApp::showDemographicsPage() {
         hasActiveSearch_ = true;
         *currentSearchAreaPtr = searchArea;
 
-        // Update map center
+        // Update map to new location
         Wt::WLeafletMap::Coordinate newCenter(geoLocation.latitude, geoLocation.longitude);
         map->panTo(newCenter);
 
