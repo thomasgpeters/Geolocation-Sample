@@ -1551,13 +1551,29 @@ html, body {
 /* ==================== Demographics View ==================== */
 .map-container {
     margin-bottom: 24px;
+    position: relative;
 }
 
 .demographics-map {
     width: 100%;
     height: 350px;
+    min-height: 350px;
+    position: relative;
+    z-index: 1;
     border-radius: var(--border-radius-lg);
     border: 1px solid var(--border-color);
+    background: #f0f0f0;
+}
+
+/* Ensure Leaflet tiles render correctly */
+.demographics-map .leaflet-container {
+    width: 100%;
+    height: 100%;
+    border-radius: var(--border-radius-lg);
+}
+
+.demographics-map .leaflet-tile-pane {
+    border-radius: var(--border-radius-lg);
 }
 
 .demographics-columns {
