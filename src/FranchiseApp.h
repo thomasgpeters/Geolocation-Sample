@@ -10,6 +10,7 @@
 #include "widgets/ResultsDisplay.h"
 #include "services/AISearchService.h"
 #include "models/Franchisee.h"
+#include "models/GeoLocation.h"
 
 namespace FranchiseAI {
 
@@ -33,6 +34,16 @@ public:
      * @brief Check if franchisee is configured
      */
     bool isFranchiseeConfigured() const { return franchisee_.isConfigured; }
+
+    /**
+     * @brief Get the current search area (shared between pages)
+     */
+    const Models::SearchArea& getCurrentSearchArea() const { return currentSearchArea_; }
+
+    /**
+     * @brief Check if a search has been performed
+     */
+    bool hasActiveSearch() const { return hasActiveSearch_; }
 
 private:
     void setupUI();
@@ -87,6 +98,11 @@ private:
     // Current state
     std::string currentPage_ = "ai-search";
     Models::SearchResults lastResults_;
+
+    // Shared search context (synced between AI Search and Demographics)
+    Models::SearchArea currentSearchArea_;
+    std::string currentSearchLocation_;
+    bool hasActiveSearch_ = false;
 };
 
 /**

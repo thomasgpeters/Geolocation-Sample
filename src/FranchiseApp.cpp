@@ -165,6 +165,18 @@ void FranchiseApp::onQuickSearch(const std::string& query) {
 void FranchiseApp::onSearchRequested(const Models::SearchQuery& query) {
     if (!searchService_) return;
 
+    // Store the search context for syncing with Demographics page
+    currentSearchLocation_ = query.location;
+    if (query.latitude != 0 && query.longitude != 0) {
+        Models::GeoLocation location(query.latitude, query.longitude);
+        location.formattedAddress = query.location;
+        currentSearchArea_ = Models::SearchArea::fromMiles(location, query.radiusMiles);
+    } else if (!query.location.empty()) {
+        Models::GeoLocation location = searchService_->geocodeAddress(query.location);
+        currentSearchArea_ = Models::SearchArea::fromMiles(location, query.radiusMiles);
+    }
+    hasActiveSearch_ = true;
+
     // Show loading state
     if (resultsDisplay_) {
         resultsDisplay_->showLoading();
@@ -633,9 +645,23 @@ void FranchiseApp::showAISearchPage() {
     searchPanel_->searchRequested().connect(this, &FranchiseApp::onSearchRequested);
     searchPanel_->searchCancelled().connect(this, &FranchiseApp::onSearchCancelled);
 
-    // Pre-populate search panel with franchisee's location and criteria
-    if (franchisee_.isConfigured && franchisee_.hasValidLocation()) {
-        Models::SearchQuery defaultQuery;
+    // Pre-populate search panel with current search state or franchisee's location
+    Models::SearchQuery defaultQuery;
+    if (hasActiveSearch_ && !currentSearchLocation_.empty()) {
+        // Use the current search state (synced from Demographics or previous search)
+        defaultQuery.location = currentSearchLocation_;
+        defaultQuery.latitude = currentSearchArea_.center.latitude;
+        defaultQuery.longitude = currentSearchArea_.center.longitude;
+        defaultQuery.radiusMiles = currentSearchArea_.radiusMiles;
+        if (franchisee_.isConfigured) {
+            defaultQuery.businessTypes = franchisee_.searchCriteria.businessTypes;
+            defaultQuery.minEmployees = franchisee_.searchCriteria.minEmployees;
+            defaultQuery.maxEmployees = franchisee_.searchCriteria.maxEmployees;
+        }
+        defaultQuery.includeOpenStreetMap = true;
+        searchPanel_->setSearchQuery(defaultQuery);
+    } else if (franchisee_.isConfigured && franchisee_.hasValidLocation()) {
+        // Use franchisee location as default
         defaultQuery.location = franchisee_.address;
         defaultQuery.latitude = franchisee_.location.latitude;
         defaultQuery.longitude = franchisee_.location.longitude;
@@ -721,9 +747,22 @@ void FranchiseApp::showDemographicsPage() {
     auto locationInput = searchRow->addWidget(std::make_unique<Wt::WLineEdit>());
     locationInput->setPlaceholderText("e.g., Denver, CO or New York, NY");
     locationInput->setStyleClass("form-control");
-    locationInput->setText("Denver, CO");
 
-    auto radiusInput = searchRow->addWidget(std::make_unique<Wt::WLineEdit>("10"));
+    // Pre-fill with current search location or franchisee location
+    std::string defaultLocation = "Denver, CO";
+    double defaultRadiusKm = 10.0;
+    if (hasActiveSearch_ && !currentSearchLocation_.empty()) {
+        defaultLocation = currentSearchLocation_;
+        defaultRadiusKm = currentSearchArea_.radiusKm;
+    } else if (franchisee_.isConfigured && !franchisee_.address.empty()) {
+        defaultLocation = franchisee_.address;
+        defaultRadiusKm = franchisee_.searchCriteria.radiusMiles * 1.60934;  // Convert to km
+    }
+    locationInput->setText(defaultLocation);
+
+    auto radiusInput = searchRow->addWidget(std::make_unique<Wt::WLineEdit>(
+        std::to_string(static_cast<int>(defaultRadiusKm))
+    ));
     radiusInput->setStyleClass("form-control");
 
     auto analyzeBtn = searchRow->addWidget(std::make_unique<Wt::WPushButton>("Analyze Area (km radius)"));
@@ -945,12 +984,25 @@ void FranchiseApp::showDemographicsPage() {
         attribution->setStyleClass("section-description");
     };
 
-    // Display default Denver stats using SearchArea
-    Models::GeoLocation defaultLocation(39.7392, -104.9903, "Denver", "CO");
-    Models::SearchArea defaultSearchArea(defaultLocation, 10.0);  // 10km radius
+    // Display stats using current search area or default
+    Models::SearchArea initialSearchArea;
+    if (hasActiveSearch_ && currentSearchArea_.center.hasValidCoordinates()) {
+        // Use the search area from AI Search
+        initialSearchArea = currentSearchArea_;
+    } else if (franchisee_.isConfigured && franchisee_.hasValidLocation()) {
+        // Use franchisee location
+        initialSearchArea = Models::SearchArea::fromMiles(
+            franchisee_.location,
+            franchisee_.searchCriteria.radiusMiles
+        );
+    } else {
+        // Fall back to Denver
+        Models::GeoLocation denverLocation(39.7392, -104.9903, "Denver", "CO");
+        initialSearchArea = Models::SearchArea(denverLocation, 10.0);
+    }
     auto& osmAPI = searchService_->getOSMAPI();
-    auto defaultStats = osmAPI.getAreaStatisticsSync(defaultSearchArea);
-    displayStatsFunc(resultsContainer, defaultStats, defaultSearchArea);
+    auto initialStats = osmAPI.getAreaStatisticsSync(initialSearchArea);
+    displayStatsFunc(resultsContainer, initialStats, initialSearchArea);
 
     // Connect analyze button
     analyzeBtn->clicked().connect([this, locationInput, radiusInput, resultsContainer, drillDownContainer, displayStatsFunc]() {
@@ -974,6 +1026,11 @@ void FranchiseApp::showDemographicsPage() {
 
         // Create SearchArea with the geocoded location
         Models::SearchArea searchArea(geoLocation, radiusKm);
+
+        // Update shared search state (syncs with AI Search page)
+        currentSearchLocation_ = location;
+        currentSearchArea_ = searchArea;
+        hasActiveSearch_ = true;
 
         // Get area statistics using SearchArea-based API
         auto& osmAPI = searchService_->getOSMAPI();
