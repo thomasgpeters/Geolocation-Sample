@@ -868,16 +868,16 @@ void FranchiseApp::showDemographicsPage() {
             auto card = statsGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
             card->setStyleClass("stat-card clickable");
 
-            // Make the value a clickable button
-            auto valueBtn = card->addWidget(std::make_unique<Wt::WPushButton>(std::to_string(count)));
-            valueBtn->setStyleClass("stat-value-btn");
+            // Make the value a clickable text link (same size as original)
+            auto valueText = card->addWidget(std::make_unique<Wt::WText>(std::to_string(count)));
+            valueText->setStyleClass("stat-value stat-link");
 
             // Copy to local variables for lambda capture (structured bindings can't be captured directly)
             std::string categoryLabel = label;
             int categoryCount = count;
 
             // Connect click handler for drill-down
-            valueBtn->clicked().connect([showDrillDownFunc, categoryLabel, categoryCount]() {
+            valueText->clicked().connect([showDrillDownFunc, categoryLabel, categoryCount]() {
                 showDrillDownFunc(categoryLabel, categoryCount);
             });
 

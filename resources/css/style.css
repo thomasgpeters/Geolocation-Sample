@@ -1303,23 +1303,18 @@ html, body {
     box-shadow: var(--shadow-md);
 }
 
-.stat-value-btn {
-    font-size: 32px;
-    font-weight: 700;
+/* Clickable stat value styled as a link */
+.stat-value.stat-link {
     color: var(--primary-color);
-    background: none;
-    border: none;
     cursor: pointer;
-    display: block;
-    width: 100%;
-    padding: 4px 8px;
-    border-radius: var(--border-radius-sm);
-    transition: background-color var(--transition-fast), color var(--transition-fast);
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    transition: text-decoration-color var(--transition-fast), color var(--transition-fast);
 }
 
-.stat-value-btn:hover {
-    background-color: var(--primary-light);
+.stat-value.stat-link:hover {
     color: var(--primary-hover);
+    text-decoration-color: var(--primary-hover);
 }
 
 .drilldown-container {
