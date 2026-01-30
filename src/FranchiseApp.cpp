@@ -813,16 +813,30 @@ void FranchiseApp::showDemographicsPage() {
     double initLat = initialSearchArea.center.latitude;
     double initLon = initialSearchArea.center.longitude;
 
-    // Initialize Leaflet map via JavaScript - load CSS dynamically first
+    // Initialize Leaflet map via JavaScript - load from CDN
     std::ostringstream initMapJs;
     initMapJs << "(function() {"
-              // First, ensure Leaflet CSS is loaded
+              // Load Leaflet CSS from CDN
               << "  if (!document.getElementById('leaflet-css')) {"
               << "    var link = document.createElement('link');"
               << "    link.id = 'leaflet-css';"
               << "    link.rel = 'stylesheet';"
-              << "    link.href = 'css/leaflet.css';"
+              << "    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';"
+              << "    link.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';"
+              << "    link.crossOrigin = '';"
               << "    document.head.appendChild(link);"
+              << "  }"
+              // Load Leaflet JS from CDN
+              << "  function loadLeafletJS(callback) {"
+              << "    if (typeof L !== 'undefined') { callback(); return; }"
+              << "    if (document.getElementById('leaflet-js')) { setTimeout(function() { loadLeafletJS(callback); }, 100); return; }"
+              << "    var script = document.createElement('script');"
+              << "    script.id = 'leaflet-js';"
+              << "    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';"
+              << "    script.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';"
+              << "    script.crossOrigin = '';"
+              << "    script.onload = callback;"
+              << "    document.head.appendChild(script);"
               << "  }"
               // Define init function
               << "  function initDemographicsMap() {"
@@ -830,31 +844,21 @@ void FranchiseApp::showDemographicsPage() {
               << "    if (!mapEl) { setTimeout(initDemographicsMap, 100); return; }"
               << "    if (mapEl._leaflet_map) return;"
               << "    if (typeof L === 'undefined') { setTimeout(initDemographicsMap, 100); return; }"
-              // Check if CSS is loaded by testing a Leaflet class
-              << "    var testDiv = document.createElement('div');"
-              << "    testDiv.className = 'leaflet-container';"
-              << "    document.body.appendChild(testDiv);"
-              << "    var style = window.getComputedStyle(testDiv);"
-              << "    document.body.removeChild(testDiv);"
-              << "    if (style.position !== 'relative') { setTimeout(initDemographicsMap, 100); return; }"
               // Create the map
-              << "    var map = L.map('" << mapId << "', {"
-              << "      center: [" << initLat << ", " << initLon << "],"
-              << "      zoom: 13"
-              << "    });"
-              << "    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {"
-              << "      maxZoom: 19,"
-              << "      attribution: '&copy; OpenStreetMap contributors'"
-              << "    }).addTo(map);"
-              << "    mapEl._leaflet_map = map;"
-              << "    window.demographicsMap = map;"
-              << "    setTimeout(function() { map.invalidateSize(); }, 300);"
+              << "    try {"
+              << "      var map = L.map('" << mapId << "').setView([" << initLat << ", " << initLon << "], 13);"
+              << "      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {"
+              << "        maxZoom: 19,"
+              << "        attribution: '&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors'"
+              << "      }).addTo(map);"
+              << "      mapEl._leaflet_map = map;"
+              << "      window.demographicsMap = map;"
+              << "      setTimeout(function() { map.invalidateSize(); }, 300);"
+              << "    } catch(e) { console.error('Map init error:', e); }"
               << "  }"
-              << "  setTimeout(initDemographicsMap, 200);"
+              << "  loadLeafletJS(function() { setTimeout(initDemographicsMap, 100); });"
               << "})();";
 
-    // Require Leaflet script and initialize map
-    require("scripts/leaflet.js");
     doJavaScript(initMapJs.str());
 
     // Two-column layout: Stats on left, Categories on right
