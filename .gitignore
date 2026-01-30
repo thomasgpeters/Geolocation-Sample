@@ -26,3 +26,7 @@ Makefile
 # OS files
 .DS_Store
 Thumbs.db
+
+# Wt framework symlinks (created by scripts/setup-resources.sh)
+resources/themes
+resources/webkit-transitions.css
