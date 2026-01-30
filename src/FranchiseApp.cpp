@@ -1028,10 +1028,10 @@ void FranchiseApp::showDemographicsPage() {
         activePills->push_back(pillData);
 
         updateEmptyState();
-        (*refreshMarkers)();
+        // Note: POI markers are refreshed when user clicks "Analyze Area"
 
         // Handle POI limit change
-        limitSelect->changed().connect([activePills, apiName, limitSelect, refreshMarkers]() {
+        limitSelect->changed().connect([activePills, apiName, limitSelect]() {
             int limits[] = {5, 10, 25, 50, 100};
             int newLimit = limits[limitSelect->currentIndex()];
             for (auto& pill : *activePills) {
@@ -1040,11 +1040,11 @@ void FranchiseApp::showDemographicsPage() {
                     break;
                 }
             }
-            (*refreshMarkers)();
+            // Note: POI markers are refreshed when user clicks "Analyze Area"
         });
 
         // Handle remove
-        removeBtn->clicked().connect([this, activePills, pillCard, apiName, refreshMarkers, updateEmptyState]() {
+        removeBtn->clicked().connect([activePills, pillCard, apiName, updateEmptyState]() {
             // Remove from active pills
             activePills->erase(
                 std::remove_if(activePills->begin(), activePills->end(),
@@ -1054,7 +1054,7 @@ void FranchiseApp::showDemographicsPage() {
             // Remove widget
             pillCard->removeFromParent();
             updateEmptyState();
-            (*refreshMarkers)();
+            // Note: POI markers are refreshed when user clicks "Analyze Area"
         });
     };
 
@@ -1231,19 +1231,30 @@ void FranchiseApp::showDemographicsPage() {
         (*refreshMarkers)();
     });
 
-    // Add blur event to location input to recenter map when user finishes typing
-    locationInput->blurred().connect([this, locationInput]() {
+    // Add blur event to location input to recenter map and refresh POIs
+    locationInput->blurred().connect([this, locationInput, radiusSelect, currentSearchAreaPtr, refreshMarkers, getRadiusFromSelect]() {
         std::string location = locationInput->text().toUTF8();
         if (location.empty()) return;
 
         // Geocode and recenter map
         Models::GeoLocation geoLocation = searchService_->geocodeAddress(location);
         if (geoLocation.hasValidCoordinates()) {
+            double radiusKm = getRadiusFromSelect(radiusSelect->currentIndex());
+            Models::SearchArea searchArea(geoLocation, radiusKm);
+
+            // Update shared state
+            currentSearchLocation_ = location;
+            currentSearchArea_ = searchArea;
+            *currentSearchAreaPtr = searchArea;
+
             std::ostringstream panMapJs;
             panMapJs << "if (window.demographicsMap) {"
                      << "  window.demographicsMap.setView([" << geoLocation.latitude << ", " << geoLocation.longitude << "], 13);"
                      << "}";
             doJavaScript(panMapJs.str());
+
+            // Refresh POI markers for the new location
+            (*refreshMarkers)();
         }
     });
 }
