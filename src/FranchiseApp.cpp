@@ -741,14 +741,6 @@ void FranchiseApp::showDemographicsPage() {
     auto container = workArea_->addWidget(std::make_unique<Wt::WContainerWidget>());
     container->setStyleClass("page-container demographics-page");
 
-    // Search section
-    auto searchRow = container->addWidget(std::make_unique<Wt::WContainerWidget>());
-    searchRow->setStyleClass("demographics-search-row");
-
-    auto locationInput = searchRow->addWidget(std::make_unique<Wt::WLineEdit>());
-    locationInput->setPlaceholderText("Enter city, address, or location...");
-    locationInput->setStyleClass("form-control location-input");
-
     // Pre-fill with current search location or franchisee location
     std::string defaultLocation = "Denver, CO";
     double defaultRadiusKm = 10.0;
@@ -769,26 +761,6 @@ void FranchiseApp::showDemographicsPage() {
         Models::GeoLocation denverLocation(39.7392, -104.9903, "Denver", "CO");
         initialSearchArea = Models::SearchArea(denverLocation, 10.0);
     }
-    locationInput->setText(defaultLocation);
-
-    // Radius dropdown
-    auto radiusSelect = searchRow->addWidget(std::make_unique<Wt::WComboBox>());
-    radiusSelect->setStyleClass("form-control radius-select");
-    radiusSelect->addItem("5 km");
-    radiusSelect->addItem("10 km");
-    radiusSelect->addItem("25 km");
-    radiusSelect->addItem("40 km");
-    radiusSelect->addItem("50 km");
-
-    // Set default selection based on defaultRadiusKm
-    if (defaultRadiusKm <= 5) radiusSelect->setCurrentIndex(0);
-    else if (defaultRadiusKm <= 10) radiusSelect->setCurrentIndex(1);
-    else if (defaultRadiusKm <= 25) radiusSelect->setCurrentIndex(2);
-    else if (defaultRadiusKm <= 40) radiusSelect->setCurrentIndex(3);
-    else radiusSelect->setCurrentIndex(4);
-
-    auto analyzeBtn = searchRow->addWidget(std::make_unique<Wt::WPushButton>("Analyze Area"));
-    analyzeBtn->setStyleClass("btn btn-primary analyze-btn");
 
     // Get initial stats
     auto& osmAPI = searchService_->getOSMAPI();
@@ -804,9 +776,18 @@ void FranchiseApp::showDemographicsPage() {
     auto mapWithSidebar = container->addWidget(std::make_unique<Wt::WContainerWidget>());
     mapWithSidebar->setStyleClass("map-with-sidebar");
 
-    // Map container (left side)
+    // Map container (left side) with location overlay
     auto mapContainer = mapWithSidebar->addWidget(std::make_unique<Wt::WContainerWidget>());
     mapContainer->setStyleClass("map-container");
+
+    // Location input as overlay (like browser address bar)
+    auto locationOverlay = mapContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
+    locationOverlay->setStyleClass("location-overlay");
+
+    auto locationInput = locationOverlay->addWidget(std::make_unique<Wt::WLineEdit>());
+    locationInput->setPlaceholderText("Enter city, address, or location...");
+    locationInput->setStyleClass("form-control location-input-overlay");
+    locationInput->setText(defaultLocation);
 
     // Create map div with unique ID
     auto mapDiv = mapContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
@@ -1168,14 +1149,40 @@ void FranchiseApp::showDemographicsPage() {
         categoryDropdown->setCurrentIndex(0);
     });
 
-    // Sidebar footer
+    // Sidebar footer with action controls
     auto sidebarFooter = mapSidebar->addWidget(std::make_unique<Wt::WContainerWidget>());
     sidebarFooter->setStyleClass("sidebar-footer");
 
-    auto footerInfo = sidebarFooter->addWidget(std::make_unique<Wt::WText>("Data: OpenStreetMap"));
+    // Top row: Radius and Analyze button
+    auto footerControls = sidebarFooter->addWidget(std::make_unique<Wt::WContainerWidget>());
+    footerControls->setStyleClass("sidebar-footer-controls");
+
+    auto radiusSelect = footerControls->addWidget(std::make_unique<Wt::WComboBox>());
+    radiusSelect->setStyleClass("form-control radius-select-footer");
+    radiusSelect->addItem("5 km");
+    radiusSelect->addItem("10 km");
+    radiusSelect->addItem("25 km");
+    radiusSelect->addItem("40 km");
+    radiusSelect->addItem("50 km");
+
+    // Set default selection based on defaultRadiusKm
+    if (defaultRadiusKm <= 5) radiusSelect->setCurrentIndex(0);
+    else if (defaultRadiusKm <= 10) radiusSelect->setCurrentIndex(1);
+    else if (defaultRadiusKm <= 25) radiusSelect->setCurrentIndex(2);
+    else if (defaultRadiusKm <= 40) radiusSelect->setCurrentIndex(3);
+    else radiusSelect->setCurrentIndex(4);
+
+    auto analyzeBtn = footerControls->addWidget(std::make_unique<Wt::WPushButton>("Analyze Area"));
+    analyzeBtn->setStyleClass("btn btn-primary analyze-btn-footer");
+
+    // Bottom row: Info and Clear All
+    auto footerBottom = sidebarFooter->addWidget(std::make_unique<Wt::WContainerWidget>());
+    footerBottom->setStyleClass("sidebar-footer-bottom");
+
+    auto footerInfo = footerBottom->addWidget(std::make_unique<Wt::WText>("Data: OpenStreetMap"));
     footerInfo->setStyleClass("sidebar-footer-info");
 
-    auto clearAllBtn = sidebarFooter->addWidget(std::make_unique<Wt::WPushButton>("Clear All"));
+    auto clearAllBtn = footerBottom->addWidget(std::make_unique<Wt::WPushButton>("Clear All"));
     clearAllBtn->setStyleClass("btn-clear-all");
     clearAllBtn->clicked().connect([this, activePills, pillTray, emptyMessage, refreshMarkers]() {
         // Remove all pill widgets
