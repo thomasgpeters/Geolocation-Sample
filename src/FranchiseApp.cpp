@@ -736,18 +736,6 @@ void FranchiseApp::showDemographicsPage() {
     auto container = workArea_->addWidget(std::make_unique<Wt::WContainerWidget>());
     container->setStyleClass("page-container demographics-page");
 
-    // Header
-    auto header = container->addWidget(std::make_unique<Wt::WContainerWidget>());
-    header->setStyleClass("page-header");
-
-    auto title = header->addWidget(std::make_unique<Wt::WText>("Demographics Analysis"));
-    title->setStyleClass("page-title");
-
-    auto subtitle = header->addWidget(std::make_unique<Wt::WText>(
-        "View your search area on the map with business statistics below."
-    ));
-    subtitle->setStyleClass("page-subtitle");
-
     // Search section
     auto searchSection = container->addWidget(std::make_unique<Wt::WContainerWidget>());
     searchSection->setStyleClass("settings-section compact");
