@@ -1029,6 +1029,22 @@ void FranchiseApp::showDemographicsPage() {
         auto limitValueText = sliderContainer->addWidget(std::make_unique<Wt::WText>(std::to_string(defaultValue)));
         limitValueText->setStyleClass("category-pill-slider-value");
 
+        // Add JavaScript for real-time slider value display update
+        std::string sliderId = limitSlider->id();
+        std::string valueTextId = limitValueText->id();
+        std::ostringstream realTimeJs;
+        realTimeJs << "setTimeout(function() {"
+                   << "  var slider = document.getElementById('" << sliderId << "');"
+                   << "  var valueText = document.getElementById('" << valueTextId << "');"
+                   << "  if (slider && valueText) {"
+                   << "    var input = slider.querySelector('input[type=\"range\"]') || slider;"
+                   << "    input.addEventListener('input', function() {"
+                   << "      valueText.textContent = this.value;"
+                   << "    });"
+                   << "  }"
+                   << "}, 100);";
+        doJavaScript(realTimeJs.str());
+
         // Add to active pills
         CategoryPillData pillData;
         pillData.displayName = displayName;
@@ -1043,7 +1059,7 @@ void FranchiseApp::showDemographicsPage() {
         updateEmptyState();
         // Note: POI markers are refreshed when user clicks "Analyze Area"
 
-        // Handle slider value change
+        // Handle slider value change (fires on release)
         limitSlider->valueChanged().connect([activePills, apiName, limitSlider, limitValueText]() {
             int newLimit = limitSlider->value();
             limitValueText->setText(std::to_string(newLimit));
@@ -1053,7 +1069,17 @@ void FranchiseApp::showDemographicsPage() {
                     break;
                 }
             }
-            // Note: POI markers are refreshed when user clicks "Analyze Area"
+        });
+
+        // Handle slider moved (fires while dragging for real-time updates)
+        limitSlider->sliderMoved().connect([activePills, apiName, limitValueText](int newLimit) {
+            limitValueText->setText(std::to_string(newLimit));
+            for (auto& pill : *activePills) {
+                if (pill.apiName == apiName) {
+                    pill.poiLimit = newLimit;
+                    break;
+                }
+            }
         });
 
         // Handle remove
