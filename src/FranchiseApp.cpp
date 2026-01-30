@@ -924,27 +924,44 @@ void FranchiseApp::showDemographicsPage() {
         std::string apiName;
         int count;
         int poiLimit;
-        std::string color;  // Pastel color for pill and markers
+        std::string color;        // Soft pastel color for pill card
+        std::string markerColor;  // Deeper vivid color for map markers
         Wt::WContainerWidget* pillWidget;
         Wt::WSlider* limitSlider;
         Wt::WText* limitValueText;
     };
     auto activePills = std::make_shared<std::vector<CategoryPillData>>();
 
-    // Pastel colors for post-it note effect
+    // Soft muted pastel colors for post-it note cards (less vivid)
     std::vector<std::string> pastelColors = {
-        "#FFE5B4", // Peach
-        "#BAFFC9", // Mint
-        "#BAE1FF", // Light Blue
-        "#FFFFBA", // Light Yellow
-        "#FFB3BA", // Light Pink
-        "#E0BBE4", // Light Purple
-        "#D4F0F0", // Light Teal
-        "#FFC8A2", // Light Orange
-        "#C9C9FF", // Lavender
-        "#CAFFBF", // Light Lime
-        "#FDFFB6", // Cream
-        "#A0C4FF"  // Sky Blue
+        "#FFF5E6", // Soft Peach
+        "#E8F5E9", // Soft Mint
+        "#E3F2FD", // Soft Blue
+        "#FFFDE7", // Soft Yellow
+        "#FCE4EC", // Soft Pink
+        "#F3E5F5", // Soft Purple
+        "#E0F7FA", // Soft Teal
+        "#FFF3E0", // Soft Orange
+        "#EDE7F6", // Soft Lavender
+        "#F1F8E9", // Soft Lime
+        "#FFFEF0", // Soft Cream
+        "#E8EAF6"  // Soft Indigo
+    };
+
+    // Deeper, more vivid marker colors (with black mixed in for depth)
+    std::vector<std::string> markerColors = {
+        "#CC8844", // Deep Peach/Amber
+        "#2E7D32", // Deep Green
+        "#1565C0", // Deep Blue
+        "#F9A825", // Deep Yellow/Gold
+        "#C2185B", // Deep Pink
+        "#7B1FA2", // Deep Purple
+        "#00838F", // Deep Teal
+        "#E65100", // Deep Orange
+        "#5E35B1", // Deep Lavender/Violet
+        "#558B2F", // Deep Lime
+        "#FF8F00", // Deep Amber
+        "#303F9F"  // Deep Indigo
     };
     auto usedColorIndex = std::make_shared<int>(0);
 
@@ -967,10 +984,6 @@ void FranchiseApp::showDemographicsPage() {
             auto& osmAPI = searchService_->getOSMAPI();
             auto pois = osmAPI.searchByCategorySync(*currentSearchAreaPtr, pill.apiName);
 
-            // Convert pastel color to darker solid color for markers
-            std::string markerColor = pill.color;
-            // Make it more saturated/darker for visibility
-
             int markerCount = 0;
             for (const auto& poi : pois) {
                 if (markerCount >= currentLimit) break;
@@ -980,17 +993,17 @@ void FranchiseApp::showDemographicsPage() {
                     if (c == '\'' || c == '"' || c == '\\') c = ' ';
                 }
 
-                // Create colored circle marker
+                // Create colored circle marker with deep vivid color
                 std::ostringstream addMarkerJs;
                 addMarkerJs << "if (window.demographicsMap && typeof L !== 'undefined') {"
                            << "  var markerIcon = L.divIcon({"
                            << "    className: 'custom-marker',"
-                           << "    html: '<div style=\"background-color: " << pill.color << "; "
-                           << "      width: 24px; height: 24px; border-radius: 50%; "
-                           << "      border: 3px solid rgba(0,0,0,0.3); "
-                           << "      box-shadow: 0 2px 5px rgba(0,0,0,0.3);\"></div>',"
-                           << "    iconSize: [24, 24],"
-                           << "    iconAnchor: [12, 12]"
+                           << "    html: '<div style=\"background-color: " << pill.markerColor << "; "
+                           << "      width: 22px; height: 22px; border-radius: 50%; "
+                           << "      border: 2px solid rgba(0,0,0,0.5); "
+                           << "      box-shadow: 0 2px 4px rgba(0,0,0,0.4), inset 0 1px 2px rgba(255,255,255,0.3);\"></div>',"
+                           << "    iconSize: [22, 22],"
+                           << "    iconAnchor: [11, 11]"
                            << "  });"
                            << "  var marker = L.marker([" << poi.latitude << ", " << poi.longitude << "], {icon: markerIcon})"
                            << "    .addTo(window.demographicsMap)"
@@ -1015,7 +1028,7 @@ void FranchiseApp::showDemographicsPage() {
 
     // Function to create a pill card for a category
     auto createPill = std::make_shared<std::function<void(const std::string&, const std::string&, int)>>();
-    *createPill = [this, pillTray, activePills, refreshMarkers, updateEmptyState, createPill, pastelColors, usedColorIndex](
+    *createPill = [this, pillTray, activePills, refreshMarkers, updateEmptyState, createPill, pastelColors, markerColors, usedColorIndex](
         const std::string& displayName, const std::string& apiName, int count) {
 
         // Check if already added
@@ -1023,8 +1036,10 @@ void FranchiseApp::showDemographicsPage() {
             if (pill.apiName == apiName) return;
         }
 
-        // Get next color from palette
-        std::string pillColor = pastelColors[*usedColorIndex % pastelColors.size()];
+        // Get next colors from palette (soft for pill, deep for markers)
+        int colorIdx = *usedColorIndex % pastelColors.size();
+        std::string pillColor = pastelColors[colorIdx];
+        std::string pillMarkerColor = markerColors[colorIdx];
         (*usedColorIndex)++;
 
         auto pillCard = pillTray->addWidget(std::make_unique<Wt::WContainerWidget>());
@@ -1094,6 +1109,7 @@ void FranchiseApp::showDemographicsPage() {
         pillData.count = count;
         pillData.poiLimit = defaultValue;
         pillData.color = pillColor;
+        pillData.markerColor = pillMarkerColor;
         pillData.pillWidget = pillCard;
         pillData.limitSlider = limitSlider;
         pillData.limitValueText = limitValueText;
