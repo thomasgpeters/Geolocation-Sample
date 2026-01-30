@@ -809,13 +809,17 @@ void FranchiseApp::showDemographicsPage() {
     auto map = mapContainer->addWidget(std::make_unique<Wt::WLeafletMap>());
     map->setStyleClass("demographics-map");
 
-    // Set initial position
+    // Set initial position and zoom via JavaScript
     Wt::WLeafletMap::Coordinate center(
         initialSearchArea.center.latitude,
         initialSearchArea.center.longitude
     );
     map->panTo(center);
-    map->setZoom(13);
+
+    // Set zoom level via doJavaScript (setZoom not available in Wt API)
+    map->doJavaScript(map->jsRef() + ".map.setView(["
+        + std::to_string(initialSearchArea.center.latitude) + ","
+        + std::to_string(initialSearchArea.center.longitude) + "], 13);");
 
     // Add OpenStreetMap tile layer
     map->addTileLayer(
