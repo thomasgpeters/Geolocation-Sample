@@ -38,8 +38,10 @@ FranchiseApp::FranchiseApp(const Wt::WEnvironment& env)
 
     // Show setup page if franchisee not configured, otherwise show AI Search
     if (!franchisee_.isConfigured) {
+        sidebar_->setActiveItem("setup");
         showSetupPage();
     } else {
+        sidebar_->setActiveItem("ai-search");
         showAISearchPage();
     }
 }
@@ -96,24 +98,33 @@ void FranchiseApp::setupRouting() {
         std::string path = internalPath();
 
         if (path == "/setup") {
+            sidebar_->setActiveItem("setup");
             showSetupPage();
         } else if (path == "/dashboard") {
+            sidebar_->setActiveItem("dashboard");
             showDashboardPage();
         } else if (path == "/search" || path == "/ai-search") {
+            sidebar_->setActiveItem("ai-search");
             showAISearchPage();
         } else if (path == "/prospects") {
+            sidebar_->setActiveItem("prospects");
             showProspectsPage();
         } else if (path == "/demographics") {
+            sidebar_->setActiveItem("demographics");
             showDemographicsPage();
         } else if (path == "/reports") {
+            sidebar_->setActiveItem("reports");
             showReportsPage();
         } else if (path == "/settings") {
+            sidebar_->setActiveItem("settings");
             showSettingsPage();
         } else {
             // Default to setup if not configured, otherwise search
             if (!franchisee_.isConfigured) {
+                sidebar_->setActiveItem("setup");
                 showSetupPage();
             } else {
+                sidebar_->setActiveItem("ai-search");
                 showAISearchPage();
             }
         }
@@ -123,27 +134,29 @@ void FranchiseApp::setupRouting() {
 void FranchiseApp::onMenuItemSelected(const std::string& itemId) {
     currentPage_ = itemId;
 
+    // Map menu item IDs to internal paths
+    // The internalPathChanged handler will show the appropriate page
     if (itemId == "setup") {
+        setInternalPath("/setup", false);
         showSetupPage();
-        setInternalPath("/setup", true);
     } else if (itemId == "dashboard") {
+        setInternalPath("/dashboard", false);
         showDashboardPage();
-        setInternalPath("/dashboard", true);
     } else if (itemId == "ai-search") {
+        setInternalPath("/search", false);
         showAISearchPage();
-        setInternalPath("/search", true);
     } else if (itemId == "prospects") {
+        setInternalPath("/prospects", false);
         showProspectsPage();
-        setInternalPath("/prospects", true);
     } else if (itemId == "demographics") {
+        setInternalPath("/demographics", false);
         showDemographicsPage();
-        setInternalPath("/demographics", true);
     } else if (itemId == "reports") {
+        setInternalPath("/reports", false);
         showReportsPage();
-        setInternalPath("/reports", true);
     } else if (itemId == "settings") {
+        setInternalPath("/settings", false);
         showSettingsPage();
-        setInternalPath("/settings", true);
     }
 }
 
@@ -297,8 +310,8 @@ void FranchiseApp::onFranchiseeSetupComplete(const Models::Franchisee& franchise
 
     // Navigate to AI Search page
     sidebar_->setActiveItem("ai-search");
+    setInternalPath("/search", false);
     showAISearchPage();
-    setInternalPath("/search", true);
 }
 
 void FranchiseApp::updateHeaderWithFranchisee() {
