@@ -741,14 +741,6 @@ void FranchiseApp::showDemographicsPage() {
     auto container = workArea_->addWidget(std::make_unique<Wt::WContainerWidget>());
     container->setStyleClass("page-container demographics-page");
 
-    // Search section
-    auto searchRow = container->addWidget(std::make_unique<Wt::WContainerWidget>());
-    searchRow->setStyleClass("demographics-search-row");
-
-    auto locationInput = searchRow->addWidget(std::make_unique<Wt::WLineEdit>());
-    locationInput->setPlaceholderText("Enter city, address, or location...");
-    locationInput->setStyleClass("form-control location-input");
-
     // Pre-fill with current search location or franchisee location
     std::string defaultLocation = "Denver, CO";
     double defaultRadiusKm = 10.0;
@@ -769,26 +761,6 @@ void FranchiseApp::showDemographicsPage() {
         Models::GeoLocation denverLocation(39.7392, -104.9903, "Denver", "CO");
         initialSearchArea = Models::SearchArea(denverLocation, 10.0);
     }
-    locationInput->setText(defaultLocation);
-
-    // Radius dropdown
-    auto radiusSelect = searchRow->addWidget(std::make_unique<Wt::WComboBox>());
-    radiusSelect->setStyleClass("form-control radius-select");
-    radiusSelect->addItem("5 km");
-    radiusSelect->addItem("10 km");
-    radiusSelect->addItem("25 km");
-    radiusSelect->addItem("40 km");
-    radiusSelect->addItem("50 km");
-
-    // Set default selection based on defaultRadiusKm
-    if (defaultRadiusKm <= 5) radiusSelect->setCurrentIndex(0);
-    else if (defaultRadiusKm <= 10) radiusSelect->setCurrentIndex(1);
-    else if (defaultRadiusKm <= 25) radiusSelect->setCurrentIndex(2);
-    else if (defaultRadiusKm <= 40) radiusSelect->setCurrentIndex(3);
-    else radiusSelect->setCurrentIndex(4);
-
-    auto analyzeBtn = searchRow->addWidget(std::make_unique<Wt::WPushButton>("Analyze Area"));
-    analyzeBtn->setStyleClass("btn btn-primary analyze-btn");
 
     // Get initial stats
     auto& osmAPI = searchService_->getOSMAPI();
@@ -804,9 +776,18 @@ void FranchiseApp::showDemographicsPage() {
     auto mapWithSidebar = container->addWidget(std::make_unique<Wt::WContainerWidget>());
     mapWithSidebar->setStyleClass("map-with-sidebar");
 
-    // Map container (left side)
+    // Map container (left side) with location overlay
     auto mapContainer = mapWithSidebar->addWidget(std::make_unique<Wt::WContainerWidget>());
     mapContainer->setStyleClass("map-container");
+
+    // Location input as overlay (like browser address bar)
+    auto locationOverlay = mapContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
+    locationOverlay->setStyleClass("location-overlay");
+
+    auto locationInput = locationOverlay->addWidget(std::make_unique<Wt::WLineEdit>());
+    locationInput->setPlaceholderText("Enter city, address, or location...");
+    locationInput->setStyleClass("form-control location-input-overlay");
+    locationInput->setText(defaultLocation);
 
     // Create map div with unique ID
     auto mapDiv = mapContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
@@ -924,27 +905,44 @@ void FranchiseApp::showDemographicsPage() {
         std::string apiName;
         int count;
         int poiLimit;
-        std::string color;  // Pastel color for pill and markers
+        std::string color;        // Soft pastel color for pill card
+        std::string markerColor;  // Deeper vivid color for map markers
         Wt::WContainerWidget* pillWidget;
         Wt::WSlider* limitSlider;
         Wt::WText* limitValueText;
     };
     auto activePills = std::make_shared<std::vector<CategoryPillData>>();
 
-    // Pastel colors for post-it note effect
+    // Soft muted pastel colors for post-it note cards (less vivid)
     std::vector<std::string> pastelColors = {
-        "#FFE5B4", // Peach
-        "#BAFFC9", // Mint
-        "#BAE1FF", // Light Blue
-        "#FFFFBA", // Light Yellow
-        "#FFB3BA", // Light Pink
-        "#E0BBE4", // Light Purple
-        "#D4F0F0", // Light Teal
-        "#FFC8A2", // Light Orange
-        "#C9C9FF", // Lavender
-        "#CAFFBF", // Light Lime
-        "#FDFFB6", // Cream
-        "#A0C4FF"  // Sky Blue
+        "#FFF5E6", // Soft Peach
+        "#E8F5E9", // Soft Mint
+        "#E3F2FD", // Soft Blue
+        "#FFFDE7", // Soft Yellow
+        "#FCE4EC", // Soft Pink
+        "#F3E5F5", // Soft Purple
+        "#E0F7FA", // Soft Teal
+        "#FFF3E0", // Soft Orange
+        "#EDE7F6", // Soft Lavender
+        "#F1F8E9", // Soft Lime
+        "#FFFEF0", // Soft Cream
+        "#E8EAF6"  // Soft Indigo
+    };
+
+    // Deeper, more vivid marker colors (with black mixed in for depth)
+    std::vector<std::string> markerColors = {
+        "#CC8844", // Deep Peach/Amber
+        "#2E7D32", // Deep Green
+        "#1565C0", // Deep Blue
+        "#F9A825", // Deep Yellow/Gold
+        "#C2185B", // Deep Pink
+        "#7B1FA2", // Deep Purple
+        "#00838F", // Deep Teal
+        "#E65100", // Deep Orange
+        "#5E35B1", // Deep Lavender/Violet
+        "#558B2F", // Deep Lime
+        "#FF8F00", // Deep Amber
+        "#303F9F"  // Deep Indigo
     };
     auto usedColorIndex = std::make_shared<int>(0);
 
@@ -967,10 +965,6 @@ void FranchiseApp::showDemographicsPage() {
             auto& osmAPI = searchService_->getOSMAPI();
             auto pois = osmAPI.searchByCategorySync(*currentSearchAreaPtr, pill.apiName);
 
-            // Convert pastel color to darker solid color for markers
-            std::string markerColor = pill.color;
-            // Make it more saturated/darker for visibility
-
             int markerCount = 0;
             for (const auto& poi : pois) {
                 if (markerCount >= currentLimit) break;
@@ -980,17 +974,17 @@ void FranchiseApp::showDemographicsPage() {
                     if (c == '\'' || c == '"' || c == '\\') c = ' ';
                 }
 
-                // Create colored circle marker
+                // Create colored circle marker with deep vivid color
                 std::ostringstream addMarkerJs;
                 addMarkerJs << "if (window.demographicsMap && typeof L !== 'undefined') {"
                            << "  var markerIcon = L.divIcon({"
                            << "    className: 'custom-marker',"
-                           << "    html: '<div style=\"background-color: " << pill.color << "; "
-                           << "      width: 24px; height: 24px; border-radius: 50%; "
-                           << "      border: 3px solid rgba(0,0,0,0.3); "
-                           << "      box-shadow: 0 2px 5px rgba(0,0,0,0.3);\"></div>',"
-                           << "    iconSize: [24, 24],"
-                           << "    iconAnchor: [12, 12]"
+                           << "    html: '<div style=\"background-color: " << pill.markerColor << "; "
+                           << "      width: 22px; height: 22px; border-radius: 50%; "
+                           << "      border: 2px solid rgba(0,0,0,0.5); "
+                           << "      box-shadow: 0 2px 4px rgba(0,0,0,0.4), inset 0 1px 2px rgba(255,255,255,0.3);\"></div>',"
+                           << "    iconSize: [22, 22],"
+                           << "    iconAnchor: [11, 11]"
                            << "  });"
                            << "  var marker = L.marker([" << poi.latitude << ", " << poi.longitude << "], {icon: markerIcon})"
                            << "    .addTo(window.demographicsMap)"
@@ -1015,7 +1009,7 @@ void FranchiseApp::showDemographicsPage() {
 
     // Function to create a pill card for a category
     auto createPill = std::make_shared<std::function<void(const std::string&, const std::string&, int)>>();
-    *createPill = [this, pillTray, activePills, refreshMarkers, updateEmptyState, createPill, pastelColors, usedColorIndex](
+    *createPill = [this, pillTray, activePills, refreshMarkers, updateEmptyState, createPill, pastelColors, markerColors, usedColorIndex](
         const std::string& displayName, const std::string& apiName, int count) {
 
         // Check if already added
@@ -1023,8 +1017,10 @@ void FranchiseApp::showDemographicsPage() {
             if (pill.apiName == apiName) return;
         }
 
-        // Get next color from palette
-        std::string pillColor = pastelColors[*usedColorIndex % pastelColors.size()];
+        // Get next colors from palette (soft for pill, deep for markers)
+        int colorIdx = *usedColorIndex % pastelColors.size();
+        std::string pillColor = pastelColors[colorIdx];
+        std::string pillMarkerColor = markerColors[colorIdx];
         (*usedColorIndex)++;
 
         auto pillCard = pillTray->addWidget(std::make_unique<Wt::WContainerWidget>());
@@ -1094,6 +1090,7 @@ void FranchiseApp::showDemographicsPage() {
         pillData.count = count;
         pillData.poiLimit = defaultValue;
         pillData.color = pillColor;
+        pillData.markerColor = pillMarkerColor;
         pillData.pillWidget = pillCard;
         pillData.limitSlider = limitSlider;
         pillData.limitValueText = limitValueText;
@@ -1152,14 +1149,40 @@ void FranchiseApp::showDemographicsPage() {
         categoryDropdown->setCurrentIndex(0);
     });
 
-    // Sidebar footer
+    // Sidebar footer with action controls
     auto sidebarFooter = mapSidebar->addWidget(std::make_unique<Wt::WContainerWidget>());
     sidebarFooter->setStyleClass("sidebar-footer");
 
-    auto footerInfo = sidebarFooter->addWidget(std::make_unique<Wt::WText>("Data: OpenStreetMap"));
+    // Top row: Radius and Analyze button
+    auto footerControls = sidebarFooter->addWidget(std::make_unique<Wt::WContainerWidget>());
+    footerControls->setStyleClass("sidebar-footer-controls");
+
+    auto radiusSelect = footerControls->addWidget(std::make_unique<Wt::WComboBox>());
+    radiusSelect->setStyleClass("form-control radius-select-footer");
+    radiusSelect->addItem("5 km");
+    radiusSelect->addItem("10 km");
+    radiusSelect->addItem("25 km");
+    radiusSelect->addItem("40 km");
+    radiusSelect->addItem("50 km");
+
+    // Set default selection based on defaultRadiusKm
+    if (defaultRadiusKm <= 5) radiusSelect->setCurrentIndex(0);
+    else if (defaultRadiusKm <= 10) radiusSelect->setCurrentIndex(1);
+    else if (defaultRadiusKm <= 25) radiusSelect->setCurrentIndex(2);
+    else if (defaultRadiusKm <= 40) radiusSelect->setCurrentIndex(3);
+    else radiusSelect->setCurrentIndex(4);
+
+    auto analyzeBtn = footerControls->addWidget(std::make_unique<Wt::WPushButton>("Analyze Area"));
+    analyzeBtn->setStyleClass("btn btn-primary analyze-btn-footer");
+
+    // Bottom row: Info and Clear All
+    auto footerBottom = sidebarFooter->addWidget(std::make_unique<Wt::WContainerWidget>());
+    footerBottom->setStyleClass("sidebar-footer-bottom");
+
+    auto footerInfo = footerBottom->addWidget(std::make_unique<Wt::WText>("Data: OpenStreetMap"));
     footerInfo->setStyleClass("sidebar-footer-info");
 
-    auto clearAllBtn = sidebarFooter->addWidget(std::make_unique<Wt::WPushButton>("Clear All"));
+    auto clearAllBtn = footerBottom->addWidget(std::make_unique<Wt::WPushButton>("Clear All"));
     clearAllBtn->setStyleClass("btn-clear-all");
     clearAllBtn->clicked().connect([this, activePills, pillTray, emptyMessage, refreshMarkers]() {
         // Remove all pill widgets

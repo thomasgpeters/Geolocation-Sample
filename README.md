@@ -127,12 +127,57 @@ Main search interface with:
 Manage saved prospects (placeholder for future implementation).
 
 ### Demographics
-Explore area data powered by OpenStreetMap:
-- **Location Search**: Enter any city/location and search radius
-- **Market Potential Score**: 0-100 scoring based on business composition
-- **Business Categories**: Count of offices, hotels, conference venues, hospitals, universities, warehouses, etc.
-- **Catering Insights**: AI-generated recommendations based on area composition
-- **Area Summary**: Total POIs and business density metrics
+Explore area data powered by OpenStreetMap with an interactive map and category-based POI visualization.
+
+#### Layout
+- **Interactive Map** (left): Leaflet-powered map loaded via CDN showing the search area and POI markers
+- **Category Pill Tray** (right): Floating sidebar for selecting and configuring POI categories
+- **Area Summary Footer**: Horizontal stats bar showing total POIs, business density, location, and radius
+
+#### Search Controls
+- **Location Input**: Enter any city, address, or location name
+- **Radius Dropdown**: Select search radius (5, 10, 25, 40, or 50 km)
+- **Analyze Area Button**: Triggers geocoding, map update, and POI marker refresh
+- **Location Blur Event**: Automatically recenters map when location input loses focus
+
+#### Category Pill Tray
+The pill tray provides a modern interface for selecting which POI categories to display on the map:
+
+1. **Category Dropdown**: Select from 12 business categories:
+   - Offices, Hotels, Conference Venues, Restaurants, Cafes
+   - Hospitals, Universities, Schools
+   - Industrial, Warehouses, Banks, Government
+
+2. **Pill Cards**: Each selected category appears as a colored card with:
+   - **Post-it Note Styling**: Soft pastel background colors (peach, mint, blue, yellow, pink, purple, teal, orange, lavender, lime, cream, indigo)
+   - **Category Name & Count**: Shows the category name and total POIs available
+   - **POI Slider Control**: Audio mixer-style fader to control how many POIs to display (0 to max)
+   - **Real-time Value Display**: Slider value updates instantly while dragging
+   - **Remove Button (×)**: Click to remove the category from the tray
+
+3. **Color-Coded Markers**: Each category's POI markers on the map use a deeper, more vivid version of the pill's pastel color for easy visual correlation
+
+4. **Clear All**: Button in the footer to remove all category pills at once
+
+#### Slider Control Features
+The POI limit slider has an audio mixer fader appearance:
+- **Track**: Recessed groove with purple gradient center
+- **Fader Thumb**: Metallic rectangular cap with 3D shading
+- **Real-time Updates**: Value display updates as you drag (JavaScript `input` event)
+- **Server Sync**: `sliderMoved()` signal keeps backend state synchronized
+
+#### Market Potential Score
+Displayed in the navigation header as a color-coded badge:
+- **Green (80-100)**: High potential market
+- **Yellow (50-79)**: Medium potential market
+- **Red (0-49)**: Lower potential market
+- **Hidden**: When no search is active
+
+#### Technical Implementation
+- **Map Library**: Leaflet.js loaded from unpkg.com CDN
+- **Custom Markers**: `L.divIcon` with colored circular divs matching category colors
+- **State Management**: `CategoryPillData` struct with shared_ptr for lambda captures
+- **Responsive Layout**: Flexbox with `calc(100vh - offset)` for full-height map
 
 ### Reports
 View analytics and generate reports (placeholder).
