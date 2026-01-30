@@ -7,6 +7,8 @@
 #include <Wt/WLineEdit.h>
 #include <Wt/WPushButton.h>
 #include <Wt/WBreak.h>
+#include <Wt/WComboBox.h>
+#include <Wt/WCheckBox.h>
 #include <sstream>
 #include <iomanip>
 
@@ -30,8 +32,12 @@ FranchiseApp::FranchiseApp(const Wt::WEnvironment& env)
     // Setup routing
     setupRouting();
 
-    // Show default page
-    showAISearchPage();
+    // Show setup page if franchisee not configured, otherwise show AI Search
+    if (!franchisee_.isConfigured) {
+        showSetupPage();
+    } else {
+        showAISearchPage();
+    }
 }
 
 void FranchiseApp::loadStyleSheet() {
@@ -85,7 +91,9 @@ void FranchiseApp::setupRouting() {
     internalPathChanged().connect([this] {
         std::string path = internalPath();
 
-        if (path == "/dashboard") {
+        if (path == "/setup") {
+            showSetupPage();
+        } else if (path == "/dashboard") {
             showDashboardPage();
         } else if (path == "/search" || path == "/ai-search") {
             showAISearchPage();
@@ -98,7 +106,12 @@ void FranchiseApp::setupRouting() {
         } else if (path == "/settings") {
             showSettingsPage();
         } else {
-            showAISearchPage();  // Default
+            // Default to setup if not configured, otherwise search
+            if (!franchisee_.isConfigured) {
+                showSetupPage();
+            } else {
+                showAISearchPage();
+            }
         }
     });
 }
@@ -106,7 +119,10 @@ void FranchiseApp::setupRouting() {
 void FranchiseApp::onMenuItemSelected(const std::string& itemId) {
     currentPage_ = itemId;
 
-    if (itemId == "dashboard") {
+    if (itemId == "setup") {
+        showSetupPage();
+        setInternalPath("/setup", true);
+    } else if (itemId == "dashboard") {
         showDashboardPage();
         setInternalPath("/dashboard", true);
     } else if (itemId == "ai-search") {
@@ -256,6 +272,247 @@ void FranchiseApp::onExportResults() {
     dialog->show();
 }
 
+void FranchiseApp::onFranchiseeSetupComplete(const Models::Franchisee& franchisee) {
+    franchisee_ = franchisee;
+    franchisee_.isConfigured = true;
+
+    // Update the sidebar with franchisee info
+    updateHeaderWithFranchisee();
+
+    // Navigate to AI Search page
+    sidebar_->setActiveItem("ai-search");
+    showAISearchPage();
+    setInternalPath("/search", true);
+}
+
+void FranchiseApp::updateHeaderWithFranchisee() {
+    if (sidebar_ && franchisee_.isConfigured) {
+        sidebar_->setUserInfo(
+            franchisee_.getDisplayName(),
+            franchisee_.getLocationDisplay()
+        );
+    }
+}
+
+void FranchiseApp::showSetupPage() {
+    workArea_->clear();
+    navigation_->setPageTitle("Store Setup");
+    navigation_->setBreadcrumbs({"Home", "Setup"});
+
+    auto container = workArea_->addWidget(std::make_unique<Wt::WContainerWidget>());
+    container->setStyleClass("page-container setup-page");
+
+    // Header
+    auto header = container->addWidget(std::make_unique<Wt::WContainerWidget>());
+    header->setStyleClass("page-header");
+
+    auto title = header->addWidget(std::make_unique<Wt::WText>("Welcome to FranchiseAI"));
+    title->setStyleClass("page-title");
+
+    auto subtitle = header->addWidget(std::make_unique<Wt::WText>(
+        "Let's set up your store location to find catering prospects nearby"
+    ));
+    subtitle->setStyleClass("page-subtitle");
+
+    // Setup form section
+    auto formSection = container->addWidget(std::make_unique<Wt::WContainerWidget>());
+    formSection->setStyleClass("settings-section");
+
+    auto formTitle = formSection->addWidget(std::make_unique<Wt::WText>("Store Information"));
+    formTitle->setStyleClass("section-title");
+
+    auto formDesc = formSection->addWidget(std::make_unique<Wt::WText>(
+        "Enter your Vocelli Pizza store details. This will be the center point for all prospect searches."
+    ));
+    formDesc->setStyleClass("section-description");
+
+    // Form grid
+    auto formGrid = formSection->addWidget(std::make_unique<Wt::WContainerWidget>());
+    formGrid->setStyleClass("form-grid");
+
+    // Store Name
+    auto nameGroup = formGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
+    nameGroup->setStyleClass("form-group");
+    auto nameLabel = nameGroup->addWidget(std::make_unique<Wt::WText>("Store Name"));
+    nameLabel->setStyleClass("form-label");
+    auto nameInput = nameGroup->addWidget(std::make_unique<Wt::WLineEdit>());
+    nameInput->setPlaceholderText("e.g., Vocelli Pizza - Downtown");
+    nameInput->setStyleClass("form-control");
+
+    // Store Address
+    auto addressGroup = formGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
+    addressGroup->setStyleClass("form-group");
+    auto addressLabel = addressGroup->addWidget(std::make_unique<Wt::WText>("Store Address"));
+    addressLabel->setStyleClass("form-label");
+    auto addressInput = addressGroup->addWidget(std::make_unique<Wt::WLineEdit>());
+    addressInput->setPlaceholderText("e.g., 123 Main St, Denver, CO 80202");
+    addressInput->setStyleClass("form-control");
+
+    // Owner Name
+    auto ownerGroup = formGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
+    ownerGroup->setStyleClass("form-group");
+    auto ownerLabel = ownerGroup->addWidget(std::make_unique<Wt::WText>("Owner/Manager Name"));
+    ownerLabel->setStyleClass("form-label");
+    auto ownerInput = ownerGroup->addWidget(std::make_unique<Wt::WLineEdit>());
+    ownerInput->setPlaceholderText("e.g., John Smith");
+    ownerInput->setStyleClass("form-control");
+
+    // Phone
+    auto phoneGroup = formGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
+    phoneGroup->setStyleClass("form-group");
+    auto phoneLabel = phoneGroup->addWidget(std::make_unique<Wt::WText>("Store Phone"));
+    phoneLabel->setStyleClass("form-label");
+    auto phoneInput = phoneGroup->addWidget(std::make_unique<Wt::WLineEdit>());
+    phoneInput->setPlaceholderText("e.g., (555) 123-4567");
+    phoneInput->setStyleClass("form-control");
+
+    // Search Preferences Section
+    auto prefsSection = container->addWidget(std::make_unique<Wt::WContainerWidget>());
+    prefsSection->setStyleClass("settings-section");
+
+    auto prefsTitle = prefsSection->addWidget(std::make_unique<Wt::WText>("Default Search Preferences"));
+    prefsTitle->setStyleClass("section-title");
+
+    auto prefsGrid = prefsSection->addWidget(std::make_unique<Wt::WContainerWidget>());
+    prefsGrid->setStyleClass("form-grid");
+
+    // Default Radius
+    auto radiusGroup = prefsGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
+    radiusGroup->setStyleClass("form-group");
+    auto radiusLabel = radiusGroup->addWidget(std::make_unique<Wt::WText>("Default Search Radius (miles)"));
+    radiusLabel->setStyleClass("form-label");
+    auto radiusInput = radiusGroup->addWidget(std::make_unique<Wt::WLineEdit>("5"));
+    radiusInput->setStyleClass("form-control");
+
+    // Target Business Types
+    auto typesGroup = prefsSection->addWidget(std::make_unique<Wt::WContainerWidget>());
+    typesGroup->setStyleClass("form-group");
+    auto typesLabel = typesGroup->addWidget(std::make_unique<Wt::WText>("Target Business Types"));
+    typesLabel->setStyleClass("form-label");
+    auto typesDesc = typesGroup->addWidget(std::make_unique<Wt::WText>(
+        "Select the types of businesses you want to target for catering services"
+    ));
+    typesDesc->setStyleClass("form-help");
+
+    auto checkboxGrid = typesGroup->addWidget(std::make_unique<Wt::WContainerWidget>());
+    checkboxGrid->setStyleClass("checkbox-grid");
+
+    // Business type checkboxes
+    std::vector<std::pair<std::string, bool>> businessTypes = {
+        {"Corporate Offices", true},
+        {"Conference Centers", true},
+        {"Hotels", true},
+        {"Medical Facilities", true},
+        {"Educational Institutions", true},
+        {"Manufacturing/Industrial", false},
+        {"Warehouses/Distribution", false},
+        {"Government Offices", false},
+        {"Tech Companies", true},
+        {"Financial Services", false},
+        {"Coworking Spaces", true},
+        {"Non-profits", false}
+    };
+
+    std::vector<Wt::WCheckBox*> typeCheckboxes;
+    for (const auto& [typeName, defaultChecked] : businessTypes) {
+        auto checkbox = checkboxGrid->addWidget(std::make_unique<Wt::WCheckBox>(typeName));
+        checkbox->setStyleClass("form-checkbox");
+        checkbox->setChecked(defaultChecked);
+        typeCheckboxes.push_back(checkbox);
+    }
+
+    // Employee Size Section
+    auto sizeGroup = prefsSection->addWidget(std::make_unique<Wt::WContainerWidget>());
+    sizeGroup->setStyleClass("form-group");
+    auto sizeLabel = sizeGroup->addWidget(std::make_unique<Wt::WText>("Target Organization Size"));
+    sizeLabel->setStyleClass("form-label");
+
+    auto sizeCombo = sizeGroup->addWidget(std::make_unique<Wt::WComboBox>());
+    sizeCombo->setStyleClass("form-control");
+    for (const auto& range : Models::EmployeeRange::getStandardRanges()) {
+        sizeCombo->addItem(range.label);
+    }
+    sizeCombo->setCurrentIndex(0);
+
+    // Action Buttons
+    auto actionsSection = container->addWidget(std::make_unique<Wt::WContainerWidget>());
+    actionsSection->setStyleClass("form-actions");
+
+    auto saveBtn = actionsSection->addWidget(std::make_unique<Wt::WPushButton>("Save and Continue to Search"));
+    saveBtn->setStyleClass("btn btn-primary btn-lg");
+
+    // Connect save button
+    saveBtn->clicked().connect([this, nameInput, addressInput, ownerInput, phoneInput, radiusInput, sizeCombo, typeCheckboxes]() {
+        // Validate required fields
+        std::string storeName = nameInput->text().toUTF8();
+        std::string address = addressInput->text().toUTF8();
+
+        if (storeName.empty() || address.empty()) {
+            auto dialog = addChild(std::make_unique<Wt::WMessageBox>(
+                "Missing Information",
+                "Please enter both store name and address.",
+                Wt::Icon::Warning,
+                Wt::StandardButton::Ok
+            ));
+            dialog->show();
+            return;
+        }
+
+        // Geocode the address
+        Models::GeoLocation location = searchService_->geocodeAddress(address);
+
+        // Create franchisee
+        Models::Franchisee franchisee;
+        franchisee.storeName = storeName;
+        franchisee.address = address;
+        franchisee.ownerName = ownerInput->text().toUTF8();
+        franchisee.phone = phoneInput->text().toUTF8();
+        franchisee.location = location;
+
+        // Set search radius
+        try {
+            franchisee.defaultSearchRadiusMiles = std::stod(radiusInput->text().toUTF8());
+        } catch (...) {
+            franchisee.defaultSearchRadiusMiles = 5.0;
+        }
+        franchisee.searchCriteria.radiusMiles = franchisee.defaultSearchRadiusMiles;
+
+        // Set employee range based on combo selection
+        auto ranges = Models::EmployeeRange::getStandardRanges();
+        int sizeIdx = sizeCombo->currentIndex();
+        if (sizeIdx >= 0 && sizeIdx < static_cast<int>(ranges.size())) {
+            franchisee.searchCriteria.minEmployees = ranges[sizeIdx].minEmployees;
+            franchisee.searchCriteria.maxEmployees = ranges[sizeIdx].maxEmployees;
+        }
+
+        // Set business types based on checkboxes
+        franchisee.searchCriteria.clearBusinessTypes();
+        std::vector<Models::BusinessType> allTypes = {
+            Models::BusinessType::CORPORATE_OFFICE,
+            Models::BusinessType::CONFERENCE_CENTER,
+            Models::BusinessType::HOTEL,
+            Models::BusinessType::MEDICAL_FACILITY,
+            Models::BusinessType::EDUCATIONAL_INSTITUTION,
+            Models::BusinessType::MANUFACTURING,
+            Models::BusinessType::WAREHOUSE,
+            Models::BusinessType::GOVERNMENT_OFFICE,
+            Models::BusinessType::TECH_COMPANY,
+            Models::BusinessType::FINANCIAL_SERVICES,
+            Models::BusinessType::COWORKING_SPACE,
+            Models::BusinessType::NONPROFIT
+        };
+
+        for (size_t i = 0; i < typeCheckboxes.size() && i < allTypes.size(); ++i) {
+            if (typeCheckboxes[i]->isChecked()) {
+                franchisee.searchCriteria.addBusinessType(allTypes[i]);
+            }
+        }
+
+        // Complete setup
+        onFranchiseeSetupComplete(franchisee);
+    });
+}
+
 void FranchiseApp::showDashboardPage() {
     workArea_->clear();
     navigation_->setPageTitle("Dashboard");
@@ -339,6 +596,31 @@ void FranchiseApp::showAISearchPage() {
     auto container = workArea_->addWidget(std::make_unique<Wt::WContainerWidget>());
     container->setStyleClass("page-container search-page");
 
+    // Franchisee info banner (if configured)
+    if (franchisee_.isConfigured) {
+        auto franchiseeBanner = container->addWidget(std::make_unique<Wt::WContainerWidget>());
+        franchiseeBanner->setStyleClass("franchisee-badge");
+
+        auto storeIcon = franchiseeBanner->addWidget(std::make_unique<Wt::WText>("📍 "));
+        auto storeName = franchiseeBanner->addWidget(std::make_unique<Wt::WText>(
+            franchisee_.getDisplayName(), Wt::TextFormat::Plain
+        ));
+        storeName->setStyleClass("store-name");
+
+        auto separator = franchiseeBanner->addWidget(std::make_unique<Wt::WText>(" | "));
+        auto storeLocation = franchiseeBanner->addWidget(std::make_unique<Wt::WText>(
+            franchisee_.getLocationDisplay(), Wt::TextFormat::Plain
+        ));
+        storeLocation->setStyleClass("store-location");
+
+        auto changeBtn = franchiseeBanner->addWidget(std::make_unique<Wt::WPushButton>("Change"));
+        changeBtn->setStyleClass("btn btn-outline btn-sm");
+        changeBtn->clicked().connect([this] {
+            showSetupPage();
+            setInternalPath("/setup", true);
+        });
+    }
+
     // Two-column layout
     auto columnsContainer = container->addWidget(std::make_unique<Wt::WContainerWidget>());
     columnsContainer->setStyleClass("search-columns");
@@ -350,6 +632,20 @@ void FranchiseApp::showAISearchPage() {
     searchPanel_ = leftColumn->addWidget(std::make_unique<Widgets::SearchPanel>());
     searchPanel_->searchRequested().connect(this, &FranchiseApp::onSearchRequested);
     searchPanel_->searchCancelled().connect(this, &FranchiseApp::onSearchCancelled);
+
+    // Pre-populate search panel with franchisee's location and criteria
+    if (franchisee_.isConfigured && franchisee_.hasValidLocation()) {
+        Models::SearchQuery defaultQuery;
+        defaultQuery.location = franchisee_.address;
+        defaultQuery.latitude = franchisee_.location.latitude;
+        defaultQuery.longitude = franchisee_.location.longitude;
+        defaultQuery.radiusMiles = franchisee_.searchCriteria.radiusMiles;
+        defaultQuery.businessTypes = franchisee_.searchCriteria.businessTypes;
+        defaultQuery.minEmployees = franchisee_.searchCriteria.minEmployees;
+        defaultQuery.maxEmployees = franchisee_.searchCriteria.maxEmployees;
+        defaultQuery.includeOpenStreetMap = franchisee_.searchCriteria.includeOpenStreetMap;
+        searchPanel_->setSearchQuery(defaultQuery);
+    }
 
     // Right column - Results display
     auto rightColumn = columnsContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
@@ -572,16 +868,16 @@ void FranchiseApp::showDemographicsPage() {
             auto card = statsGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
             card->setStyleClass("stat-card clickable");
 
-            // Make the value a clickable button
-            auto valueBtn = card->addWidget(std::make_unique<Wt::WPushButton>(std::to_string(count)));
-            valueBtn->setStyleClass("stat-value-btn");
+            // Make the value a clickable text link (same size as original)
+            auto valueText = card->addWidget(std::make_unique<Wt::WText>(std::to_string(count)));
+            valueText->setStyleClass("stat-value stat-link");
 
             // Copy to local variables for lambda capture (structured bindings can't be captured directly)
             std::string categoryLabel = label;
             int categoryCount = count;
 
             // Connect click handler for drill-down
-            valueBtn->clicked().connect([showDrillDownFunc, categoryLabel, categoryCount]() {
+            valueText->clicked().connect([showDrillDownFunc, categoryLabel, categoryCount]() {
                 showDrillDownFunc(categoryLabel, categoryCount);
             });
 
