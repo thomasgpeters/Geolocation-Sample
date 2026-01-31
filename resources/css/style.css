@@ -2519,3 +2519,87 @@ html, body {
     padding-top: 20px;
     border-top: 1px solid var(--border-color);
 }
+
+/* ==================== Modal Dialog Styles (Wt WMessageBox) ==================== */
+.Wt-dialog {
+    background: var(--bg-card);
+    border-radius: var(--border-radius-lg);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--border-color);
+    min-width: 400px;
+    max-width: 500px;
+}
+
+.Wt-dialogcover {
+    background-color: rgba(0, 0, 0, 0.5) !important;
+    backdrop-filter: blur(4px);
+}
+
+.Wt-dialog .titlebar {
+    background: var(--bg-primary);
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--text-primary);
+}
+
+.Wt-dialog .body {
+    padding: 20px;
+    color: var(--text-primary);
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.Wt-dialog .Wt-msgbox-text {
+    margin-bottom: 16px;
+    white-space: pre-wrap;
+}
+
+.Wt-dialog .Wt-msgbox-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+    margin-top: 8px;
+}
+
+.Wt-dialog .Wt-msgbox-buttons button,
+.Wt-dialog .Wt-msgbox-buttons .Wt-btn {
+    padding: 10px 20px;
+    border-radius: var(--border-radius);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    border: none;
+    background: var(--primary-color);
+    color: white;
+}
+
+.Wt-dialog .Wt-msgbox-buttons button:hover,
+.Wt-dialog .Wt-msgbox-buttons .Wt-btn:hover {
+    background: var(--primary-hover);
+}
+
+.Wt-dialog .Wt-msgbox-icon {
+    display: none;
+}
+
+/* Dialog close button */
+.Wt-dialog .closeicon {
+    position: absolute;
+    right: 16px;
+    top: 16px;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity var(--transition-fast);
+}
+
+.Wt-dialog .closeicon:hover {
+    opacity: 1;
+}
