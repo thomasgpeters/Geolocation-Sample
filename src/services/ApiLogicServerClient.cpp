@@ -364,10 +364,24 @@ ApiResponse ApiLogicServerClient::getStoreLocations() {
 }
 
 ApiResponse ApiLogicServerClient::getStoreLocation(const std::string& id) {
+    if (id.empty()) {
+        ApiResponse response;
+        response.success = false;
+        response.statusCode = 400;
+        response.errorMessage = "Store location ID cannot be empty";
+        return response;
+    }
     return httpGet("/StoreLocation/" + id);
 }
 
 ApiResponse ApiLogicServerClient::deleteStoreLocation(const std::string& id) {
+    if (id.empty()) {
+        ApiResponse response;
+        response.success = false;
+        response.statusCode = 400;
+        response.errorMessage = "Store location ID cannot be empty";
+        return response;
+    }
     return httpDelete("/StoreLocation/" + id);
 }
 
