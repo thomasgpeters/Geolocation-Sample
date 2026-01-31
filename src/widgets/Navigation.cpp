@@ -98,10 +98,81 @@ void Navigation::createRightSection() {
     notificationBadge_ = notifContainer->addWidget(std::make_unique<Wt::WText>("0"));
     notificationBadge_->setStyleClass("notification-badge hidden");
 
+    // User menu container (button + dropdown)
+    userMenuContainer_ = rightSection->addWidget(std::make_unique<Wt::WContainerWidget>());
+    userMenuContainer_->setStyleClass("user-menu-container");
+
     // User menu button
-    auto userBtn = rightSection->addWidget(std::make_unique<Wt::WPushButton>("👤"));
+    auto userBtn = userMenuContainer_->addWidget(std::make_unique<Wt::WPushButton>("👤"));
     userBtn->setStyleClass("nav-icon-btn user-btn");
     userBtn->setToolTip("User Menu");
+    userBtn->clicked().connect([this] {
+        toggleUserMenu();
+    });
+
+    // User dropdown menu (hidden by default)
+    userDropdown_ = userMenuContainer_->addWidget(std::make_unique<Wt::WContainerWidget>());
+    userDropdown_->setStyleClass("user-dropdown hidden");
+
+    // User info header in dropdown
+    auto userInfoSection = userDropdown_->addWidget(std::make_unique<Wt::WContainerWidget>());
+    userInfoSection->setStyleClass("user-dropdown-header");
+
+    auto userAvatar = userInfoSection->addWidget(std::make_unique<Wt::WText>("👤"));
+    userAvatar->setStyleClass("user-dropdown-avatar");
+
+    auto userDetails = userInfoSection->addWidget(std::make_unique<Wt::WContainerWidget>());
+    userDetails->setStyleClass("user-dropdown-details");
+
+    userNameText_ = userDetails->addWidget(std::make_unique<Wt::WText>(userName_));
+    userNameText_->setStyleClass("user-dropdown-name");
+
+    userEmailText_ = userDetails->addWidget(std::make_unique<Wt::WText>(userEmail_));
+    userEmailText_->setStyleClass("user-dropdown-email");
+
+    // Divider
+    auto divider1 = userDropdown_->addWidget(std::make_unique<Wt::WContainerWidget>());
+    divider1->setStyleClass("user-dropdown-divider");
+
+    // Menu items
+    auto menuItems = userDropdown_->addWidget(std::make_unique<Wt::WContainerWidget>());
+    menuItems->setStyleClass("user-dropdown-menu");
+
+    // User Profile option
+    auto profileItem = menuItems->addWidget(std::make_unique<Wt::WContainerWidget>());
+    profileItem->setStyleClass("user-dropdown-item");
+    auto profileIcon = profileItem->addWidget(std::make_unique<Wt::WText>("👤"));
+    profileIcon->setStyleClass("dropdown-item-icon");
+    auto profileText = profileItem->addWidget(std::make_unique<Wt::WText>("User Profile"));
+    profileText->setStyleClass("dropdown-item-text");
+    profileItem->clicked().connect([this] {
+        toggleUserMenu();  // Close menu
+        userProfileClicked_.emit();
+    });
+
+    // Settings option
+    auto settingsItem = menuItems->addWidget(std::make_unique<Wt::WContainerWidget>());
+    settingsItem->setStyleClass("user-dropdown-item");
+    auto settingsIcon = settingsItem->addWidget(std::make_unique<Wt::WText>("⚙️"));
+    settingsIcon->setStyleClass("dropdown-item-icon");
+    auto settingsText = settingsItem->addWidget(std::make_unique<Wt::WText>("Settings"));
+    settingsText->setStyleClass("dropdown-item-text");
+
+    // Divider before logout
+    auto divider2 = userDropdown_->addWidget(std::make_unique<Wt::WContainerWidget>());
+    divider2->setStyleClass("user-dropdown-divider");
+
+    // Logout option
+    auto logoutItem = userDropdown_->addWidget(std::make_unique<Wt::WContainerWidget>());
+    logoutItem->setStyleClass("user-dropdown-item logout-item");
+    auto logoutIcon = logoutItem->addWidget(std::make_unique<Wt::WText>("🚪"));
+    logoutIcon->setStyleClass("dropdown-item-icon");
+    auto logoutText = logoutItem->addWidget(std::make_unique<Wt::WText>("Logout"));
+    logoutText->setStyleClass("dropdown-item-text");
+    logoutItem->clicked().connect([this] {
+        toggleUserMenu();  // Close menu
+        logoutClicked_.emit();
+    });
 }
 
 void Navigation::setPageTitle(const std::string& title) {
@@ -166,6 +237,32 @@ void Navigation::setMarketScore(int score) {
             colorClass += " score-low";
         }
         marketScoreContainer_->setStyleClass(colorClass);
+    }
+}
+
+void Navigation::toggleUserMenu() {
+    userMenuOpen_ = !userMenuOpen_;
+
+    if (userDropdown_) {
+        if (userMenuOpen_) {
+            userDropdown_->setStyleClass("user-dropdown");
+        } else {
+            userDropdown_->setStyleClass("user-dropdown hidden");
+        }
+    }
+}
+
+void Navigation::setUserName(const std::string& name) {
+    userName_ = name;
+    if (userNameText_) {
+        userNameText_->setText(name);
+    }
+}
+
+void Navigation::setUserEmail(const std::string& email) {
+    userEmail_ = email;
+    if (userEmailText_) {
+        userEmailText_->setText(email);
     }
 }
 
