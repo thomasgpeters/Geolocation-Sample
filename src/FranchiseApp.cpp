@@ -1068,6 +1068,47 @@ void FranchiseApp::showOpenStreetMapPage() {
     double initLat = initialSearchArea.center.latitude;
     double initLon = initialSearchArea.center.longitude;
 
+    // Build franchisee info for popup (sanitize for JavaScript)
+    std::string franchiseeName = franchisee_.storeName.empty() ? "My Franchise" : franchisee_.storeName;
+    std::string franchiseeAddress = franchisee_.address;
+    std::string franchiseeCity = franchisee_.location.city;
+    std::string franchiseeState = franchisee_.location.state;
+    std::string franchiseePhone = franchisee_.phone;
+    std::string franchiseeEmail = franchisee_.email;
+
+    // Sanitize strings for JavaScript
+    auto sanitizeJs = [](std::string& str) {
+        for (auto& c : str) {
+            if (c == '\'' || c == '"' || c == '\\' || c == '\n' || c == '\r') c = ' ';
+        }
+    };
+    sanitizeJs(franchiseeName);
+    sanitizeJs(franchiseeAddress);
+    sanitizeJs(franchiseeCity);
+    sanitizeJs(franchiseeState);
+    sanitizeJs(franchiseePhone);
+    sanitizeJs(franchiseeEmail);
+
+    // Build popup content
+    std::ostringstream popupContent;
+    popupContent << "<div style=\"min-width: 200px;\">"
+                 << "<b style=\"font-size: 14px; color: #c41e3a;\">" << franchiseeName << "</b><br>";
+    if (!franchiseeAddress.empty()) {
+        popupContent << "<span style=\"color: #666;\">" << franchiseeAddress << "</span><br>";
+    }
+    if (!franchiseeCity.empty() || !franchiseeState.empty()) {
+        popupContent << "<span style=\"color: #666;\">" << franchiseeCity;
+        if (!franchiseeCity.empty() && !franchiseeState.empty()) popupContent << ", ";
+        popupContent << franchiseeState << "</span><br>";
+    }
+    if (!franchiseePhone.empty()) {
+        popupContent << "<br><span style=\"color: #333;\">📞 " << franchiseePhone << "</span><br>";
+    }
+    if (!franchiseeEmail.empty()) {
+        popupContent << "<span style=\"color: #333;\">✉️ " << franchiseeEmail << "</span>";
+    }
+    popupContent << "</div>";
+
     // Initialize Leaflet map via JavaScript - load from CDN
     std::ostringstream initMapJs;
     initMapJs << "(function() {"
@@ -1108,6 +1149,25 @@ void FranchiseApp::showOpenStreetMapPage() {
               << "      }).addTo(map);"
               << "      mapEl._leaflet_map = map;"
               << "      window.osmMap = map;"
+              // Add red pin marker for franchisee location
+              << "      var redIcon = L.divIcon({"
+              << "        className: 'franchisee-marker',"
+              << "        html: '<div style=\"position: relative;\">"
+              << "<div style=\"width: 30px; height: 30px; background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%); "
+              << "border-radius: 50% 50% 50% 0; transform: rotate(-45deg); "
+              << "border: 3px solid #fff; box-shadow: 0 3px 8px rgba(0,0,0,0.4);\">"
+              << "</div>"
+              << "<div style=\"position: absolute; top: 6px; left: 9px; width: 12px; height: 12px; "
+              << "background: #fff; border-radius: 50%; transform: rotate(45deg);\"></div>"
+              << "</div>',"
+              << "        iconSize: [30, 30],"
+              << "        iconAnchor: [15, 30],"
+              << "        popupAnchor: [0, -30]"
+              << "      });"
+              << "      var franchiseeMarker = L.marker([" << initLat << ", " << initLon << "], {icon: redIcon})"
+              << "        .addTo(map)"
+              << "        .bindPopup('" << popupContent.str() << "');"
+              << "      window.osmFranchiseeMarker = franchiseeMarker;"
               << "      setTimeout(function() { map.invalidateSize(); }, 300);"
               << "    } catch(e) { console.error('Map init error:', e); }"
               << "  }"
