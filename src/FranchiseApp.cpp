@@ -53,8 +53,9 @@ FranchiseApp::FranchiseApp(const Wt::WEnvironment& env)
 
     searchService_ = std::make_unique<Services::AISearchService>(config);
 
-    // Initialize ApiLogicServer client and load store location
+    // Initialize ApiLogicServer client and load data
     alsClient_ = std::make_unique<Services::ApiLogicServerClient>();
+    alsClient_->loadAppConfigs();  // Load all app config into memory cache
     loadStoreLocationFromALS();
 
     // Load styles

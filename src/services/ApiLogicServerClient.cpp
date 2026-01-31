@@ -195,6 +195,7 @@ ApiResponse ApiLogicServerClient::httpGet(const std::string& path) {
         response.body = responseBody;
         response.success = (httpCode >= 200 && httpCode < 300);
         std::cout << "  [ALS] Response: " << httpCode << " (" << responseBody.length() << " bytes)" << std::endl;
+        std::cout << "  [ALS] Body: " << responseBody << std::endl;
     }
 
     curl_slist_free_all(headers);
@@ -424,36 +425,101 @@ bool ApiLogicServerClient::isAvailable() {
     return response.success || response.statusCode == 404;  // 404 is ok, means server is up
 }
 
-std::string ApiLogicServerClient::getAppConfigValue(const std::string& key) {
-    // Query app_config by config_key
-    auto response = httpGet("/AppConfig?filter[config_key]=" + key);
+void ApiLogicServerClient::loadAppConfigs() {
+    std::cout << "  [ALS] Loading all AppConfig entries..." << std::endl;
+    appConfigCache_.clear();
 
-    if (response.success && !response.body.empty()) {
-        // Extract config_value from response
-        std::string configValue = extractJsonString(response.body, "config_value");
-        return configValue;
+    auto response = httpGet("/AppConfig");
+    if (!response.success || response.body.empty()) {
+        std::cerr << "  [ALS] Failed to load AppConfig" << std::endl;
+        return;
+    }
+
+    // Parse the JSON array of config entries
+    // Look for each object in the data array
+    const std::string& json = response.body;
+    size_t pos = 0;
+
+    while (pos < json.length()) {
+        // Find next "id" field (indicates start of a record)
+        size_t idPos = json.find("\"id\"", pos);
+        if (idPos == std::string::npos) break;
+
+        // Extract fields for this record
+        // Find the object boundaries (look for config_key which must exist)
+        size_t keyPos = json.find("\"config_key\"", idPos);
+        if (keyPos == std::string::npos) break;
+
+        AppConfigEntry entry;
+
+        // Extract ID
+        size_t idStart = json.find("\"", idPos + 4);
+        size_t idEnd = json.find("\"", idStart + 1);
+        if (idStart != std::string::npos && idEnd != std::string::npos) {
+            entry.id = json.substr(idStart + 1, idEnd - idStart - 1);
+        }
+
+        // Extract config_key
+        size_t ckStart = json.find("\"", keyPos + 12);
+        size_t ckEnd = json.find("\"", ckStart + 1);
+        if (ckStart != std::string::npos && ckEnd != std::string::npos) {
+            entry.configKey = json.substr(ckStart + 1, ckEnd - ckStart - 1);
+        }
+
+        // Extract config_value
+        size_t cvPos = json.find("\"config_value\"", keyPos);
+        if (cvPos != std::string::npos && cvPos < keyPos + 500) {
+            size_t cvStart = json.find("\"", cvPos + 14);
+            size_t cvEnd = json.find("\"", cvStart + 1);
+            if (cvStart != std::string::npos && cvEnd != std::string::npos) {
+                entry.configValue = json.substr(cvStart + 1, cvEnd - cvStart - 1);
+            }
+        }
+
+        // Add to cache if we got a valid key
+        if (!entry.configKey.empty() && !entry.id.empty()) {
+            appConfigCache_[entry.configKey] = entry;
+            std::cout << "  [ALS] Cached: " << entry.configKey << " = '" << entry.configValue << "' (id: " << entry.id << ")" << std::endl;
+        }
+
+        pos = keyPos + 1;
+    }
+
+    std::cout << "  [ALS] Loaded " << appConfigCache_.size() << " config entries" << std::endl;
+}
+
+std::string ApiLogicServerClient::getAppConfigValue(const std::string& key) {
+    // Look up from cache
+    auto it = appConfigCache_.find(key);
+    if (it != appConfigCache_.end()) {
+        return it->second.configValue;
     }
     return "";
 }
 
 bool ApiLogicServerClient::setAppConfigValue(const std::string& key, const std::string& value) {
-    // First check if the config exists
-    auto getResponse = httpGet("/AppConfig?filter[config_key]=" + key);
+    std::cout << "  [ALS] setAppConfigValue: key=" << key << ", value=" << value << std::endl;
 
-    if (getResponse.success && !getResponse.body.empty()) {
-        // Try to extract the ID
-        std::string id = extractJsonString(getResponse.body, "id");
+    // Check if we have this key in cache (meaning it exists in DB)
+    auto it = appConfigCache_.find(key);
+    if (it != appConfigCache_.end()) {
+        // Update existing record using cached ID
+        std::string id = it->second.id;
+        std::cout << "  [ALS] Found in cache, PATCH using id: " << id << std::endl;
 
-        if (!id.empty()) {
-            // Update existing config - JSON:API format with type and id for PATCH
-            std::string json = "{\"data\": {\"attributes\": {\"config_value\": \"" + value +
-                               "\"}, \"type\": \"AppConfig\", \"id\": \"" + id + "\"}}";
-            auto response = httpPatch("/AppConfig/" + id, json);
-            return response.success;
+        std::string json = "{\"data\": {\"attributes\": {\"config_value\": \"" + value +
+                           "\"}, \"type\": \"AppConfig\", \"id\": \"" + id + "\"}}";
+        auto response = httpPatch("/AppConfig/" + id, json);
+
+        if (response.success) {
+            // Update cache
+            it->second.configValue = value;
         }
+        return response.success;
     }
 
-    // Create new config entry - JSON:API format with all required fields
+    // Create new config entry
+    std::cout << "  [ALS] Not in cache, doing POST" << std::endl;
     std::string json = "{\"data\": {\"attributes\": {"
                        "\"config_key\": \"" + key + "\", "
                        "\"config_value\": \"" + value + "\", "
@@ -465,6 +531,19 @@ bool ApiLogicServerClient::setAppConfigValue(const std::string& key, const std::
                        "\"default_value\": \"\"}, "
                        "\"type\": \"AppConfig\"}}";
     auto response = httpPost("/AppConfig", json);
+
+    if (response.success) {
+        // Add to cache - extract ID from response
+        std::string newId = extractJsonString(response.body, "id");
+        if (!newId.empty()) {
+            AppConfigEntry entry;
+            entry.id = newId;
+            entry.configKey = key;
+            entry.configValue = value;
+            appConfigCache_[key] = entry;
+            std::cout << "  [ALS] Added to cache with id: " << newId << std::endl;
+        }
+    }
     return response.success;
 }
 
