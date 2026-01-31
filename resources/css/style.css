@@ -115,6 +115,10 @@ html, body {
     color: white;
 }
 
+.user-section-wrapper {
+    position: relative;
+}
+
 .user-section {
     display: flex;
     align-items: center;
@@ -122,6 +126,15 @@ html, body {
     padding: 12px;
     background: rgba(255, 255, 255, 0.05);
     border-radius: var(--border-radius);
+}
+
+.user-section.clickable {
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.user-section.clickable:hover {
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .user-avatar {
@@ -133,11 +146,13 @@ html, body {
     align-items: center;
     justify-content: center;
     font-size: 18px;
+    flex-shrink: 0;
 }
 
 .user-info {
     flex: 1;
     overflow: hidden;
+    min-width: 0;
 }
 
 .user-name {
@@ -145,12 +160,78 @@ html, body {
     font-size: 14px;
     color: white;
     display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .franchise-name {
     font-size: 12px;
     color: var(--text-sidebar-muted);
     display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dropdown-arrow {
+    font-size: 10px;
+    color: var(--text-sidebar-muted);
+    margin-left: auto;
+    transition: transform 0.2s ease;
+}
+
+.user-section.clickable:hover .dropdown-arrow {
+    color: white;
+}
+
+/* User Dropdown Menu */
+.user-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 4px;
+    background: #1e293b;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--border-radius);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    overflow: hidden;
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    color: var(--text-sidebar);
+}
+
+.dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.dropdown-item.logout {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    color: #f87171;
+}
+
+.dropdown-item.logout:hover {
+    background: rgba(248, 113, 113, 0.15);
+}
+
+.dropdown-icon {
+    font-size: 16px;
+    width: 20px;
+    text-align: center;
+}
+
+.dropdown-label {
+    font-size: 14px;
+    font-weight: 500;
 }
 
 .sidebar-menu {
