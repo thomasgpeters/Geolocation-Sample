@@ -2053,15 +2053,19 @@ void FranchiseApp::showSettingsPage() {
     saveBtn->clicked().connect([this, nameInput, addressInput, ownerInput, phoneInput, radiusInput,
                                 sizeCombo, typeCheckboxes, openaiInput, modelSelect, geminiInput,
                                 googleInput, bbbInput, censusInput, statusMessage, aiStatus]() {
+        std::cout << "  [Settings] Save button clicked" << std::endl;
         auto& appConfig = AppConfig::instance();
         bool changed = false;
 
         // === Save Store Setup ===
         std::string storeName = nameInput->text().toUTF8();
         std::string address = addressInput->text().toUTF8();
+        std::cout << "  [Settings] Store name: '" << storeName << "'" << std::endl;
+        std::cout << "  [Settings] Address: '" << address << "'" << std::endl;
 
         bool geocodeSuccess = false;
         if (!storeName.empty() && !address.empty()) {
+            std::cout << "  [Settings] Geocoding address..." << std::endl;
             Models::GeoLocation location = searchService_->geocodeAddress(address);
 
             franchisee_.storeName = storeName;
@@ -2072,6 +2076,8 @@ void FranchiseApp::showSettingsPage() {
 
             // Check if geocoding was successful
             geocodeSuccess = location.hasValidCoordinates();
+            std::cout << "  [Settings] Geocode success: " << (geocodeSuccess ? "yes" : "no") << std::endl;
+            std::cout << "  [Settings] Lat/Lng: " << location.latitude << ", " << location.longitude << std::endl;
 
             try {
                 franchisee_.defaultSearchRadiusMiles = std::stod(radiusInput->text().toUTF8());
@@ -2109,10 +2115,15 @@ void FranchiseApp::showSettingsPage() {
 
             // Save store location to ApiLogicServer
             if (geocodeSuccess) {
+                std::cout << "  [Settings] Saving to ALS..." << std::endl;
                 saveStoreLocationToALS();
+            } else {
+                std::cout << "  [Settings] Skipping ALS save - geocode failed" << std::endl;
             }
 
             changed = true;
+        } else {
+            std::cout << "  [Settings] Skipping save - store name or address empty" << std::endl;
         }
 
         // === Save AI Configuration ===
