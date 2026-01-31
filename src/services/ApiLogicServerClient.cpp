@@ -13,8 +13,12 @@ namespace Services {
 std::string StoreLocationDTO::toJson() const {
     std::ostringstream json;
     // Wrap in JSON:API format for ApiLogicServer
-    // JSON:API requires "type" member in data object
-    json << "{\"data\": {\"type\": \"StoreLocation\", \"attributes\": {";
+    // JSON:API requires "type" member in data object, and "id" for PATCH updates
+    json << "{\"data\": {\"type\": \"StoreLocation\"";
+    if (!id.empty()) {
+        json << ", \"id\": \"" << id << "\"";
+    }
+    json << ", \"attributes\": {";
     json << "\"store_name\": \"" << storeName << "\"";
 
     if (!storeCode.empty()) {
@@ -437,8 +441,9 @@ bool ApiLogicServerClient::setAppConfigValue(const std::string& key, const std::
         std::string id = extractJsonString(getResponse.body, "id");
 
         if (!id.empty()) {
-            // Update existing config - JSON:API format with type member
-            std::string json = "{\"data\": {\"type\": \"AppConfig\", \"attributes\": {\"config_value\": \"" + value + "\"}}}";
+            // Update existing config - JSON:API format with type and id for PATCH
+            std::string json = "{\"data\": {\"type\": \"AppConfig\", \"id\": \"" + id +
+                               "\", \"attributes\": {\"config_value\": \"" + value + "\"}}}";
             auto response = httpPatch("/AppConfig/" + id, json);
             return response.success;
         }
