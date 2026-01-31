@@ -343,8 +343,135 @@ All API requests follow the JSON:API specification:
 
 ---
 
+## Audit Trail System
+
+### Overview
+
+The Audit Trail system provides administrators with visibility into all user actions and security events within the application. This feature is essential for compliance, security monitoring, and troubleshooting.
+
+### Access Control
+
+- **Admin Only:** The Audit Trail page is only accessible to users with the `admin` role
+- **Menu Visibility:** The "Audit Trail" menu item only appears in the sidebar for admin users
+- **Route Protection:** Direct URL access to `/audit` is blocked for non-admin users
+
+### Audit Trail Page
+
+Located at `/audit?token=xxx`, the Audit Trail page provides:
+
+- **Filterable Table:** Filter by event type, user, date range
+- **Paginated Results:** 25 entries per page with navigation
+- **Event Details:** Timestamp, user, event type, details, IP address
+- **Color-Coded Badges:** Visual indicators for event types
+
+### Logged Events
+
+The following events are automatically logged to the `audit_log` table:
+
+| Event Type | Description | Logged Data |
+|------------|-------------|-------------|
+| `login` | Successful user login | User ID, email, IP address |
+| `logout` | User logout | User ID, IP address |
+| `failed_login` | Failed login attempt | Email, reason, IP address |
+| `password_change` | Password changed | User ID |
+| `settings_change` | Application settings modified | Setting name, old/new values |
+| `franchisee_update` | Franchisee data modified | Franchisee ID, changes |
+| `store_update` | Store location modified | Store ID, changes |
+| `prospect_create` | New prospect added | Prospect ID |
+| `prospect_update` | Prospect modified | Prospect ID, changes |
+| `search_performed` | AI search executed | Search parameters |
+
+### AuditLogger Service
+
+The `AuditLogger` singleton provides a simple interface for logging events:
+
+```cpp
+#include "services/AuditLogger.h"
+
+// Log a login event
+Services::AuditLogger::instance().logLogin(userId, email, ipAddress);
+
+// Log a logout event
+Services::AuditLogger::instance().logLogout(userId, ipAddress);
+
+// Log a settings change
+Services::AuditLogger::instance().logSettingsChange(
+    userId, "search_radius", "5", "10"
+);
+
+// Log custom event with details
+std::map<std::string, std::string> details;
+details["action"] = "exported_prospects";
+details["count"] = "25";
+Services::AuditLogger::instance().log(
+    userId,
+    "export_data",
+    details,
+    ipAddress
+);
+```
+
+### Event Type Constants
+
+Use the `AuditEventType` namespace for consistent event naming:
+
+```cpp
+namespace AuditEventType {
+    constexpr const char* LOGIN = "login";
+    constexpr const char* LOGOUT = "logout";
+    constexpr const char* FAILED_LOGIN = "failed_login";
+    constexpr const char* PASSWORD_CHANGE = "password_change";
+    constexpr const char* SETTINGS_CHANGE = "settings_change";
+    constexpr const char* FRANCHISEE_UPDATE = "franchisee_update";
+    constexpr const char* STORE_UPDATE = "store_update";
+    constexpr const char* PROSPECT_CREATE = "prospect_create";
+    // ... more event types
+}
+```
+
+### AuditTrailPage Widget
+
+The `AuditTrailPage` widget (`src/widgets/AuditTrailPage.h`) provides:
+
+- **Filter Controls:** Event type dropdown, user search, date range
+- **Responsive Table:** Displays audit entries with sorting
+- **Pagination:** Navigate through large result sets
+- **Event Badges:** Color-coded event type indicators
+
+```cpp
+// Add to a page
+workArea_->addWidget(std::make_unique<Widgets::AuditTrailPage>());
+```
+
+### Database Indexes
+
+The audit_log table includes indexes for efficient querying:
+
+```sql
+CREATE INDEX idx_audit_log_user ON audit_log(user_id);
+CREATE INDEX idx_audit_log_event ON audit_log(event_type);
+CREATE INDEX idx_audit_log_created ON audit_log(created_at DESC);
+```
+
+### UI Styling
+
+Event types are displayed with color-coded badges:
+
+| Event Type | Badge Color |
+|------------|-------------|
+| `login` | Green |
+| `logout` | Blue |
+| `failed_login` | Red |
+| `settings_change` | Yellow |
+| `*_create` | Cyan |
+| `*_update` | Purple |
+| `*_delete` | Red |
+
+---
+
 ## Future Enhancements
 
+- [x] Audit Trail for administrators
 - [ ] OAuth2/OpenID Connect integration
 - [ ] Two-factor authentication (2FA)
 - [ ] Password reset via email
@@ -352,3 +479,6 @@ All API requests follow the JSON:API specification:
 - [ ] Session management UI (view/revoke sessions)
 - [ ] Role-based UI customization
 - [ ] API key authentication for integrations
+- [ ] Audit log export (CSV/PDF)
+- [ ] Audit log retention policies
+- [ ] Real-time audit notifications

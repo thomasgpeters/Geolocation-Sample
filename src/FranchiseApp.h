@@ -9,7 +9,9 @@
 #include "widgets/SearchPanel.h"
 #include "widgets/ResultsDisplay.h"
 #include "widgets/LoginDialog.h"
+#include "widgets/AuditTrailPage.h"
 #include "services/AISearchService.h"
+#include "services/AuditLogger.h"
 #include "services/ApiLogicServerClient.h"
 #include "services/AuthService.h"
 #include "models/Franchisee.h"
@@ -101,6 +103,7 @@ private:
     void showOpenStreetMapPage();
     void showReportsPage();
     void showSettingsPage();
+    void showAuditTrailPage();
 
     // Franchisee data
     Models::Franchisee franchisee_;

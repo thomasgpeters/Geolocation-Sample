@@ -2,6 +2,8 @@
 #include "AppConfig.h"
 #include "models/GeoLocation.h"
 #include "widgets/LoginDialog.h"
+#include "widgets/AuditTrailPage.h"
+#include "services/AuditLogger.h"
 #include <Wt/WBootstrap5Theme.h>
 #include <Wt/WCssStyleSheet.h>
 #include <Wt/WText.h>
@@ -196,6 +198,13 @@ void FranchiseApp::onLoginSuccessful(const Services::LoginResult& result) {
     currentUser_.role = result.role;
     currentUser_.franchiseeId = result.franchiseeId;
 
+    // Log the login event
+    std::string ipAddress;
+    if (environment().clientAddress().length() > 0) {
+        ipAddress = environment().clientAddress();
+    }
+    Services::AuditLogger::instance().logLogin(result.userId, result.email, ipAddress);
+
     // Clear the login page
     root()->clear();
 
@@ -215,6 +224,12 @@ void FranchiseApp::onLoginSuccessful(const Services::LoginResult& result) {
     setupUI();
     setupRouting();
 
+    // Set user role on sidebar (shows/hides admin items like Audit Trail)
+    sidebar_->setUserRole(result.role);
+
+    // Connect logout signal
+    sidebar_->logoutRequested().connect(this, &FranchiseApp::onLogout);
+
     // Redirect to Dashboard with token in URL
     std::string dashboardUrl = "/dashboard?token=" + sessionToken_;
     setInternalPath("/dashboard", false);
@@ -233,6 +248,13 @@ void FranchiseApp::onLoginSuccessful(const Services::LoginResult& result) {
 
 void FranchiseApp::onLogout() {
     std::cout << "[FranchiseApp] User logging out" << std::endl;
+
+    // Log the logout event before clearing state
+    std::string ipAddress;
+    if (environment().clientAddress().length() > 0) {
+        ipAddress = environment().clientAddress();
+    }
+    Services::AuditLogger::instance().logLogout(currentUser_.id, ipAddress);
 
     // Invalidate session
     if (authService_ && !sessionToken_.empty()) {
@@ -374,6 +396,12 @@ void FranchiseApp::onMenuItemSelected(const std::string& itemId) {
     } else if (itemId == "settings") {
         setInternalPath("/settings", true);
         showSettingsPage();
+    } else if (itemId == "audit-trail") {
+        // Admin only - Audit Trail
+        if (currentUser_.role == "admin") {
+            setInternalPath("/audit", true);
+            showAuditTrailPage();
+        }
     }
 }
 
@@ -2488,6 +2516,23 @@ void FranchiseApp::showSettingsPage() {
             statusMessage->setHidden(false);
         }
     });
+}
+
+void FranchiseApp::showAuditTrailPage() {
+    // Admin-only page - check role
+    if (currentUser_.role != "admin") {
+        std::cout << "[FranchiseApp] Non-admin user attempted to access Audit Trail" << std::endl;
+        showDashboardPage();
+        return;
+    }
+
+    workArea_->clear();
+    navigation_->setPageTitle("Audit Trail");
+    navigation_->setBreadcrumbs({"Home", "Admin", "Audit Trail"});
+    navigation_->setMarketScore(-1);
+
+    // Add the AuditTrailPage widget
+    workArea_->addWidget(std::make_unique<Widgets::AuditTrailPage>());
 }
 
 void FranchiseApp::loadStoreLocationFromALS() {

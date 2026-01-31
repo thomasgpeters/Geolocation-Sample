@@ -22,6 +22,7 @@ struct MenuItem {
     std::string icon;
     bool isActive = false;
     bool isDivider = false;  // If true, renders as a dividing line
+    bool isAdminOnly = false;  // If true, only visible to admin users
 };
 
 /**
@@ -68,6 +69,17 @@ public:
      */
     bool isCollapsed() const { return isCollapsed_; }
 
+    /**
+     * @brief Set user role to show/hide admin menu items
+     * @param role User role ("admin", "franchisee", "staff")
+     */
+    void setUserRole(const std::string& role);
+
+    /**
+     * @brief Signal emitted when logout is requested
+     */
+    Wt::Signal<>& logoutRequested() { return logoutRequested_; }
+
 private:
     void setupUI();
     void createHeader();
@@ -77,9 +89,12 @@ private:
 
     std::vector<MenuItem> menuItems_;
     std::string activeItemId_;
+    std::string userRole_ = "franchisee";
     bool isCollapsed_ = false;
+    bool isAdmin_ = false;
 
     Wt::Signal<std::string> itemSelected_;
+    Wt::Signal<> logoutRequested_;
 
     // UI components
     Wt::WContainerWidget* headerContainer_ = nullptr;
