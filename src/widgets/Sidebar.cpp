@@ -40,7 +40,7 @@ void Sidebar::createHeader() {
     auto logoContainer = headerContainer_->addWidget(std::make_unique<Wt::WContainerWidget>());
     logoContainer->setStyleClass("sidebar-logo");
 
-    auto brandLogo = logoContainer->addWidget(std::make_unique<Wt::WImage>("https://media.licdn.com/dms/image/v2/D4E0BAQFNqqJ59i1lgQ/company-logo_200_200/company-logo_200_200/0/1733939002925/imagery_business_systems_llc_logo?e=2147483647&v=beta&t=s_hATe0kqIDc64S79VJYXNS4N_UwrcnUA1x7VCb3sFA"));
+    auto brandLogo = logoContainer->addWidget(std::make_unique<Wt::WImage>("https://media.licdn.com/dms/image/v2/D4E0BAQFNqqJ59i1lgQ/company-logo_200_200/company-logo_200_200/0/1733939002925/imagery_business_systems_llc_logo?e=1771459200&v=beta&t=uASbYiGNvSAkTxbpF0MxvSBGt74KHdfVxToiG4dmSGw"));
     brandLogo->setStyleClass("brand-logo");
     brandLogo->setAlternateText("FranchiseAI Logo");
 
