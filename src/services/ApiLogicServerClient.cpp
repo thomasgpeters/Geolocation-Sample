@@ -13,7 +13,8 @@ namespace Services {
 std::string StoreLocationDTO::toJson() const {
     std::ostringstream json;
     // Wrap in JSON:API format for ApiLogicServer
-    json << "{\"data\": {\"attributes\": {";
+    // JSON:API requires "type" member in data object
+    json << "{\"data\": {\"type\": \"StoreLocation\", \"attributes\": {";
     json << "\"store_name\": \"" << storeName << "\"";
 
     if (!storeCode.empty()) {
@@ -436,15 +437,15 @@ bool ApiLogicServerClient::setAppConfigValue(const std::string& key, const std::
         std::string id = extractJsonString(getResponse.body, "id");
 
         if (!id.empty()) {
-            // Update existing config - JSON:API format
-            std::string json = "{\"data\": {\"attributes\": {\"config_value\": \"" + value + "\"}}}";
+            // Update existing config - JSON:API format with type member
+            std::string json = "{\"data\": {\"type\": \"AppConfig\", \"attributes\": {\"config_value\": \"" + value + "\"}}}";
             auto response = httpPatch("/AppConfig/" + id, json);
             return response.success;
         }
     }
 
-    // Create new config entry - JSON:API format
-    std::string json = "{\"data\": {\"attributes\": {\"config_key\": \"" + key +
+    // Create new config entry - JSON:API format with type member
+    std::string json = "{\"data\": {\"type\": \"AppConfig\", \"attributes\": {\"config_key\": \"" + key +
                        "\", \"config_value\": \"" + value +
                        "\", \"config_type\": \"string\", \"category\": \"system\"}}}";
     auto response = httpPost("/AppConfig", json);
