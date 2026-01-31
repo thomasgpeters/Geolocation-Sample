@@ -9,6 +9,7 @@
 #include "widgets/SearchPanel.h"
 #include "widgets/ResultsDisplay.h"
 #include "services/AISearchService.h"
+#include "services/ApiLogicServerClient.h"
 #include "models/Franchisee.h"
 #include "models/GeoLocation.h"
 
@@ -80,9 +81,15 @@ private:
 
     // Franchisee data
     Models::Franchisee franchisee_;
+    std::string currentStoreLocationId_;  // UUID for ALS updates
+
+    // ApiLogicServer integration
+    void loadStoreLocationFromALS();
+    bool saveStoreLocationToALS();
 
     // Services
     std::unique_ptr<Services::AISearchService> searchService_;
+    std::unique_ptr<Services::ApiLogicServerClient> alsClient_;
 
     // Main layout containers
     Wt::WContainerWidget* mainContainer_ = nullptr;

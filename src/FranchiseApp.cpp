@@ -53,6 +53,10 @@ FranchiseApp::FranchiseApp(const Wt::WEnvironment& env)
 
     searchService_ = std::make_unique<Services::AISearchService>(config);
 
+    // Initialize ApiLogicServer client and load store location
+    alsClient_ = std::make_unique<Services::ApiLogicServerClient>();
+    loadStoreLocationFromALS();
+
     // Load styles
     loadStyleSheet();
 
@@ -2019,6 +2023,12 @@ void FranchiseApp::showSettingsPage() {
             franchisee_.isConfigured = geocodeSuccess;  // Only mark configured if geocoding succeeded
             sidebar_->setUserInfo(franchisee_.ownerName.empty() ? "Franchise Owner" : franchisee_.ownerName,
                                    franchisee_.storeName);
+
+            // Save store location to ApiLogicServer
+            if (geocodeSuccess) {
+                saveStoreLocationToALS();
+            }
+
             changed = true;
         }
 
@@ -2094,6 +2104,84 @@ void FranchiseApp::showSettingsPage() {
             statusMessage->setHidden(false);
         }
     });
+}
+
+void FranchiseApp::loadStoreLocationFromALS() {
+    std::cout << "  [App] Loading store location from ApiLogicServer..." << std::endl;
+
+    auto response = alsClient_->getStoreLocations();
+
+    if (response.success) {
+        auto locations = Services::ApiLogicServerClient::parseStoreLocations(response);
+
+        if (!locations.empty()) {
+            // Use the first (or primary) store location
+            const auto& loc = locations[0];
+            currentStoreLocationId_ = loc.id;
+
+            franchisee_.storeId = loc.id;
+            franchisee_.storeName = loc.storeName;
+            franchisee_.address = loc.addressLine1;
+            franchisee_.location.city = loc.city;
+            franchisee_.location.state = loc.stateProvince;
+            franchisee_.location.zipCode = loc.postalCode;
+            franchisee_.location.latitude = loc.latitude;
+            franchisee_.location.longitude = loc.longitude;
+            franchisee_.defaultSearchRadiusMiles = loc.defaultSearchRadiusMiles;
+            franchisee_.phone = loc.phone;
+            franchisee_.email = loc.email;
+            franchisee_.isConfigured = true;
+
+            std::cout << "  [App] Loaded store: " << franchisee_.storeName
+                      << " at " << franchisee_.location.city << ", " << franchisee_.location.state
+                      << " (" << franchisee_.location.latitude << ", " << franchisee_.location.longitude << ")"
+                      << std::endl;
+        } else {
+            std::cout << "  [App] No store locations found in database" << std::endl;
+        }
+    } else {
+        std::cerr << "  [App] Failed to load from ALS: " << response.errorMessage << std::endl;
+    }
+}
+
+bool FranchiseApp::saveStoreLocationToALS() {
+    std::cout << "  [App] Saving store location to ApiLogicServer..." << std::endl;
+
+    Services::StoreLocationDTO dto;
+    dto.id = currentStoreLocationId_;  // Empty for new, set for update
+    dto.storeName = franchisee_.storeName;
+    dto.addressLine1 = franchisee_.address;
+    dto.city = franchisee_.location.city;
+    dto.stateProvince = franchisee_.location.state;
+    dto.postalCode = franchisee_.location.zipCode;
+    dto.latitude = franchisee_.location.latitude;
+    dto.longitude = franchisee_.location.longitude;
+    dto.defaultSearchRadiusMiles = franchisee_.defaultSearchRadiusMiles;
+    dto.phone = franchisee_.phone;
+    dto.email = franchisee_.email;
+    dto.geocodeSource = "nominatim";
+    dto.isPrimary = true;
+    dto.isActive = true;
+
+    auto response = alsClient_->saveStoreLocation(dto);
+
+    if (response.success) {
+        // Parse the response to get the ID if this was a create
+        if (currentStoreLocationId_.empty()) {
+            auto created = Services::StoreLocationDTO::fromJson(response.body);
+            if (!created.id.empty()) {
+                currentStoreLocationId_ = created.id;
+                franchisee_.storeId = created.id;
+                std::cout << "  [App] Created new store location with ID: " << created.id << std::endl;
+            }
+        } else {
+            std::cout << "  [App] Updated store location: " << currentStoreLocationId_ << std::endl;
+        }
+        return true;
+    } else {
+        std::cerr << "  [App] Failed to save to ALS: " << response.errorMessage << std::endl;
+        return false;
+    }
 }
 
 std::unique_ptr<Wt::WApplication> createFranchiseApp(const Wt::WEnvironment& env) {
