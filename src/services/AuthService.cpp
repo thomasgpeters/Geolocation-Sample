@@ -364,6 +364,15 @@ UserDTO AuthService::getUser(const std::string& userId) {
         return user;
     }
 
+    // Validate UUID format before making API call
+    bool isValidUuid = userId.length() == 36 &&
+                       userId[8] == '-' && userId[13] == '-' &&
+                       userId[18] == '-' && userId[23] == '-';
+    if (!isValidUuid) {
+        std::cout << "[AuthService] Invalid UUID format: " << userId << std::endl;
+        return user;
+    }
+
     ApiLogicServerClient alsClient;
     std::string userJson = alsClient.getResource("User", userId);
 
