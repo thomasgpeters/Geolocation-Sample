@@ -535,6 +535,14 @@ html, body {
     display: block;
 }
 
+.page-tagline {
+    color: var(--text-primary);
+    font-size: 16px;
+    font-weight: 600;
+    display: block;
+    margin-top: 4px;
+}
+
 /* ==================== Search Page Layout ==================== */
 .search-page {
     height: 100%;

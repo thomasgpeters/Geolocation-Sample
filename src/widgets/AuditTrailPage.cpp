@@ -62,15 +62,12 @@ void AuditTrailPage::setupUI() {
     app->styleSheet().addRule(".timestamp", "font-size: 13px; color: #6b7280;");
     app->styleSheet().addRule(".details-cell", "max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;");
 
-    // Header
+    // Header - tagline only (title shown in navigation)
     auto* header = addWidget(std::make_unique<Wt::WContainerWidget>());
     header->addStyleClass("audit-header");
 
-    auto* title = header->addWidget(std::make_unique<Wt::WText>("Audit Trail"));
-    title->addStyleClass("audit-title");
-
-    auto* subtitle = header->addWidget(std::make_unique<Wt::WText>("View all user activity and security events"));
-    subtitle->addStyleClass("audit-subtitle");
+    auto* tagline = header->addWidget(std::make_unique<Wt::WText>("View all user activity and security events"));
+    tagline->addStyleClass("page-tagline");
 
     // Filters
     setupFilters();
