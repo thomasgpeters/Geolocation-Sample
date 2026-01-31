@@ -496,8 +496,24 @@ void AuthService::recordLoginAttempt(const std::string& userId,
               << "\"attributes\":{"
               << "\"event_type\":\"" << (success ? "login" : "failed_login") << "\"";
 
-    if (!userId.empty()) {
-        auditJson << ",\"user_id\":\"" << userId << "\"";
+    // Only include user_id if it's a valid UUID (not empty, not whitespace)
+    std::string trimmedUserId = userId;
+    // Trim whitespace
+    size_t start = trimmedUserId.find_first_not_of(" \t\n\r");
+    size_t end = trimmedUserId.find_last_not_of(" \t\n\r");
+    if (start != std::string::npos && end != std::string::npos) {
+        trimmedUserId = trimmedUserId.substr(start, end - start + 1);
+    } else {
+        trimmedUserId = "";
+    }
+
+    // Validate UUID format (basic check: 36 chars with hyphens at right positions)
+    bool isValidUuid = trimmedUserId.length() == 36 &&
+                       trimmedUserId[8] == '-' && trimmedUserId[13] == '-' &&
+                       trimmedUserId[18] == '-' && trimmedUserId[23] == '-';
+
+    if (isValidUuid) {
+        auditJson << ",\"user_id\":\"" << trimmedUserId << "\"";
     }
     if (!ipAddress.empty()) {
         auditJson << ",\"ip_address\":\"" << ipAddress << "\"";

@@ -30,13 +30,26 @@ void AuditLogger::log(const std::string& userId,
     std::cout << "[AuditLogger] Logging event: " << eventType
               << " for user: " << (userId.empty() ? "anonymous" : userId) << std::endl;
 
+    // Validate UUID format before including in request
+    std::string trimmedUserId = userId;
+    size_t start = trimmedUserId.find_first_not_of(" \t\n\r");
+    size_t end = trimmedUserId.find_last_not_of(" \t\n\r");
+    if (start != std::string::npos && end != std::string::npos) {
+        trimmedUserId = trimmedUserId.substr(start, end - start + 1);
+    } else {
+        trimmedUserId = "";
+    }
+    bool isValidUuid = trimmedUserId.length() == 36 &&
+                       trimmedUserId[8] == '-' && trimmedUserId[13] == '-' &&
+                       trimmedUserId[18] == '-' && trimmedUserId[23] == '-';
+
     // Build JSON:API request body
     std::ostringstream json;
     json << "{\"data\":{\"type\":\"AuditLog\",\"attributes\":{";
     json << "\"event_type\":\"" << eventType << "\"";
 
-    if (!userId.empty()) {
-        json << ",\"user_id\":\"" << userId << "\"";
+    if (isValidUuid) {
+        json << ",\"user_id\":\"" << trimmedUserId << "\"";
     }
 
     if (!detailsJson.empty() && detailsJson != "{}") {
