@@ -97,3 +97,31 @@ add_custom_target(run
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     COMMENT "Running Franchise AI Search Application on http://localhost:8080"
 )
+
+# ============================================================================
+# Test Target: ApiLogicServer Client Tests
+# ============================================================================
+set(TEST_SOURCES
+    tests/test_als_client.cpp
+    src/services/ApiLogicServerClient.cpp
+)
+
+add_executable(test_als_client ${TEST_SOURCES})
+
+target_include_directories(test_als_client PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/services
+    ${CMAKE_SOURCE_DIR}/src/models
+)
+
+target_link_libraries(test_als_client
+    CURL::libcurl
+)
+
+# Custom target to run tests
+add_custom_target(test
+    COMMAND test_als_client
+    DEPENDS test_als_client
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMENT "Running ApiLogicServer Client Tests"
+)
