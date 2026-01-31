@@ -103,6 +103,12 @@ private:
     Models::SearchArea currentSearchArea_;
     std::string currentSearchLocation_;
     bool hasActiveSearch_ = false;
+
+    // Saved prospects list (AI analysis performed when added)
+    std::vector<Models::SearchResultItem> savedProspects_;
+
+    // Helper to perform AI analysis on a single prospect
+    void analyzeProspect(Models::SearchResultItem& item);
 };
 
 /**

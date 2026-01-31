@@ -241,6 +241,7 @@ private:
 
     void analyzeResults(Models::SearchResults& results);
     void scoreResult(Models::SearchResultItem& item);
+    void generateLocalInsights(Models::SearchResultItem& item);
     void generateAIInsights(Models::SearchResultItem& item);
     void generateOverallAnalysis(Models::SearchResults& results);
 
