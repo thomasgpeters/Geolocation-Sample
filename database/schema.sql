@@ -3,9 +3,8 @@
 -- ApiLogicServer Data Model for Prospect Tracking
 -- ============================================================================
 
--- Enable required extensions
+-- Enable required extensions (no PostGIS needed)
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "postgis";  -- For geospatial queries
 
 -- ============================================================================
 -- ENUM TYPES
@@ -78,9 +77,9 @@ CREATE TABLE territories (
     code VARCHAR(30) UNIQUE NOT NULL,
     description TEXT,
 
-    -- Geographic boundaries (PostGIS)
-    boundary GEOMETRY(POLYGON, 4326),
-    center_point GEOMETRY(POINT, 4326),
+    -- Center point (simple lat/lng)
+    center_latitude DECIMAL(10, 8),
+    center_longitude DECIMAL(11, 8),
 
     -- Territory metadata
     radius_miles DECIMAL(10, 2),
@@ -94,8 +93,6 @@ CREATE TABLE territories (
 );
 
 CREATE INDEX idx_territories_region ON territories(region_id);
-CREATE INDEX idx_territories_boundary ON territories USING GIST(boundary);
-CREATE INDEX idx_territories_center ON territories USING GIST(center_point);
 
 COMMENT ON TABLE territories IS 'Sales territories with geographic boundaries';
 
@@ -173,8 +170,7 @@ CREATE TABLE franchisees (
     postal_code VARCHAR(20),
     country_code CHAR(2) DEFAULT 'US',
 
-    -- Geolocation
-    location GEOMETRY(POINT, 4326),
+    -- Geolocation (simple lat/lng)
     latitude DECIMAL(10, 8),
     longitude DECIMAL(11, 8),
 
@@ -191,7 +187,6 @@ CREATE TABLE franchisees (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_franchisees_location ON franchisees USING GIST(location);
 CREATE INDEX idx_franchisees_active ON franchisees(is_active) WHERE is_active = true;
 
 COMMENT ON TABLE franchisees IS 'Franchise owners and their business details';
@@ -277,8 +272,7 @@ CREATE TABLE prospects (
     postal_code VARCHAR(20),
     country_code CHAR(2) DEFAULT 'US',
 
-    -- Geolocation
-    location GEOMETRY(POINT, 4326),
+    -- Geolocation (simple lat/lng)
     latitude DECIMAL(10, 8),
     longitude DECIMAL(11, 8),
     geocode_accuracy VARCHAR(20),
@@ -313,7 +307,6 @@ CREATE TABLE prospects (
 
 CREATE INDEX idx_prospects_territory ON prospects(territory_id);
 CREATE INDEX idx_prospects_franchisee ON prospects(franchisee_id);
-CREATE INDEX idx_prospects_location ON prospects USING GIST(location);
 CREATE INDEX idx_prospects_status ON prospects(status);
 CREATE INDEX idx_prospects_industry ON prospects(industry_id);
 CREATE INDEX idx_prospects_postal_code ON prospects(postal_code);
@@ -721,40 +714,6 @@ CREATE TRIGGER update_saved_searches_updated_at BEFORE UPDATE ON saved_searches
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ---------------------------------------------------------------------------
--- Function: Find prospects within radius of a point
--- ---------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION find_prospects_within_radius(
-    center_lat DECIMAL,
-    center_lng DECIMAL,
-    radius_miles DECIMAL
-)
-RETURNS TABLE (
-    prospect_id UUID,
-    business_name VARCHAR,
-    distance_miles DECIMAL
-) AS $$
-BEGIN
-    RETURN QUERY
-    SELECT
-        p.id,
-        p.business_name,
-        ROUND((ST_Distance(
-            p.location::geography,
-            ST_SetSRID(ST_MakePoint(center_lng, center_lat), 4326)::geography
-        ) / 1609.34)::numeric, 2) as distance_miles
-    FROM prospects p
-    WHERE ST_DWithin(
-        p.location::geography,
-        ST_SetSRID(ST_MakePoint(center_lng, center_lat), 4326)::geography,
-        radius_miles * 1609.34  -- Convert miles to meters
-    )
-    ORDER BY distance_miles;
-END;
-$$ LANGUAGE plpgsql;
-
-COMMENT ON FUNCTION find_prospects_within_radius IS 'Find all prospects within a given radius (miles) from a point';
-
--- ---------------------------------------------------------------------------
 -- Function: Calculate prospect score grade from total score
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION calculate_score_grade(total_score INTEGER)
@@ -772,26 +731,125 @@ $$ LANGUAGE plpgsql IMMUTABLE;
 
 COMMENT ON FUNCTION calculate_score_grade IS 'Convert numeric score to letter grade';
 
--- ---------------------------------------------------------------------------
--- Function: Auto-assign prospect to territory based on location
--- ---------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION auto_assign_territory()
-RETURNS TRIGGER AS $$
-BEGIN
-    IF NEW.location IS NOT NULL AND NEW.territory_id IS NULL THEN
-        SELECT id INTO NEW.territory_id
-        FROM territories
-        WHERE ST_Contains(boundary, NEW.location)
-          AND is_active = true
-        LIMIT 1;
-    END IF;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
 
-CREATE TRIGGER auto_assign_prospect_territory
-    BEFORE INSERT OR UPDATE ON prospects
-    FOR EACH ROW EXECUTE FUNCTION auto_assign_territory();
+-- ============================================================================
+-- APPLICATION CONFIGURATION TABLE
+-- ============================================================================
+
+-- ---------------------------------------------------------------------------
+-- App Config: Stores application settings (business/feature settings only)
+-- ---------------------------------------------------------------------------
+-- NOTE: Infrastructure configs (ApiLogicServer URL, API keys, service endpoints)
+-- are stored in local config/app_config.json, NOT in the database.
+-- This table stores only business/feature settings managed through the app.
+
+CREATE TABLE app_config (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+
+    config_key VARCHAR(100) NOT NULL UNIQUE,
+    config_value TEXT,
+    config_type VARCHAR(20) DEFAULT 'string',  -- string, integer, boolean, json
+
+    -- Categorization
+    category VARCHAR(50) NOT NULL,  -- 'features', 'display', 'business'
+
+    -- Metadata
+    description TEXT,
+    is_sensitive BOOLEAN DEFAULT false,
+    is_required BOOLEAN DEFAULT false,
+    default_value TEXT,
+
+    -- Validation
+    validation_regex VARCHAR(500),
+    allowed_values TEXT[],  -- For enum-like configs
+
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_app_config_category ON app_config(category);
+CREATE INDEX idx_app_config_key ON app_config(config_key);
+
+CREATE TRIGGER update_app_config_updated_at BEFORE UPDATE ON app_config
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+COMMENT ON TABLE app_config IS 'Application configuration settings (business/feature settings only)';
+
+-- ---------------------------------------------------------------------------
+-- Store Locations: Franchise store locations for the app
+-- ---------------------------------------------------------------------------
+CREATE TABLE store_locations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    franchisee_id UUID REFERENCES franchisees(id) ON DELETE CASCADE,
+
+    -- Store identification
+    store_name VARCHAR(200) NOT NULL,
+    store_code VARCHAR(50) UNIQUE,
+
+    -- Address
+    address_line1 VARCHAR(200) NOT NULL,
+    address_line2 VARCHAR(100),
+    city VARCHAR(100) NOT NULL,
+    state_province VARCHAR(50) NOT NULL,
+    postal_code VARCHAR(20) NOT NULL,
+    country_code CHAR(2) DEFAULT 'US',
+
+    -- Geolocation (simple lat/lng)
+    latitude DECIMAL(10, 8),
+    longitude DECIMAL(11, 8),
+    geocode_source VARCHAR(50),  -- 'nominatim', 'google', 'manual'
+    geocoded_at TIMESTAMP WITH TIME ZONE,
+
+    -- Search preferences
+    default_search_radius_miles DECIMAL(6, 2) DEFAULT 5.0,
+
+    -- Contact
+    phone VARCHAR(30),
+    email VARCHAR(255),
+
+    -- Status
+    is_active BOOLEAN DEFAULT true,
+    is_primary BOOLEAN DEFAULT false,
+
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_store_locations_franchisee ON store_locations(franchisee_id);
+CREATE INDEX idx_store_locations_active ON store_locations(is_active) WHERE is_active = true;
+
+CREATE TRIGGER update_store_locations_updated_at BEFORE UPDATE ON store_locations
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+COMMENT ON TABLE store_locations IS 'Physical store locations for franchise operations';
+
+
+-- ============================================================================
+-- SEED DATA: Application Configuration
+-- ============================================================================
+
+-- Feature Flags (managed via ApiLogicServer)
+INSERT INTO app_config (config_key, config_value, config_type, category, description, is_sensitive, is_required, default_value) VALUES
+('enable_ai_search', 'true', 'boolean', 'features', 'Enable AI-powered prospect search', false, false, 'true'),
+('enable_demographics', 'true', 'boolean', 'features', 'Enable demographics visualization', false, false, 'true'),
+('enable_osm_data', 'true', 'boolean', 'features', 'Enable OpenStreetMap data integration', false, false, 'true'),
+('enable_prospect_scoring', 'true', 'boolean', 'features', 'Enable AI-based prospect scoring', false, false, 'true'),
+('enable_market_analysis', 'true', 'boolean', 'features', 'Enable AI market analysis for prospects', false, false, 'true');
+
+-- Display/UI Settings (user preferences stored in database)
+INSERT INTO app_config (config_key, config_value, config_type, category, description, is_sensitive, is_required, default_value) VALUES
+('default_map_zoom', '12', 'integer', 'display', 'Default zoom level for map views', false, false, '12'),
+('default_search_radius', '5', 'integer', 'display', 'Default search radius in miles', false, false, '5'),
+('results_per_page', '25', 'integer', 'display', 'Number of results per page in lists', false, false, '25'),
+('map_tile_provider', 'openstreetmap', 'string', 'display', 'Map tile provider: openstreetmap, mapbox', false, false, 'openstreetmap'),
+('theme', 'light', 'string', 'display', 'UI theme: light, dark', false, false, 'light');
+
+-- Business Rules (configurable thresholds)
+INSERT INTO app_config (config_key, config_value, config_type, category, description, is_sensitive, is_required, default_value) VALUES
+('min_prospect_score', '50', 'integer', 'business', 'Minimum score to qualify as a prospect', false, false, '50'),
+('hot_lead_threshold', '80', 'integer', 'business', 'Score threshold for hot lead classification', false, false, '80'),
+('geocoding_cache_minutes', '1440', 'integer', 'business', 'Cache duration for geocoding results (minutes)', false, false, '1440'),
+('max_search_results', '100', 'integer', 'business', 'Maximum results returned from search', false, false, '100');
 
 
 -- ============================================================================
@@ -827,10 +885,241 @@ INSERT INTO tags (name, color, description) VALUES
 
 
 -- ============================================================================
--- GRANTS (adjust roles as needed)
+-- SEED DATA: Regions
 -- ============================================================================
 
--- Example: Create application role
--- CREATE ROLE franchiseai_app WITH LOGIN PASSWORD 'your_password';
--- GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO franchiseai_app;
--- GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO franchiseai_app;
+INSERT INTO regions (id, name, code, country_code, timezone) VALUES
+('a1000000-0000-0000-0000-000000000001'::uuid, 'Western Region', 'WEST', 'US', 'America/Los_Angeles'),
+('a1000000-0000-0000-0000-000000000002'::uuid, 'Central Region', 'CENTRAL', 'US', 'America/Chicago'),
+('a1000000-0000-0000-0000-000000000003'::uuid, 'Eastern Region', 'EAST', 'US', 'America/New_York'),
+('a1000000-0000-0000-0000-000000000004'::uuid, 'Southern Region', 'SOUTH', 'US', 'America/Chicago');
+
+
+-- ============================================================================
+-- SEED DATA: Territories (using simple lat/lng instead of PostGIS)
+-- ============================================================================
+
+INSERT INTO territories (id, region_id, name, code, description, center_latitude, center_longitude, radius_miles, is_active) VALUES
+-- Western Region
+('b1000000-0000-0000-0000-000000000001'::uuid, 'a1000000-0000-0000-0000-000000000001'::uuid,
+ 'San Francisco Metro', 'SF-METRO', 'San Francisco Bay Area territory',
+ 37.7749, -122.4194, 25.0, true),
+('b1000000-0000-0000-0000-000000000002'::uuid, 'a1000000-0000-0000-0000-000000000001'::uuid,
+ 'Los Angeles Downtown', 'LA-DT', 'Downtown Los Angeles territory',
+ 34.0522, -118.2437, 15.0, true),
+('b1000000-0000-0000-0000-000000000003'::uuid, 'a1000000-0000-0000-0000-000000000001'::uuid,
+ 'Seattle Metro', 'SEA-METRO', 'Greater Seattle area',
+ 47.6062, -122.3321, 20.0, true),
+
+-- Central Region
+('b1000000-0000-0000-0000-000000000004'::uuid, 'a1000000-0000-0000-0000-000000000002'::uuid,
+ 'Denver Metro', 'DEN-METRO', 'Denver metropolitan area',
+ 39.7392, -104.9903, 20.0, true),
+('b1000000-0000-0000-0000-000000000005'::uuid, 'a1000000-0000-0000-0000-000000000002'::uuid,
+ 'Chicago Loop', 'CHI-LOOP', 'Chicago downtown and surrounding areas',
+ 41.8781, -87.6298, 15.0, true),
+('b1000000-0000-0000-0000-000000000006'::uuid, 'a1000000-0000-0000-0000-000000000002'::uuid,
+ 'Austin Metro', 'AUS-METRO', 'Austin Texas metropolitan area',
+ 30.2672, -97.7431, 18.0, true),
+
+-- Eastern Region
+('b1000000-0000-0000-0000-000000000007'::uuid, 'a1000000-0000-0000-0000-000000000003'::uuid,
+ 'New York City', 'NYC', 'New York City five boroughs',
+ 40.7128, -74.0060, 15.0, true),
+('b1000000-0000-0000-0000-000000000008'::uuid, 'a1000000-0000-0000-0000-000000000003'::uuid,
+ 'Boston Metro', 'BOS-METRO', 'Greater Boston area',
+ 42.3601, -71.0589, 18.0, true),
+
+-- Southern Region
+('b1000000-0000-0000-0000-000000000009'::uuid, 'a1000000-0000-0000-0000-000000000004'::uuid,
+ 'Atlanta Metro', 'ATL-METRO', 'Atlanta metropolitan area',
+ 33.7490, -84.3880, 22.0, true),
+('b1000000-0000-0000-0000-000000000010'::uuid, 'a1000000-0000-0000-0000-000000000004'::uuid,
+ 'Miami Metro', 'MIA-METRO', 'Miami-Dade area',
+ 25.7617, -80.1918, 20.0, true);
+
+
+-- ============================================================================
+-- SEED DATA: Franchisees
+-- ============================================================================
+
+INSERT INTO franchisees (id, business_name, dba_name, franchise_number, owner_first_name, owner_last_name,
+                         email, phone, address_line1, city, state_province, postal_code,
+                         latitude, longitude, start_date, is_active) VALUES
+('c1000000-0000-0000-0000-000000000001'::uuid,
+ 'Rocky Mountain Catering LLC', 'Mountain Fresh Catering', 'FRA-001',
+ 'John', 'Smith', 'john.smith@rmcatering.com', '(303) 555-0101',
+ '1600 California St', 'Denver', 'CO', '80202',
+ 39.7456, -104.9885, '2022-01-15', true),
+
+('c1000000-0000-0000-0000-000000000002'::uuid,
+ 'Bay Area Gourmet Inc', 'SF Gourmet Catering', 'FRA-002',
+ 'Sarah', 'Johnson', 'sarah@sfgourmet.com', '(415) 555-0202',
+ '555 Market St', 'San Francisco', 'CA', '94105',
+ 37.7909, -122.3998, '2021-06-01', true),
+
+('c1000000-0000-0000-0000-000000000003'::uuid,
+ 'Windy City Eats LLC', 'Chicago Corporate Catering', 'FRA-003',
+ 'Michael', 'Davis', 'mdavis@windycityeats.com', '(312) 555-0303',
+ '233 S Wacker Dr', 'Chicago', 'IL', '60606',
+ 41.8789, -87.6359, '2020-09-01', true);
+
+
+-- ============================================================================
+-- SEED DATA: Franchisee Territory Assignments
+-- ============================================================================
+
+INSERT INTO franchisee_territories (franchisee_id, territory_id, is_primary, assigned_date) VALUES
+('c1000000-0000-0000-0000-000000000001'::uuid, 'b1000000-0000-0000-0000-000000000004'::uuid, true, '2022-01-15'),
+('c1000000-0000-0000-0000-000000000002'::uuid, 'b1000000-0000-0000-0000-000000000001'::uuid, true, '2021-06-01'),
+('c1000000-0000-0000-0000-000000000003'::uuid, 'b1000000-0000-0000-0000-000000000005'::uuid, true, '2020-09-01');
+
+
+-- ============================================================================
+-- SEED DATA: Store Locations
+-- ============================================================================
+
+INSERT INTO store_locations (id, franchisee_id, store_name, store_code, address_line1, city, state_province,
+                             postal_code, latitude, longitude, geocode_source, geocoded_at,
+                             default_search_radius_miles, phone, is_active, is_primary) VALUES
+('d1000000-0000-0000-0000-000000000001'::uuid, 'c1000000-0000-0000-0000-000000000001'::uuid,
+ 'Downtown Denver Store', 'DEN-001', '1600 California St', 'Denver', 'CO', '80202',
+ 39.7456, -104.9885, 'nominatim', CURRENT_TIMESTAMP, 10.0, '(303) 555-0101', true, true),
+
+('d1000000-0000-0000-0000-000000000002'::uuid, 'c1000000-0000-0000-0000-000000000002'::uuid,
+ 'Financial District Store', 'SF-001', '555 Market St', 'San Francisco', 'CA', '94105',
+ 37.7909, -122.3998, 'nominatim', CURRENT_TIMESTAMP, 8.0, '(415) 555-0202', true, true),
+
+('d1000000-0000-0000-0000-000000000003'::uuid, 'c1000000-0000-0000-0000-000000000003'::uuid,
+ 'Willis Tower Store', 'CHI-001', '233 S Wacker Dr', 'Chicago', 'IL', '60606',
+ 41.8789, -87.6359, 'nominatim', CURRENT_TIMESTAMP, 12.0, '(312) 555-0303', true, true);
+
+
+-- ============================================================================
+-- SEED DATA: Sample Prospects
+-- ============================================================================
+
+INSERT INTO prospects (id, territory_id, franchisee_id, business_name, business_type,
+                       employee_count, employee_count_range, address_line1, city, state_province,
+                       postal_code, latitude, longitude, primary_phone, website,
+                       status, data_source, is_verified) VALUES
+-- Denver Prospects
+('e1000000-0000-0000-0000-000000000001'::uuid,
+ 'b1000000-0000-0000-0000-000000000004'::uuid, 'c1000000-0000-0000-0000-000000000001'::uuid,
+ 'TechStart Colorado', 'Technology Company', 150, 'medium',
+ '1801 California St', 'Denver', 'CO', '80202',
+ 39.7489, -104.9878, '(303) 555-1001', 'https://techstartco.example.com', 'new', 'openstreetmap', true),
+
+('e1000000-0000-0000-0000-000000000002'::uuid,
+ 'b1000000-0000-0000-0000-000000000004'::uuid, 'c1000000-0000-0000-0000-000000000001'::uuid,
+ 'Colorado Healthcare Partners', 'Healthcare Facility', 320, 'large',
+ '1635 Aurora Ct', 'Denver', 'CO', '80045',
+ 39.7456, -104.8372, '(303) 555-1002', 'https://cohealthpartners.example.com', 'contacted', 'openstreetmap', true),
+
+('e1000000-0000-0000-0000-000000000003'::uuid,
+ 'b1000000-0000-0000-0000-000000000004'::uuid, 'c1000000-0000-0000-0000-000000000001'::uuid,
+ 'Mile High Law Group', 'Law Firm', 85, 'medium',
+ '1700 Broadway', 'Denver', 'CO', '80290',
+ 39.7436, -104.9872, '(303) 555-1003', 'https://milehighlaw.example.com', 'qualified', 'openstreetmap', true),
+
+-- San Francisco Prospects
+('e1000000-0000-0000-0000-000000000004'::uuid,
+ 'b1000000-0000-0000-0000-000000000001'::uuid, 'c1000000-0000-0000-0000-000000000002'::uuid,
+ 'Bay Innovations Inc', 'Technology Company', 280, 'large',
+ '101 California St', 'San Francisco', 'CA', '94111',
+ 37.7929, -122.3984, '(415) 555-2001', 'https://bayinnovations.example.com', 'new', 'openstreetmap', true),
+
+('e1000000-0000-0000-0000-000000000005'::uuid,
+ 'b1000000-0000-0000-0000-000000000001'::uuid, 'c1000000-0000-0000-0000-000000000002'::uuid,
+ 'Pacific Financial Advisors', 'Financial Services', 120, 'medium',
+ '425 Market St', 'San Francisco', 'CA', '94105',
+ 37.7912, -122.3985, '(415) 555-2002', 'https://pacificfa.example.com', 'proposal_sent', 'openstreetmap', true),
+
+-- Chicago Prospects
+('e1000000-0000-0000-0000-000000000006'::uuid,
+ 'b1000000-0000-0000-0000-000000000005'::uuid, 'c1000000-0000-0000-0000-000000000003'::uuid,
+ 'Midwest Corporate Holdings', 'Corporate Office', 450, 'large',
+ '311 S Wacker Dr', 'Chicago', 'IL', '60606',
+ 41.8776, -87.6363, '(312) 555-3001', 'https://midwestcorp.example.com', 'new', 'openstreetmap', true),
+
+('e1000000-0000-0000-0000-000000000007'::uuid,
+ 'b1000000-0000-0000-0000-000000000005'::uuid, 'c1000000-0000-0000-0000-000000000003'::uuid,
+ 'Chicago Medical Center', 'Healthcare Facility', 890, 'enterprise',
+ '710 N Lake Shore Dr', 'Chicago', 'IL', '60611',
+ 41.8953, -87.6171, '(312) 555-3002', 'https://chicagomedical.example.com', 'qualified', 'openstreetmap', true);
+
+
+-- ============================================================================
+-- SEED DATA: Prospect Scores
+-- ============================================================================
+
+INSERT INTO prospect_scores (prospect_id, total_score, score_grade, fit_score, engagement_score,
+                            catering_potential_score, proximity_score, score_source, model_version, confidence) VALUES
+('e1000000-0000-0000-0000-000000000001'::uuid, 82, 'B', 85, 75, 88, 90, 'ai_model', '1.0.0', 0.85),
+('e1000000-0000-0000-0000-000000000002'::uuid, 91, 'A', 95, 88, 92, 85, 'ai_model', '1.0.0', 0.92),
+('e1000000-0000-0000-0000-000000000003'::uuid, 78, 'B', 80, 72, 82, 88, 'ai_model', '1.0.0', 0.78),
+('e1000000-0000-0000-0000-000000000004'::uuid, 88, 'B', 90, 82, 90, 85, 'ai_model', '1.0.0', 0.88),
+('e1000000-0000-0000-0000-000000000005'::uuid, 75, 'B', 78, 70, 80, 82, 'ai_model', '1.0.0', 0.75),
+('e1000000-0000-0000-0000-000000000006'::uuid, 94, 'A', 96, 90, 95, 92, 'ai_model', '1.0.0', 0.94),
+('e1000000-0000-0000-0000-000000000007'::uuid, 96, 'A', 98, 92, 98, 88, 'ai_model', '1.0.0', 0.96);
+
+
+-- ============================================================================
+-- SEED DATA: Territory Demographics
+-- ============================================================================
+
+INSERT INTO territory_demographics (territory_id, total_population, population_density, median_age,
+                                   total_households, median_household_income, total_businesses,
+                                   total_employees, business_density, data_year, data_source) VALUES
+('b1000000-0000-0000-0000-000000000004'::uuid, 716492, 4521.3, 34.5, 305678, 85432.00,
+ 42350, 528900, 267.8, 2024, 'US Census Bureau'),
+('b1000000-0000-0000-0000-000000000001'::uuid, 873965, 18634.2, 38.2, 352890, 126750.00,
+ 68420, 892340, 1458.6, 2024, 'US Census Bureau'),
+('b1000000-0000-0000-0000-000000000005'::uuid, 2693976, 11841.8, 35.8, 1087650, 78650.00,
+ 125680, 1892450, 552.4, 2024, 'US Census Bureau');
+
+
+-- ============================================================================
+-- HELPER FUNCTIONS FOR APILOGICSERVER
+-- ============================================================================
+
+-- ---------------------------------------------------------------------------
+-- Function: Get config value by key
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION get_config(p_key VARCHAR)
+RETURNS TEXT AS $$
+DECLARE
+    v_value TEXT;
+BEGIN
+    SELECT config_value INTO v_value
+    FROM app_config
+    WHERE config_key = p_key;
+
+    IF v_value IS NULL THEN
+        SELECT default_value INTO v_value
+        FROM app_config
+        WHERE config_key = p_key;
+    END IF;
+
+    RETURN v_value;
+END;
+$$ LANGUAGE plpgsql;
+
+COMMENT ON FUNCTION get_config IS 'Get configuration value by key, returns default if null';
+
+-- ---------------------------------------------------------------------------
+-- Function: Set config value
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION set_config(p_key VARCHAR, p_value TEXT)
+RETURNS BOOLEAN AS $$
+BEGIN
+    UPDATE app_config
+    SET config_value = p_value,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE config_key = p_key;
+
+    RETURN FOUND;
+END;
+$$ LANGUAGE plpgsql;
+
+COMMENT ON FUNCTION set_config IS 'Set configuration value by key';

@@ -31,6 +31,20 @@ public:
     void loadFromEnvironment() {
         std::lock_guard<std::mutex> lock(mutex_);
 
+        // Load ApiLogicServer settings (infrastructure config)
+        if (const char* host = std::getenv("API_LOGIC_SERVER_HOST")) {
+            apiLogicServerHost_ = host;
+        }
+        if (const char* port = std::getenv("API_LOGIC_SERVER_PORT")) {
+            try { apiLogicServerPort_ = std::stoi(port); } catch (...) {}
+        }
+        if (const char* protocol = std::getenv("API_LOGIC_SERVER_PROTOCOL")) {
+            apiLogicServerProtocol_ = protocol;
+        }
+        if (const char* prefix = std::getenv("API_LOGIC_SERVER_API_PREFIX")) {
+            apiLogicServerApiPrefix_ = prefix;
+        }
+
         // Load OpenAI API key
         if (const char* key = std::getenv("OPENAI_API_KEY")) {
             openaiApiKey_ = key;
@@ -81,7 +95,20 @@ public:
             std::string value = extractJsonString(line.substr(colonPos + 1));
 
             // Only load from file if not already set (env vars take precedence)
-            if (key == "openai_api_key" && !value.empty() && openaiApiKey_.empty()) {
+            // ApiLogicServer settings
+            if (key == "host" && !value.empty() && apiLogicServerHost_.empty()) {
+                apiLogicServerHost_ = value;
+            } else if (key == "port" && !value.empty() && apiLogicServerPort_ == 0) {
+                try { apiLogicServerPort_ = std::stoi(value); } catch (...) {}
+            } else if (key == "protocol" && !value.empty() && apiLogicServerProtocol_.empty()) {
+                apiLogicServerProtocol_ = value;
+            } else if (key == "api_prefix" && !value.empty() && apiLogicServerApiPrefix_.empty()) {
+                apiLogicServerApiPrefix_ = value;
+            } else if (key == "timeout_ms" && !value.empty()) {
+                try { apiLogicServerTimeoutMs_ = std::stoi(value); } catch (...) {}
+            }
+            // API keys
+            else if (key == "openai_api_key" && !value.empty() && openaiApiKey_.empty()) {
                 openaiApiKey_ = value;
             } else if (key == "google_api_key" && !value.empty() && googleApiKey_.empty()) {
                 googleApiKey_ = value;
@@ -131,7 +158,41 @@ public:
         return true;
     }
 
-    // Getters
+    // Getters - ApiLogicServer (individual components)
+    std::string getApiLogicServerHost() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return apiLogicServerHost_.empty() ? "localhost" : apiLogicServerHost_;
+    }
+
+    int getApiLogicServerPort() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return apiLogicServerPort_ > 0 ? apiLogicServerPort_ : 5656;
+    }
+
+    std::string getApiLogicServerProtocol() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return apiLogicServerProtocol_.empty() ? "http" : apiLogicServerProtocol_;
+    }
+
+    std::string getApiLogicServerApiPrefix() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return apiLogicServerApiPrefix_.empty() ? "/api" : apiLogicServerApiPrefix_;
+    }
+
+    int getApiLogicServerTimeoutMs() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return apiLogicServerTimeoutMs_ > 0 ? apiLogicServerTimeoutMs_ : 30000;
+    }
+
+    // Constructed endpoint (assembled from individual components)
+    std::string getApiLogicServerEndpoint() const {
+        return getApiLogicServerProtocol() + "://" +
+               getApiLogicServerHost() + ":" +
+               std::to_string(getApiLogicServerPort()) +
+               getApiLogicServerApiPrefix();
+    }
+
+    // Getters - API Keys
     std::string getOpenAIApiKey() const {
         std::lock_guard<std::mutex> lock(mutex_);
         return openaiApiKey_;
@@ -225,6 +286,13 @@ public:
     void printStatus() const {
         std::lock_guard<std::mutex> lock(mutex_);
 
+        std::cout << "Infrastructure Configuration:" << std::endl;
+        std::cout << "  ALS Host:        " << (apiLogicServerHost_.empty() ? "localhost (default)" : apiLogicServerHost_) << std::endl;
+        std::cout << "  ALS Port:        " << (apiLogicServerPort_ == 0 ? "5656 (default)" : std::to_string(apiLogicServerPort_)) << std::endl;
+        std::cout << "  ALS Protocol:    " << (apiLogicServerProtocol_.empty() ? "http (default)" : apiLogicServerProtocol_) << std::endl;
+        std::cout << "  ALS API Prefix:  " << (apiLogicServerApiPrefix_.empty() ? "/api (default)" : apiLogicServerApiPrefix_) << std::endl;
+        std::cout << std::endl;
+
         std::cout << "API Configuration Status:" << std::endl;
         std::cout << "  OpenAI API Key:  " << (openaiApiKey_.empty() ? "Not configured" : "Configured (" + maskKey(openaiApiKey_) + ")") << std::endl;
         std::cout << "  OpenAI Model:    " << (openaiModel_.empty() ? "gpt-4o (default)" : openaiModel_) << std::endl;
@@ -242,6 +310,14 @@ private:
 
     mutable std::mutex mutex_;
 
+    // ApiLogicServer settings (infrastructure - from local config only)
+    std::string apiLogicServerHost_;
+    int apiLogicServerPort_ = 0;
+    std::string apiLogicServerProtocol_;
+    std::string apiLogicServerApiPrefix_;
+    int apiLogicServerTimeoutMs_ = 30000;
+
+    // API keys (from local config or environment)
     std::string openaiApiKey_;
     std::string openaiModel_;
     std::string googleApiKey_;
