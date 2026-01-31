@@ -25,6 +25,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <fstream>
+#include <vector>
 #include "FranchiseApp.h"
 #include "AppConfig.h"
 
@@ -92,9 +93,24 @@ int main(int argc, char** argv) {
     // First load from environment variables (these take precedence)
     config.loadFromEnvironment();
 
-    // Then try to load from config file (won't override env vars if already set)
-    if (config.loadFromFile("config/app_config.json")) {
-        std::cout << "Loaded configuration from config/app_config.json" << std::endl;
+    // Try to load from config file - check multiple locations
+    std::vector<std::string> configPaths = {
+        "config/app_config.json",           // Current directory
+        "../config/app_config.json",        // Parent directory (if running from build/)
+        "./app_config.json",                // Same directory as executable
+        "../Geolocation-Sample/config/app_config.json"  // Relative from build location
+    };
+
+    bool configLoaded = false;
+    for (const auto& path : configPaths) {
+        if (config.loadFromFile(path)) {
+            configLoaded = true;
+            break;
+        }
+    }
+
+    if (!configLoaded) {
+        std::cerr << "Warning: Could not load config file from any location" << std::endl;
     }
 
     // Print configuration status
