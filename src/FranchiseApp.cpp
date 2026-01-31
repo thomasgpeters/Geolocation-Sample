@@ -147,9 +147,9 @@ void FranchiseApp::setupRouting() {
         } else if (path == "/prospects") {
             sidebar_->setActiveItem("prospects");
             showProspectsPage();
-        } else if (path == "/demographics") {
-            sidebar_->setActiveItem("demographics");
-            showDemographicsPage();
+        } else if (path == "/openstreetmap") {
+            sidebar_->setActiveItem("openstreetmap");
+            showOpenStreetMapPage();
         } else if (path == "/reports") {
             sidebar_->setActiveItem("reports");
             showReportsPage();
@@ -178,9 +178,9 @@ void FranchiseApp::onMenuItemSelected(const std::string& itemId) {
     } else if (itemId == "prospects") {
         setInternalPath("/prospects", false);
         showProspectsPage();
-    } else if (itemId == "demographics") {
-        setInternalPath("/demographics", false);
-        showDemographicsPage();
+    } else if (itemId == "openstreetmap") {
+        setInternalPath("/openstreetmap", false);
+        showOpenStreetMapPage();
     } else if (itemId == "reports") {
         setInternalPath("/reports", false);
         showReportsPage();
@@ -212,7 +212,7 @@ void FranchiseApp::onQuickSearch(const std::string& query) {
 void FranchiseApp::onSearchRequested(const Models::SearchQuery& query) {
     if (!searchService_) return;
 
-    // Store the search context for syncing with Demographics page
+    // Store the search context for syncing with Open Street Map page
     currentSearchLocation_ = query.location;
     if (query.latitude != 0 && query.longitude != 0) {
         Models::GeoLocation location(query.latitude, query.longitude);
@@ -423,7 +423,7 @@ void FranchiseApp::showSetupPage() {
     workArea_->clear();
     navigation_->setPageTitle("Store Setup");
     navigation_->setBreadcrumbs({"Home", "Setup"});
-    navigation_->setMarketScore(-1);  // Hide market score on non-demographics pages
+    navigation_->setMarketScore(-1);  // Hide market score on non-OSM pages
 
     auto container = workArea_->addWidget(std::make_unique<Wt::WContainerWidget>());
     container->setStyleClass("page-container setup-page");
@@ -764,7 +764,7 @@ void FranchiseApp::showAISearchPage() {
     // Pre-populate search panel with current search state or franchisee's location
     Models::SearchQuery defaultQuery;
     if (hasActiveSearch_ && !currentSearchLocation_.empty()) {
-        // Use the current search state (synced from Demographics or previous search)
+        // Use the current search state (synced from Open Street Map or previous search)
         defaultQuery.location = currentSearchLocation_;
         defaultQuery.latitude = currentSearchArea_.center.latitude;
         defaultQuery.longitude = currentSearchArea_.center.longitude;
@@ -1003,13 +1003,13 @@ void FranchiseApp::showProspectsPage() {
     }
 }
 
-void FranchiseApp::showDemographicsPage() {
+void FranchiseApp::showOpenStreetMapPage() {
     workArea_->clear();
-    navigation_->setPageTitle("Demographics");
-    navigation_->setBreadcrumbs({"Home", "Demographics"});
+    navigation_->setPageTitle("Open Street Map");
+    navigation_->setBreadcrumbs({"Home", "Open Street Map"});
 
     auto container = workArea_->addWidget(std::make_unique<Wt::WContainerWidget>());
-    container->setStyleClass("page-container demographics-page");
+    container->setStyleClass("page-container openstreetmap-page");
 
     // Pre-fill with current search location or franchisee location
     std::string defaultLocation = "Denver, CO";
@@ -1061,7 +1061,7 @@ void FranchiseApp::showDemographicsPage() {
 
     // Create map div with unique ID
     auto mapDiv = mapContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
-    mapDiv->setStyleClass("demographics-map");
+    mapDiv->setStyleClass("osm-map");
     std::string mapId = mapDiv->id();
 
     // Store coordinates for JavaScript
@@ -1094,11 +1094,11 @@ void FranchiseApp::showDemographicsPage() {
               << "    document.head.appendChild(script);"
               << "  }"
               // Define init function
-              << "  function initDemographicsMap() {"
+              << "  function initOSMMap() {"
               << "    var mapEl = document.getElementById('" << mapId << "');"
-              << "    if (!mapEl) { setTimeout(initDemographicsMap, 100); return; }"
+              << "    if (!mapEl) { setTimeout(initOSMMap, 100); return; }"
               << "    if (mapEl._leaflet_map) return;"
-              << "    if (typeof L === 'undefined') { setTimeout(initDemographicsMap, 100); return; }"
+              << "    if (typeof L === 'undefined') { setTimeout(initOSMMap, 100); return; }"
               // Create the map
               << "    try {"
               << "      var map = L.map('" << mapId << "').setView([" << initLat << ", " << initLon << "], 13);"
@@ -1107,11 +1107,11 @@ void FranchiseApp::showDemographicsPage() {
               << "        attribution: '&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors'"
               << "      }).addTo(map);"
               << "      mapEl._leaflet_map = map;"
-              << "      window.demographicsMap = map;"
+              << "      window.osmMap = map;"
               << "      setTimeout(function() { map.invalidateSize(); }, 300);"
               << "    } catch(e) { console.error('Map init error:', e); }"
               << "  }"
-              << "  loadLeafletJS(function() { setTimeout(initDemographicsMap, 100); });"
+              << "  loadLeafletJS(function() { setTimeout(initOSMMap, 100); });"
               << "})();";
 
     doJavaScript(initMapJs.str());
@@ -1221,10 +1221,10 @@ void FranchiseApp::showDemographicsPage() {
     *refreshMarkers = [this, activePills, currentSearchAreaPtr]() {
         // Clear existing markers
         std::ostringstream clearMarkersJs;
-        clearMarkersJs << "if (window.demographicsMarkers) {"
-                      << "  window.demographicsMarkers.forEach(function(m) { m.remove(); });"
+        clearMarkersJs << "if (window.osmMarkers) {"
+                      << "  window.osmMarkers.forEach(function(m) { m.remove(); });"
                       << "}"
-                      << "window.demographicsMarkers = [];";
+                      << "window.osmMarkers = [];";
         doJavaScript(clearMarkersJs.str());
 
         // Add markers for each active category
@@ -1246,7 +1246,7 @@ void FranchiseApp::showDemographicsPage() {
 
                 // Create colored circle marker with deep vivid color
                 std::ostringstream addMarkerJs;
-                addMarkerJs << "if (window.demographicsMap && typeof L !== 'undefined') {"
+                addMarkerJs << "if (window.osmMap && typeof L !== 'undefined') {"
                            << "  var markerIcon = L.divIcon({"
                            << "    className: 'custom-marker',"
                            << "    html: '<div style=\"background-color: " << pill.markerColor << "; "
@@ -1257,10 +1257,10 @@ void FranchiseApp::showDemographicsPage() {
                            << "    iconAnchor: [11, 11]"
                            << "  });"
                            << "  var marker = L.marker([" << poi.latitude << ", " << poi.longitude << "], {icon: markerIcon})"
-                           << "    .addTo(window.demographicsMap)"
+                           << "    .addTo(window.osmMap)"
                            << "    .bindPopup('<b>" << safeName << "</b><br><small>" << pill.displayName << "</small>');"
-                           << "  if (!window.demographicsMarkers) window.demographicsMarkers = [];"
-                           << "  window.demographicsMarkers.push(marker);"
+                           << "  if (!window.osmMarkers) window.osmMarkers = [];"
+                           << "  window.osmMarkers.push(marker);"
                            << "}";
                 doJavaScript(addMarkerJs.str());
                 markerCount++;
@@ -1466,10 +1466,10 @@ void FranchiseApp::showDemographicsPage() {
 
         // Clear markers
         std::ostringstream clearMarkersJs;
-        clearMarkersJs << "if (window.demographicsMarkers) {"
-                      << "  window.demographicsMarkers.forEach(function(m) { m.remove(); });"
+        clearMarkersJs << "if (window.osmMarkers) {"
+                      << "  window.osmMarkers.forEach(function(m) { m.remove(); });"
                       << "}"
-                      << "window.demographicsMarkers = [];";
+                      << "window.osmMarkers = [];";
         doJavaScript(clearMarkersJs.str());
     });
 
@@ -1554,8 +1554,8 @@ void FranchiseApp::showDemographicsPage() {
 
         // Update map to new location via JavaScript
         std::ostringstream panMapJs;
-        panMapJs << "if (window.demographicsMap) {"
-                 << "  window.demographicsMap.setView([" << geoLocation.latitude << ", " << geoLocation.longitude << "], 13);"
+        panMapJs << "if (window.osmMap) {"
+                 << "  window.osmMap.setView([" << geoLocation.latitude << ", " << geoLocation.longitude << "], 13);"
                  << "}";
         doJavaScript(panMapJs.str());
 
@@ -1623,8 +1623,8 @@ void FranchiseApp::showDemographicsPage() {
             *currentSearchAreaPtr = searchArea;
 
             std::ostringstream panMapJs;
-            panMapJs << "if (window.demographicsMap) {"
-                     << "  window.demographicsMap.setView([" << geoLocation.latitude << ", " << geoLocation.longitude << "], 13);"
+            panMapJs << "if (window.osmMap) {"
+                     << "  window.osmMap.setView([" << geoLocation.latitude << ", " << geoLocation.longitude << "], 13);"
                      << "}";
             doJavaScript(panMapJs.str());
 
@@ -1694,8 +1694,11 @@ void FranchiseApp::showSettingsPage() {
     tabNav->setStyleClass("tab-nav");
 
     // Create tab buttons
-    auto tabStore = tabNav->addWidget(std::make_unique<Wt::WText>("Store Setup"));
-    tabStore->setStyleClass("tab-btn active");
+    auto tabFranchisee = tabNav->addWidget(std::make_unique<Wt::WText>("Franchisee Information"));
+    tabFranchisee->setStyleClass("tab-btn active");
+
+    auto tabMarketing = tabNav->addWidget(std::make_unique<Wt::WText>("Marketing"));
+    tabMarketing->setStyleClass("tab-btn");
 
     auto tabAI = tabNav->addWidget(std::make_unique<Wt::WText>("AI Configuration"));
     tabAI->setStyleClass("tab-btn");
@@ -1708,29 +1711,29 @@ void FranchiseApp::showSettingsPage() {
     tabContent->setStyleClass("tab-content");
 
     // ===========================================
-    // Tab 1: Store Setup (from showSetupPage)
+    // Tab 1: Franchisee Information
     // ===========================================
-    auto storePanel = tabContent->addWidget(std::make_unique<Wt::WContainerWidget>());
-    storePanel->setStyleClass("tab-panel active");
-    storePanel->setId("tab-store");
+    auto franchiseePanel = tabContent->addWidget(std::make_unique<Wt::WContainerWidget>());
+    franchiseePanel->setStyleClass("tab-panel active");
+    franchiseePanel->setId("tab-franchisee");
 
-    // Store Information Section
-    auto storeSection = storePanel->addWidget(std::make_unique<Wt::WContainerWidget>());
-    storeSection->setStyleClass("settings-section");
+    // Franchisee Information Section
+    auto franchiseeSection = franchiseePanel->addWidget(std::make_unique<Wt::WContainerWidget>());
+    franchiseeSection->setStyleClass("settings-section");
 
-    auto storeTitle = storeSection->addWidget(std::make_unique<Wt::WText>("Store Information"));
-    storeTitle->setStyleClass("section-title");
+    auto franchiseeTitle = franchiseeSection->addWidget(std::make_unique<Wt::WText>("Franchisee Information"));
+    franchiseeTitle->setStyleClass("section-title");
 
-    auto storeDesc = storeSection->addWidget(std::make_unique<Wt::WText>(
+    auto franchiseeDesc = franchiseeSection->addWidget(std::make_unique<Wt::WText>(
         "Enter your franchise store details. This will be the center point for all prospect searches."
     ));
-    storeDesc->setStyleClass("section-description");
+    franchiseeDesc->setStyleClass("section-description");
 
-    auto storeFormGrid = storeSection->addWidget(std::make_unique<Wt::WContainerWidget>());
-    storeFormGrid->setStyleClass("form-grid");
+    auto franchiseeFormGrid = franchiseeSection->addWidget(std::make_unique<Wt::WContainerWidget>());
+    franchiseeFormGrid->setStyleClass("form-grid");
 
     // Store Name - combo box with existing stores + new store option
-    auto nameGroup = storeFormGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
+    auto nameGroup = franchiseeFormGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
     nameGroup->setStyleClass("form-group");
     nameGroup->addWidget(std::make_unique<Wt::WText>("Store Name"))->setStyleClass("form-label");
 
@@ -1758,7 +1761,7 @@ void FranchiseApp::showSettingsPage() {
     nameInput->setHidden(selectedIndex != 0);  // Hide if existing store selected
 
     // Store Address
-    auto addressGroup = storeFormGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
+    auto addressGroup = franchiseeFormGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
     addressGroup->setStyleClass("form-group");
     addressGroup->addWidget(std::make_unique<Wt::WText>("Store Address"))->setStyleClass("form-label");
     auto addressInput = addressGroup->addWidget(std::make_unique<Wt::WLineEdit>());
@@ -1767,7 +1770,7 @@ void FranchiseApp::showSettingsPage() {
     if (franchisee_.isConfigured) addressInput->setText(franchisee_.address);
 
     // Owner Name
-    auto ownerGroup = storeFormGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
+    auto ownerGroup = franchiseeFormGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
     ownerGroup->setStyleClass("form-group");
     ownerGroup->addWidget(std::make_unique<Wt::WText>("Owner/Manager Name"))->setStyleClass("form-label");
     auto ownerInput = ownerGroup->addWidget(std::make_unique<Wt::WLineEdit>());
@@ -1776,7 +1779,7 @@ void FranchiseApp::showSettingsPage() {
     if (franchisee_.isConfigured) ownerInput->setText(franchisee_.ownerName);
 
     // Phone
-    auto phoneGroup = storeFormGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
+    auto phoneGroup = franchiseeFormGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
     phoneGroup->setStyleClass("form-group");
     phoneGroup->addWidget(std::make_unique<Wt::WText>("Store Phone"))->setStyleClass("form-label");
     auto phoneInput = phoneGroup->addWidget(std::make_unique<Wt::WLineEdit>());
@@ -1818,14 +1821,22 @@ void FranchiseApp::showSettingsPage() {
         }
     });
 
-    // Search Preferences
-    auto prefsSection = storePanel->addWidget(std::make_unique<Wt::WContainerWidget>());
-    prefsSection->setStyleClass("settings-section");
+    // ===========================================
+    // Tab 2: Marketing
+    // ===========================================
+    auto marketingPanel = tabContent->addWidget(std::make_unique<Wt::WContainerWidget>());
+    marketingPanel->setStyleClass("tab-panel");
+    marketingPanel->setId("tab-marketing");
 
-    auto prefsTitle = prefsSection->addWidget(std::make_unique<Wt::WText>("Default Search Preferences"));
-    prefsTitle->setStyleClass("section-title");
+    auto marketingSection = marketingPanel->addWidget(std::make_unique<Wt::WContainerWidget>());
+    marketingSection->setStyleClass("settings-section");
 
-    auto prefsGrid = prefsSection->addWidget(std::make_unique<Wt::WContainerWidget>());
+    marketingSection->addWidget(std::make_unique<Wt::WText>("Search Preferences"))->setStyleClass("section-title");
+    marketingSection->addWidget(std::make_unique<Wt::WText>(
+        "Configure your default search parameters for finding prospects."
+    ))->setStyleClass("section-description");
+
+    auto prefsGrid = marketingSection->addWidget(std::make_unique<Wt::WContainerWidget>());
     prefsGrid->setStyleClass("form-grid");
 
     // Default Radius
@@ -1839,7 +1850,7 @@ void FranchiseApp::showSettingsPage() {
     }
 
     // Target Business Types
-    auto typesGroup = prefsSection->addWidget(std::make_unique<Wt::WContainerWidget>());
+    auto typesGroup = marketingSection->addWidget(std::make_unique<Wt::WContainerWidget>());
     typesGroup->setStyleClass("form-group");
     typesGroup->addWidget(std::make_unique<Wt::WText>("Target Business Types"))->setStyleClass("form-label");
     typesGroup->addWidget(std::make_unique<Wt::WText>(
@@ -1865,7 +1876,7 @@ void FranchiseApp::showSettingsPage() {
     }
 
     // Employee Size
-    auto sizeGroup = prefsSection->addWidget(std::make_unique<Wt::WContainerWidget>());
+    auto sizeGroup = marketingSection->addWidget(std::make_unique<Wt::WContainerWidget>());
     sizeGroup->setStyleClass("form-group");
     sizeGroup->addWidget(std::make_unique<Wt::WText>("Target Organization Size"))->setStyleClass("form-label");
     auto sizeCombo = sizeGroup->addWidget(std::make_unique<Wt::WComboBox>());
@@ -1876,7 +1887,7 @@ void FranchiseApp::showSettingsPage() {
     sizeCombo->setCurrentIndex(0);
 
     // ===========================================
-    // Tab 2: AI Configuration
+    // Tab 3: AI Configuration
     // ===========================================
     auto aiPanel = tabContent->addWidget(std::make_unique<Wt::WContainerWidget>());
     aiPanel->setStyleClass("tab-panel");
@@ -1950,7 +1961,7 @@ void FranchiseApp::showSettingsPage() {
     geminiGroup->addWidget(std::make_unique<Wt::WText>("Used if OpenAI is not configured"))->setStyleClass("form-help");
 
     // ===========================================
-    // Tab 3: Data Sources
+    // Tab 4: Data Sources
     // ===========================================
     auto dataPanel = tabContent->addWidget(std::make_unique<Wt::WContainerWidget>());
     dataPanel->setStyleClass("tab-panel");
@@ -1997,29 +2008,50 @@ void FranchiseApp::showSettingsPage() {
     // ===========================================
     // Tab Switching Logic
     // ===========================================
-    tabStore->clicked().connect([tabStore, tabAI, tabData, storePanel, aiPanel, dataPanel] {
-        tabStore->setStyleClass("tab-btn active");
+    tabFranchisee->clicked().connect([tabFranchisee, tabMarketing, tabAI, tabData,
+                                       franchiseePanel, marketingPanel, aiPanel, dataPanel] {
+        tabFranchisee->setStyleClass("tab-btn active");
+        tabMarketing->setStyleClass("tab-btn");
         tabAI->setStyleClass("tab-btn");
         tabData->setStyleClass("tab-btn");
-        storePanel->setStyleClass("tab-panel active");
+        franchiseePanel->setStyleClass("tab-panel active");
+        marketingPanel->setStyleClass("tab-panel");
         aiPanel->setStyleClass("tab-panel");
         dataPanel->setStyleClass("tab-panel");
     });
 
-    tabAI->clicked().connect([tabStore, tabAI, tabData, storePanel, aiPanel, dataPanel] {
-        tabStore->setStyleClass("tab-btn");
+    tabMarketing->clicked().connect([tabFranchisee, tabMarketing, tabAI, tabData,
+                                      franchiseePanel, marketingPanel, aiPanel, dataPanel] {
+        tabFranchisee->setStyleClass("tab-btn");
+        tabMarketing->setStyleClass("tab-btn active");
+        tabAI->setStyleClass("tab-btn");
+        tabData->setStyleClass("tab-btn");
+        franchiseePanel->setStyleClass("tab-panel");
+        marketingPanel->setStyleClass("tab-panel active");
+        aiPanel->setStyleClass("tab-panel");
+        dataPanel->setStyleClass("tab-panel");
+    });
+
+    tabAI->clicked().connect([tabFranchisee, tabMarketing, tabAI, tabData,
+                               franchiseePanel, marketingPanel, aiPanel, dataPanel] {
+        tabFranchisee->setStyleClass("tab-btn");
+        tabMarketing->setStyleClass("tab-btn");
         tabAI->setStyleClass("tab-btn active");
         tabData->setStyleClass("tab-btn");
-        storePanel->setStyleClass("tab-panel");
+        franchiseePanel->setStyleClass("tab-panel");
+        marketingPanel->setStyleClass("tab-panel");
         aiPanel->setStyleClass("tab-panel active");
         dataPanel->setStyleClass("tab-panel");
     });
 
-    tabData->clicked().connect([tabStore, tabAI, tabData, storePanel, aiPanel, dataPanel] {
-        tabStore->setStyleClass("tab-btn");
+    tabData->clicked().connect([tabFranchisee, tabMarketing, tabAI, tabData,
+                                 franchiseePanel, marketingPanel, aiPanel, dataPanel] {
+        tabFranchisee->setStyleClass("tab-btn");
+        tabMarketing->setStyleClass("tab-btn");
         tabAI->setStyleClass("tab-btn");
         tabData->setStyleClass("tab-btn active");
-        storePanel->setStyleClass("tab-panel");
+        franchiseePanel->setStyleClass("tab-panel");
+        marketingPanel->setStyleClass("tab-panel");
         aiPanel->setStyleClass("tab-panel");
         dataPanel->setStyleClass("tab-panel active");
     });
@@ -2110,10 +2142,11 @@ void FranchiseApp::showSettingsPage() {
             sidebar_->setUserInfo(franchisee_.ownerName.empty() ? "Franchise Owner" : franchisee_.ownerName,
                                    franchisee_.storeName);
 
-            // Save store location to ApiLogicServer
+            // Save franchisee and store location to ApiLogicServer
             if (geocodeSuccess) {
                 std::cout << "  [Settings] Saving to ALS..." << std::endl;
-                saveStoreLocationToALS();
+                saveFranchiseeToALS();      // Save franchisee first (for linking)
+                saveStoreLocationToALS();   // Then save store location
             } else {
                 std::cout << "  [Settings] Skipping ALS save - geocode failed" << std::endl;
             }

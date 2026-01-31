@@ -75,7 +75,7 @@ private:
     void showDashboardPage();
     void showAISearchPage();
     void showProspectsPage();
-    void showDemographicsPage();
+    void showOpenStreetMapPage();
     void showReportsPage();
     void showSettingsPage();
 
