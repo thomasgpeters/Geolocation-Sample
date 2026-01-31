@@ -13,12 +13,8 @@ namespace Services {
 std::string StoreLocationDTO::toJson() const {
     std::ostringstream json;
     // Wrap in JSON:API format for ApiLogicServer
-    // JSON:API requires "type" member in data object, and "id" for PATCH updates
-    json << "{\"data\": {\"type\": \"StoreLocation\"";
-    if (!id.empty()) {
-        json << ", \"id\": \"" << id << "\"";
-    }
-    json << ", \"attributes\": {";
+    // Order: attributes first, then type, then id (for PATCH)
+    json << "{\"data\": {\"attributes\": {";
     json << "\"store_name\": \"" << storeName << "\"";
 
     if (!storeCode.empty()) {
@@ -56,7 +52,11 @@ std::string StoreLocationDTO::toJson() const {
     json << ", \"is_active\": " << (isActive ? "true" : "false");
     json << ", \"is_primary\": " << (isPrimary ? "true" : "false");
 
-    json << "}}}";  // Close attributes, data, and root
+    json << "}, \"type\": \"StoreLocation\"";  // Close attributes, add type
+    if (!id.empty()) {
+        json << ", \"id\": \"" << id << "\"";
+    }
+    json << "}}";  // Close data and root
     return json.str();
 }
 
@@ -446,17 +446,24 @@ bool ApiLogicServerClient::setAppConfigValue(const std::string& key, const std::
 
         if (!id.empty()) {
             // Update existing config - JSON:API format with type and id for PATCH
-            std::string json = "{\"data\": {\"type\": \"AppConfig\", \"id\": \"" + id +
-                               "\", \"attributes\": {\"config_value\": \"" + value + "\"}}}";
+            std::string json = "{\"data\": {\"attributes\": {\"config_value\": \"" + value +
+                               "\"}, \"type\": \"AppConfig\", \"id\": \"" + id + "\"}}";
             auto response = httpPatch("/AppConfig/" + id, json);
             return response.success;
         }
     }
 
-    // Create new config entry - JSON:API format with type member
-    std::string json = "{\"data\": {\"type\": \"AppConfig\", \"attributes\": {\"config_key\": \"" + key +
-                       "\", \"config_value\": \"" + value +
-                       "\", \"config_type\": \"string\", \"category\": \"system\"}}}";
+    // Create new config entry - JSON:API format with all required fields
+    std::string json = "{\"data\": {\"attributes\": {"
+                       "\"config_key\": \"" + key + "\", "
+                       "\"config_value\": \"" + value + "\", "
+                       "\"config_type\": \"string\", "
+                       "\"category\": \"system\", "
+                       "\"description\": \"\", "
+                       "\"is_sensitive\": false, "
+                       "\"is_required\": false, "
+                       "\"default_value\": \"\"}, "
+                       "\"type\": \"AppConfig\"}}";
     auto response = httpPost("/AppConfig", json);
     return response.success;
 }
