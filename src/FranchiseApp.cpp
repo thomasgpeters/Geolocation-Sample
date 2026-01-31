@@ -65,15 +65,38 @@ FranchiseApp::FranchiseApp(const Wt::WEnvironment& env)
     // Setup UI
     setupUI();
 
-    // Setup routing
+    // Setup routing with clean URL paths
     setupRouting();
 
-    // Show setup page if franchisee not configured, otherwise show AI Search
+    // Enable HTML5 history-based URLs (cleaner than ?_= format)
+    setInternalPathDefaultValid(true);
+
+    // Handle initial path from URL or default to appropriate page
+    std::string initialPath = internalPath();
+
     if (!franchisee_.isConfigured) {
-        sidebar_->setActiveItem("setup");
-        showSetupPage();
+        sidebar_->setActiveItem("settings");
+        setInternalPath("/settings", false);
+        showSettingsPage();
+    } else if (initialPath == "/settings") {
+        sidebar_->setActiveItem("settings");
+        showSettingsPage();
+    } else if (initialPath == "/dashboard") {
+        sidebar_->setActiveItem("dashboard");
+        showDashboardPage();
+    } else if (initialPath == "/prospects") {
+        sidebar_->setActiveItem("prospects");
+        showProspectsPage();
+    } else if (initialPath == "/openstreetmap") {
+        sidebar_->setActiveItem("openstreetmap");
+        showOpenStreetMapPage();
+    } else if (initialPath == "/reports") {
+        sidebar_->setActiveItem("reports");
+        showReportsPage();
     } else {
+        // Default to AI Search
         sidebar_->setActiveItem("ai-search");
+        setInternalPath("/search", false);
         showAISearchPage();
     }
 }
@@ -134,33 +157,40 @@ void FranchiseApp::setupUI() {
 }
 
 void FranchiseApp::setupRouting() {
-    // Internal path handling
+    // Internal path handling - only triggered by browser navigation (back/forward)
+    // Not triggered when we call setInternalPath with emitPathChanged=false
     internalPathChanged().connect([this] {
         std::string path = internalPath();
 
+        // Skip if we're already on this page (avoids duplicate renders)
+        if (path == "/" + currentPage_ || (path == "/search" && currentPage_ == "ai-search")) {
+            return;
+        }
+
         if (path == "/dashboard") {
+            currentPage_ = "dashboard";
             sidebar_->setActiveItem("dashboard");
             showDashboardPage();
         } else if (path == "/search" || path == "/ai-search") {
+            currentPage_ = "ai-search";
             sidebar_->setActiveItem("ai-search");
             showAISearchPage();
         } else if (path == "/prospects") {
+            currentPage_ = "prospects";
             sidebar_->setActiveItem("prospects");
             showProspectsPage();
         } else if (path == "/openstreetmap") {
+            currentPage_ = "openstreetmap";
             sidebar_->setActiveItem("openstreetmap");
             showOpenStreetMapPage();
         } else if (path == "/reports") {
+            currentPage_ = "reports";
             sidebar_->setActiveItem("reports");
             showReportsPage();
         } else if (path == "/settings" || path == "/setup") {
-            // /setup now redirects to settings (Store Setup is a tab within Settings)
+            currentPage_ = "settings";
             sidebar_->setActiveItem("settings");
             showSettingsPage();
-        } else {
-            // Default to dashboard
-            sidebar_->setActiveItem("dashboard");
-            showDashboardPage();
         }
     });
 }
@@ -168,24 +198,24 @@ void FranchiseApp::setupRouting() {
 void FranchiseApp::onMenuItemSelected(const std::string& itemId) {
     currentPage_ = itemId;
 
-    // Map menu item IDs to internal paths
+    // Map menu item IDs to clean URL paths
     if (itemId == "dashboard") {
-        setInternalPath("/dashboard", false);
+        setInternalPath("/dashboard", true);
         showDashboardPage();
     } else if (itemId == "ai-search") {
-        setInternalPath("/search", false);
+        setInternalPath("/search", true);
         showAISearchPage();
     } else if (itemId == "prospects") {
-        setInternalPath("/prospects", false);
+        setInternalPath("/prospects", true);
         showProspectsPage();
     } else if (itemId == "openstreetmap") {
-        setInternalPath("/openstreetmap", false);
+        setInternalPath("/openstreetmap", true);
         showOpenStreetMapPage();
     } else if (itemId == "reports") {
-        setInternalPath("/reports", false);
+        setInternalPath("/reports", true);
         showReportsPage();
     } else if (itemId == "settings") {
-        setInternalPath("/settings", false);
+        setInternalPath("/settings", true);
         showSettingsPage();
     }
 }
@@ -2275,6 +2305,19 @@ void FranchiseApp::showSettingsPage() {
                 statusMessage->setStyleClass("settings-status-message status-success");
             }
             statusMessage->setHidden(false);
+
+            // Auto-hide the status message after 5 seconds
+            std::string messageId = statusMessage->id();
+            std::ostringstream fadeJs;
+            fadeJs << "setTimeout(function() {"
+                   << "  var el = document.getElementById('" << messageId << "');"
+                   << "  if (el) {"
+                   << "    el.style.transition = 'opacity 0.5s ease-out';"
+                   << "    el.style.opacity = '0';"
+                   << "    setTimeout(function() { el.style.display = 'none'; }, 500);"
+                   << "  }"
+                   << "}, 5000);";
+            doJavaScript(fadeJs.str());
 
             // Clear password fields
             openaiInput->setText("");
