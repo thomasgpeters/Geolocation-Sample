@@ -340,23 +340,23 @@ ApiResponse ApiLogicServerClient::saveStoreLocation(const StoreLocationDTO& loca
 
     if (location.id.empty()) {
         // Create new record
-        return httpPost("/store_locations", json);
+        return httpPost("/StoreLocation", json);
     } else {
         // Update existing record
-        return httpPatch("/store_locations/" + location.id, json);
+        return httpPatch("/StoreLocation/" + location.id, json);
     }
 }
 
 ApiResponse ApiLogicServerClient::getStoreLocations() {
-    return httpGet("/store_locations");
+    return httpGet("/StoreLocation");
 }
 
 ApiResponse ApiLogicServerClient::getStoreLocation(const std::string& id) {
-    return httpGet("/store_locations/" + id);
+    return httpGet("/StoreLocation/" + id);
 }
 
 ApiResponse ApiLogicServerClient::deleteStoreLocation(const std::string& id) {
-    return httpDelete("/store_locations/" + id);
+    return httpDelete("/StoreLocation/" + id);
 }
 
 std::vector<StoreLocationDTO> ApiLogicServerClient::parseStoreLocations(const ApiResponse& response) {
