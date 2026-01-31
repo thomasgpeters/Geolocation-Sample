@@ -7,18 +7,18 @@ namespace Widgets {
 Sidebar::Sidebar() {
     setStyleClass("sidebar");
 
-    // Define menu items
+    // Define menu items (reordered with divider)
     menuItems_ = {
-        {"setup", "Store Setup", "🏪", false},
-        {"dashboard", "Dashboard", "📊", false},
-        {"ai-search", "AI Search", "🔍", true},
-        {"prospects", "My Prospects", "👥", false},
-        {"demographics", "Demographics", "📍", false},
-        {"reports", "Reports", "📈", false},
-        {"settings", "Settings", "⚙️", false}
+        {"dashboard", "Dashboard", "📊", false, false},
+        {"ai-search", "AI Search", "🔍", true, false},
+        {"demographics", "Demographics", "📍", false, false},
+        {"divider-1", "", "", false, true},  // Dividing line
+        {"prospects", "My Prospects", "👥", false, false},
+        {"reports", "Reports", "📈", false, false},
+        {"settings", "Settings", "⚙️", false, false}
     };
 
-    activeItemId_ = "ai-search";
+    activeItemId_ = "dashboard";
 
     setupUI();
 }
@@ -66,6 +66,13 @@ void Sidebar::createMenu() {
     menuContainer_->setStyleClass("sidebar-menu");
 
     for (const auto& item : menuItems_) {
+        // Handle dividers
+        if (item.isDivider) {
+            auto divider = menuContainer_->addWidget(std::make_unique<Wt::WContainerWidget>());
+            divider->setStyleClass("menu-divider");
+            continue;
+        }
+
         auto menuItem = menuContainer_->addWidget(std::make_unique<Wt::WContainerWidget>());
 
         std::string itemClass = "menu-item";

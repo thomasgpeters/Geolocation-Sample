@@ -123,10 +123,7 @@ void FranchiseApp::setupRouting() {
     internalPathChanged().connect([this] {
         std::string path = internalPath();
 
-        if (path == "/setup") {
-            sidebar_->setActiveItem("setup");
-            showSetupPage();
-        } else if (path == "/dashboard") {
+        if (path == "/dashboard") {
             sidebar_->setActiveItem("dashboard");
             showDashboardPage();
         } else if (path == "/search" || path == "/ai-search") {
@@ -141,18 +138,14 @@ void FranchiseApp::setupRouting() {
         } else if (path == "/reports") {
             sidebar_->setActiveItem("reports");
             showReportsPage();
-        } else if (path == "/settings") {
+        } else if (path == "/settings" || path == "/setup") {
+            // /setup now redirects to settings (Store Setup is a tab within Settings)
             sidebar_->setActiveItem("settings");
             showSettingsPage();
         } else {
-            // Default to setup if not configured, otherwise search
-            if (!franchisee_.isConfigured) {
-                sidebar_->setActiveItem("setup");
-                showSetupPage();
-            } else {
-                sidebar_->setActiveItem("ai-search");
-                showAISearchPage();
-            }
+            // Default to dashboard
+            sidebar_->setActiveItem("dashboard");
+            showDashboardPage();
         }
     });
 }
@@ -161,11 +154,7 @@ void FranchiseApp::onMenuItemSelected(const std::string& itemId) {
     currentPage_ = itemId;
 
     // Map menu item IDs to internal paths
-    // The internalPathChanged handler will show the appropriate page
-    if (itemId == "setup") {
-        setInternalPath("/setup", false);
-        showSetupPage();
-    } else if (itemId == "dashboard") {
+    if (itemId == "dashboard") {
         setInternalPath("/dashboard", false);
         showDashboardPage();
     } else if (itemId == "ai-search") {
@@ -1667,7 +1656,7 @@ void FranchiseApp::showSettingsPage() {
     title->setStyleClass("page-title");
 
     auto subtitle = header->addWidget(std::make_unique<Wt::WText>(
-        "Configure API keys and application preferences"
+        "Configure your store, API keys, and application preferences"
     ));
     subtitle->setStyleClass("page-subtitle");
 
@@ -1675,27 +1664,163 @@ void FranchiseApp::showSettingsPage() {
     auto& appConfig = AppConfig::instance();
 
     // ===========================================
-    // AI Configuration Section (OpenAI / Gemini)
+    // Tab Navigation
     // ===========================================
-    auto aiSection = container->addWidget(std::make_unique<Wt::WContainerWidget>());
+    auto tabContainer = container->addWidget(std::make_unique<Wt::WContainerWidget>());
+    tabContainer->setStyleClass("settings-tabs");
+
+    auto tabNav = tabContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
+    tabNav->setStyleClass("tab-nav");
+
+    // Create tab buttons
+    auto tabStore = tabNav->addWidget(std::make_unique<Wt::WText>("Store Setup"));
+    tabStore->setStyleClass("tab-btn active");
+
+    auto tabAI = tabNav->addWidget(std::make_unique<Wt::WText>("AI Configuration"));
+    tabAI->setStyleClass("tab-btn");
+
+    auto tabData = tabNav->addWidget(std::make_unique<Wt::WText>("Data Sources"));
+    tabData->setStyleClass("tab-btn");
+
+    // Tab content container
+    auto tabContent = tabContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
+    tabContent->setStyleClass("tab-content");
+
+    // ===========================================
+    // Tab 1: Store Setup (from showSetupPage)
+    // ===========================================
+    auto storePanel = tabContent->addWidget(std::make_unique<Wt::WContainerWidget>());
+    storePanel->setStyleClass("tab-panel active");
+    storePanel->setId("tab-store");
+
+    auto storeSection = storePanel->addWidget(std::make_unique<Wt::WContainerWidget>());
+    storeSection->setStyleClass("settings-section");
+
+    auto storeTitle = storeSection->addWidget(std::make_unique<Wt::WText>("Store Information"));
+    storeTitle->setStyleClass("section-title");
+
+    auto storeDesc = storeSection->addWidget(std::make_unique<Wt::WText>(
+        "Enter your franchise store details. This will be the center point for all prospect searches."
+    ));
+    storeDesc->setStyleClass("section-description");
+
+    auto storeFormGrid = storeSection->addWidget(std::make_unique<Wt::WContainerWidget>());
+    storeFormGrid->setStyleClass("form-grid");
+
+    // Store Name
+    auto nameGroup = storeFormGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
+    nameGroup->setStyleClass("form-group");
+    nameGroup->addWidget(std::make_unique<Wt::WText>("Store Name"))->setStyleClass("form-label");
+    auto nameInput = nameGroup->addWidget(std::make_unique<Wt::WLineEdit>());
+    nameInput->setPlaceholderText("e.g., Vocelli Pizza - Downtown");
+    nameInput->setStyleClass("form-control");
+    if (franchisee_.isConfigured) nameInput->setText(franchisee_.storeName);
+
+    // Store Address
+    auto addressGroup = storeFormGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
+    addressGroup->setStyleClass("form-group");
+    addressGroup->addWidget(std::make_unique<Wt::WText>("Store Address"))->setStyleClass("form-label");
+    auto addressInput = addressGroup->addWidget(std::make_unique<Wt::WLineEdit>());
+    addressInput->setPlaceholderText("e.g., 123 Main St, Denver, CO 80202");
+    addressInput->setStyleClass("form-control");
+    if (franchisee_.isConfigured) addressInput->setText(franchisee_.address);
+
+    // Owner Name
+    auto ownerGroup = storeFormGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
+    ownerGroup->setStyleClass("form-group");
+    ownerGroup->addWidget(std::make_unique<Wt::WText>("Owner/Manager Name"))->setStyleClass("form-label");
+    auto ownerInput = ownerGroup->addWidget(std::make_unique<Wt::WLineEdit>());
+    ownerInput->setPlaceholderText("e.g., John Smith");
+    ownerInput->setStyleClass("form-control");
+    if (franchisee_.isConfigured) ownerInput->setText(franchisee_.ownerName);
+
+    // Phone
+    auto phoneGroup = storeFormGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
+    phoneGroup->setStyleClass("form-group");
+    phoneGroup->addWidget(std::make_unique<Wt::WText>("Store Phone"))->setStyleClass("form-label");
+    auto phoneInput = phoneGroup->addWidget(std::make_unique<Wt::WLineEdit>());
+    phoneInput->setPlaceholderText("e.g., (555) 123-4567");
+    phoneInput->setStyleClass("form-control");
+    if (franchisee_.isConfigured) phoneInput->setText(franchisee_.phone);
+
+    // Search Preferences
+    auto prefsSection = storePanel->addWidget(std::make_unique<Wt::WContainerWidget>());
+    prefsSection->setStyleClass("settings-section");
+
+    auto prefsTitle = prefsSection->addWidget(std::make_unique<Wt::WText>("Default Search Preferences"));
+    prefsTitle->setStyleClass("section-title");
+
+    auto prefsGrid = prefsSection->addWidget(std::make_unique<Wt::WContainerWidget>());
+    prefsGrid->setStyleClass("form-grid");
+
+    // Default Radius
+    auto radiusGroup = prefsGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
+    radiusGroup->setStyleClass("form-group");
+    radiusGroup->addWidget(std::make_unique<Wt::WText>("Default Search Radius (miles)"))->setStyleClass("form-label");
+    auto radiusInput = radiusGroup->addWidget(std::make_unique<Wt::WLineEdit>("5"));
+    radiusInput->setStyleClass("form-control");
+    if (franchisee_.isConfigured) {
+        radiusInput->setText(std::to_string(static_cast<int>(franchisee_.defaultSearchRadiusMiles)));
+    }
+
+    // Target Business Types
+    auto typesGroup = prefsSection->addWidget(std::make_unique<Wt::WContainerWidget>());
+    typesGroup->setStyleClass("form-group");
+    typesGroup->addWidget(std::make_unique<Wt::WText>("Target Business Types"))->setStyleClass("form-label");
+    typesGroup->addWidget(std::make_unique<Wt::WText>(
+        "Select the types of businesses you want to target for catering services"
+    ))->setStyleClass("form-help");
+
+    auto checkboxGrid = typesGroup->addWidget(std::make_unique<Wt::WContainerWidget>());
+    checkboxGrid->setStyleClass("checkbox-grid");
+
+    std::vector<std::pair<std::string, bool>> businessTypes = {
+        {"Corporate Offices", true}, {"Conference Centers", true}, {"Hotels", true},
+        {"Medical Facilities", true}, {"Educational Institutions", true}, {"Manufacturing/Industrial", false},
+        {"Warehouses/Distribution", false}, {"Government Offices", false}, {"Tech Companies", true},
+        {"Financial Services", false}, {"Coworking Spaces", true}, {"Non-profits", false}
+    };
+
+    std::vector<Wt::WCheckBox*> typeCheckboxes;
+    for (const auto& [typeName, defaultChecked] : businessTypes) {
+        auto checkbox = checkboxGrid->addWidget(std::make_unique<Wt::WCheckBox>(typeName));
+        checkbox->setStyleClass("form-checkbox");
+        checkbox->setChecked(defaultChecked);
+        typeCheckboxes.push_back(checkbox);
+    }
+
+    // Employee Size
+    auto sizeGroup = prefsSection->addWidget(std::make_unique<Wt::WContainerWidget>());
+    sizeGroup->setStyleClass("form-group");
+    sizeGroup->addWidget(std::make_unique<Wt::WText>("Target Organization Size"))->setStyleClass("form-label");
+    auto sizeCombo = sizeGroup->addWidget(std::make_unique<Wt::WComboBox>());
+    sizeCombo->setStyleClass("form-control");
+    for (const auto& range : Models::EmployeeRange::getStandardRanges()) {
+        sizeCombo->addItem(range.label);
+    }
+    sizeCombo->setCurrentIndex(0);
+
+    // ===========================================
+    // Tab 2: AI Configuration
+    // ===========================================
+    auto aiPanel = tabContent->addWidget(std::make_unique<Wt::WContainerWidget>());
+    aiPanel->setStyleClass("tab-panel");
+    aiPanel->setId("tab-ai");
+
+    auto aiSection = aiPanel->addWidget(std::make_unique<Wt::WContainerWidget>());
     aiSection->setStyleClass("settings-section");
 
-    auto aiSectionTitle = aiSection->addWidget(std::make_unique<Wt::WText>("AI Configuration"));
-    aiSectionTitle->setStyleClass("section-title");
-
-    auto aiSectionDesc = aiSection->addWidget(std::make_unique<Wt::WText>(
+    aiSection->addWidget(std::make_unique<Wt::WText>("AI Configuration"))->setStyleClass("section-title");
+    aiSection->addWidget(std::make_unique<Wt::WText>(
         "Configure your AI provider for intelligent prospect analysis and recommendations."
-    ));
-    aiSectionDesc->setStyleClass("section-description");
+    ))->setStyleClass("section-description");
 
-    // AI Provider status indicator
+    // AI Status
     auto aiStatusContainer = aiSection->addWidget(std::make_unique<Wt::WContainerWidget>());
     aiStatusContainer->setStyleClass("api-status-container");
 
     bool aiConfigured = searchService_->isAIEngineConfigured();
-    std::string aiStatusClass = aiConfigured ? "status-indicator status-configured" : "status-indicator status-not-configured";
     std::string aiStatusText = aiConfigured ? "AI Engine: Configured" : "AI Engine: Not Configured";
-
     if (aiConfigured) {
         auto provider = searchService_->getAIProvider();
         if (provider == Services::AIProvider::OPENAI) {
@@ -1704,37 +1829,26 @@ void FranchiseApp::showSettingsPage() {
             aiStatusText = "AI Engine: Google Gemini";
         }
     }
-
     auto aiStatus = aiStatusContainer->addWidget(std::make_unique<Wt::WText>(aiStatusText));
-    aiStatus->setStyleClass(aiStatusClass);
+    aiStatus->setStyleClass(aiConfigured ? "status-indicator status-configured" : "status-indicator status-not-configured");
 
-    // Form grid for AI settings
     auto aiFormGrid = aiSection->addWidget(std::make_unique<Wt::WContainerWidget>());
     aiFormGrid->setStyleClass("form-grid");
 
     // OpenAI API Key
     auto openaiGroup = aiFormGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
     openaiGroup->setStyleClass("form-group");
-    auto openaiLabel = openaiGroup->addWidget(std::make_unique<Wt::WText>("OpenAI API Key"));
-    openaiLabel->setStyleClass("form-label");
+    openaiGroup->addWidget(std::make_unique<Wt::WText>("OpenAI API Key"))->setStyleClass("form-label");
     auto openaiInput = openaiGroup->addWidget(std::make_unique<Wt::WLineEdit>());
-    openaiInput->setPlaceholderText("sk-...");
+    openaiInput->setPlaceholderText(appConfig.hasOpenAIKey() ? "sk-****...****(configured)" : "sk-...");
     openaiInput->setStyleClass("form-control");
     openaiInput->setAttributeValue("type", "password");
-    if (appConfig.hasOpenAIKey()) {
-        // Show masked key
-        openaiInput->setPlaceholderText("sk-****...****(configured)");
-    }
-    auto openaiHelp = openaiGroup->addWidget(std::make_unique<Wt::WText>(
-        "Get your API key from platform.openai.com"
-    ));
-    openaiHelp->setStyleClass("form-help");
+    openaiGroup->addWidget(std::make_unique<Wt::WText>("Get your API key from platform.openai.com"))->setStyleClass("form-help");
 
     // OpenAI Model Selection
     auto modelGroup = aiFormGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
     modelGroup->setStyleClass("form-group");
-    auto modelLabel = modelGroup->addWidget(std::make_unique<Wt::WText>("OpenAI Model"));
-    modelLabel->setStyleClass("form-label");
+    modelGroup->addWidget(std::make_unique<Wt::WText>("OpenAI Model"))->setStyleClass("form-label");
     auto modelSelect = modelGroup->addWidget(std::make_unique<Wt::WComboBox>());
     modelSelect->setStyleClass("form-control");
     modelSelect->addItem("gpt-4o (Recommended)");
@@ -1743,7 +1857,6 @@ void FranchiseApp::showSettingsPage() {
     modelSelect->addItem("gpt-4");
     modelSelect->addItem("gpt-3.5-turbo");
 
-    // Set current model selection
     std::string currentModel = appConfig.getOpenAIModel();
     if (currentModel == "gpt-4o-mini") modelSelect->setCurrentIndex(1);
     else if (currentModel == "gpt-4-turbo") modelSelect->setCurrentIndex(2);
@@ -1751,36 +1864,30 @@ void FranchiseApp::showSettingsPage() {
     else if (currentModel == "gpt-3.5-turbo") modelSelect->setCurrentIndex(4);
     else modelSelect->setCurrentIndex(0);
 
-    // Gemini API Key (alternative)
+    // Gemini API Key
     auto geminiGroup = aiFormGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
     geminiGroup->setStyleClass("form-group");
-    auto geminiLabel = geminiGroup->addWidget(std::make_unique<Wt::WText>("Google Gemini API Key (Alternative)"));
-    geminiLabel->setStyleClass("form-label");
+    geminiGroup->addWidget(std::make_unique<Wt::WText>("Google Gemini API Key (Alternative)"))->setStyleClass("form-label");
     auto geminiInput = geminiGroup->addWidget(std::make_unique<Wt::WLineEdit>());
-    geminiInput->setPlaceholderText("AIza...");
+    geminiInput->setPlaceholderText(appConfig.hasGeminiKey() ? "AIza****...****(configured)" : "AIza...");
     geminiInput->setStyleClass("form-control");
     geminiInput->setAttributeValue("type", "password");
-    if (appConfig.hasGeminiKey()) {
-        geminiInput->setPlaceholderText("AIza****...****(configured)");
-    }
-    auto geminiHelp = geminiGroup->addWidget(std::make_unique<Wt::WText>(
-        "Get your API key from makersuite.google.com (used if OpenAI is not configured)"
-    ));
-    geminiHelp->setStyleClass("form-help");
+    geminiGroup->addWidget(std::make_unique<Wt::WText>("Used if OpenAI is not configured"))->setStyleClass("form-help");
 
     // ===========================================
-    // Data Sources API Configuration Section
+    // Tab 3: Data Sources
     // ===========================================
-    auto apiSection = container->addWidget(std::make_unique<Wt::WContainerWidget>());
+    auto dataPanel = tabContent->addWidget(std::make_unique<Wt::WContainerWidget>());
+    dataPanel->setStyleClass("tab-panel");
+    dataPanel->setId("tab-data");
+
+    auto apiSection = dataPanel->addWidget(std::make_unique<Wt::WContainerWidget>());
     apiSection->setStyleClass("settings-section");
 
-    auto apiSectionTitle = apiSection->addWidget(std::make_unique<Wt::WText>("Data Source APIs"));
-    apiSectionTitle->setStyleClass("section-title");
-
-    auto apiSectionDesc = apiSection->addWidget(std::make_unique<Wt::WText>(
+    apiSection->addWidget(std::make_unique<Wt::WText>("Data Source APIs"))->setStyleClass("section-title");
+    apiSection->addWidget(std::make_unique<Wt::WText>(
         "Configure API keys for business data sources. OpenStreetMap is always available (no key required)."
-    ));
-    apiSectionDesc->setStyleClass("section-description");
+    ))->setStyleClass("section-description");
 
     auto apiFormGrid = apiSection->addWidget(std::make_unique<Wt::WContainerWidget>());
     apiFormGrid->setStyleClass("form-grid");
@@ -1788,90 +1895,59 @@ void FranchiseApp::showSettingsPage() {
     // Google API Key
     auto googleGroup = apiFormGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
     googleGroup->setStyleClass("form-group");
-    auto googleLabel = googleGroup->addWidget(std::make_unique<Wt::WText>("Google Places API Key"));
-    googleLabel->setStyleClass("form-label");
+    googleGroup->addWidget(std::make_unique<Wt::WText>("Google Places API Key"))->setStyleClass("form-label");
     auto googleInput = googleGroup->addWidget(std::make_unique<Wt::WLineEdit>());
-    googleInput->setPlaceholderText("AIza...");
+    googleInput->setPlaceholderText(appConfig.hasGoogleKey() ? "AIza****...****(configured)" : "AIza...");
     googleInput->setStyleClass("form-control");
     googleInput->setAttributeValue("type", "password");
-    if (appConfig.hasGoogleKey()) {
-        googleInput->setPlaceholderText("AIza****...****(configured)");
-    }
 
     // BBB API Key
     auto bbbGroup = apiFormGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
     bbbGroup->setStyleClass("form-group");
-    auto bbbLabel = bbbGroup->addWidget(std::make_unique<Wt::WText>("BBB API Key"));
-    bbbLabel->setStyleClass("form-label");
+    bbbGroup->addWidget(std::make_unique<Wt::WText>("BBB API Key"))->setStyleClass("form-label");
     auto bbbInput = bbbGroup->addWidget(std::make_unique<Wt::WLineEdit>());
-    bbbInput->setPlaceholderText("Enter BBB API key");
+    bbbInput->setPlaceholderText(appConfig.hasBBBKey() ? "****...****(configured)" : "Enter BBB API key");
     bbbInput->setStyleClass("form-control");
     bbbInput->setAttributeValue("type", "password");
-    if (appConfig.hasBBBKey()) {
-        bbbInput->setPlaceholderText("****...****(configured)");
-    }
 
     // Census API Key
     auto censusGroup = apiFormGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
     censusGroup->setStyleClass("form-group");
-    auto censusLabel = censusGroup->addWidget(std::make_unique<Wt::WText>("Census/Demographics API Key"));
-    censusLabel->setStyleClass("form-label");
+    censusGroup->addWidget(std::make_unique<Wt::WText>("Census/Demographics API Key"))->setStyleClass("form-label");
     auto censusInput = censusGroup->addWidget(std::make_unique<Wt::WLineEdit>());
-    censusInput->setPlaceholderText("Enter Census API key");
+    censusInput->setPlaceholderText(appConfig.hasCensusKey() ? "****...****(configured)" : "Enter Census API key");
     censusInput->setStyleClass("form-control");
     censusInput->setAttributeValue("type", "password");
-    if (appConfig.hasCensusKey()) {
-        censusInput->setPlaceholderText("****...****(configured)");
-    }
 
     // ===========================================
-    // Search Preferences Section
+    // Tab Switching Logic
     // ===========================================
-    auto prefsSection = container->addWidget(std::make_unique<Wt::WContainerWidget>());
-    prefsSection->setStyleClass("settings-section");
+    tabStore->clicked().connect([tabStore, tabAI, tabData, storePanel, aiPanel, dataPanel] {
+        tabStore->setStyleClass("tab-btn active");
+        tabAI->setStyleClass("tab-btn");
+        tabData->setStyleClass("tab-btn");
+        storePanel->setStyleClass("tab-panel active");
+        aiPanel->setStyleClass("tab-panel");
+        dataPanel->setStyleClass("tab-panel");
+    });
 
-    auto prefsSectionTitle = prefsSection->addWidget(std::make_unique<Wt::WText>("Search Preferences"));
-    prefsSectionTitle->setStyleClass("section-title");
+    tabAI->clicked().connect([tabStore, tabAI, tabData, storePanel, aiPanel, dataPanel] {
+        tabStore->setStyleClass("tab-btn");
+        tabAI->setStyleClass("tab-btn active");
+        tabData->setStyleClass("tab-btn");
+        storePanel->setStyleClass("tab-panel");
+        aiPanel->setStyleClass("tab-panel active");
+        dataPanel->setStyleClass("tab-panel");
+    });
 
-    auto prefsSectionDesc = prefsSection->addWidget(std::make_unique<Wt::WText>(
-        "Set your default search radius and preferred business types."
-    ));
-    prefsSectionDesc->setStyleClass("section-description");
-
-    // ===========================================
-    // Franchise Profile Section
-    // ===========================================
-    auto profileSection = container->addWidget(std::make_unique<Wt::WContainerWidget>());
-    profileSection->setStyleClass("settings-section");
-
-    auto profileSectionTitle = profileSection->addWidget(std::make_unique<Wt::WText>("Franchise Profile"));
-    profileSectionTitle->setStyleClass("section-title");
-
-    auto profileSectionDesc = profileSection->addWidget(std::make_unique<Wt::WText>(
-        "Update your franchise location and contact information."
-    ));
-    profileSectionDesc->setStyleClass("section-description");
-
-    if (franchisee_.isConfigured) {
-        auto profileInfo = profileSection->addWidget(std::make_unique<Wt::WContainerWidget>());
-        profileInfo->setStyleClass("profile-info");
-
-        auto storeNameText = profileInfo->addWidget(std::make_unique<Wt::WText>(
-            "Store: " + franchisee_.storeName
-        ));
-        storeNameText->setStyleClass("profile-field");
-
-        auto addressText = profileInfo->addWidget(std::make_unique<Wt::WText>(
-            "Address: " + franchisee_.address
-        ));
-        addressText->setStyleClass("profile-field");
-
-        auto editProfileBtn = profileSection->addWidget(std::make_unique<Wt::WPushButton>("Edit Profile"));
-        editProfileBtn->setStyleClass("btn btn-outline");
-        editProfileBtn->clicked().connect([this]() {
-            showSetupPage();
-        });
-    }
+    tabData->clicked().connect([tabStore, tabAI, tabData, storePanel, aiPanel, dataPanel] {
+        tabStore->setStyleClass("tab-btn");
+        tabAI->setStyleClass("tab-btn");
+        tabData->setStyleClass("tab-btn active");
+        storePanel->setStyleClass("tab-panel");
+        aiPanel->setStyleClass("tab-panel");
+        dataPanel->setStyleClass("tab-panel active");
+    });
 
     // ===========================================
     // Action Buttons
@@ -1879,56 +1955,101 @@ void FranchiseApp::showSettingsPage() {
     auto actionsSection = container->addWidget(std::make_unique<Wt::WContainerWidget>());
     actionsSection->setStyleClass("form-actions");
 
-    auto saveBtn = actionsSection->addWidget(std::make_unique<Wt::WPushButton>("Save Settings"));
+    auto saveBtn = actionsSection->addWidget(std::make_unique<Wt::WPushButton>("Save All Settings"));
     saveBtn->setStyleClass("btn btn-primary");
 
-    // Status message area
     auto statusMessage = actionsSection->addWidget(std::make_unique<Wt::WText>(""));
     statusMessage->setStyleClass("settings-status-message");
     statusMessage->setHidden(true);
 
-    // Connect save button
-    saveBtn->clicked().connect([this, openaiInput, modelSelect, geminiInput, googleInput, bbbInput, censusInput, statusMessage, aiStatus]() {
+    // Connect save button - saves ALL tabs
+    saveBtn->clicked().connect([this, nameInput, addressInput, ownerInput, phoneInput, radiusInput,
+                                sizeCombo, typeCheckboxes, openaiInput, modelSelect, geminiInput,
+                                googleInput, bbbInput, censusInput, statusMessage, aiStatus]() {
         auto& appConfig = AppConfig::instance();
         bool changed = false;
 
-        // Update OpenAI API Key if provided
+        // === Save Store Setup ===
+        std::string storeName = nameInput->text().toUTF8();
+        std::string address = addressInput->text().toUTF8();
+
+        if (!storeName.empty() && !address.empty()) {
+            Models::GeoLocation location = searchService_->geocodeAddress(address);
+
+            franchisee_.storeName = storeName;
+            franchisee_.address = address;
+            franchisee_.ownerName = ownerInput->text().toUTF8();
+            franchisee_.phone = phoneInput->text().toUTF8();
+            franchisee_.location = location;
+
+            try {
+                franchisee_.defaultSearchRadiusMiles = std::stod(radiusInput->text().toUTF8());
+            } catch (...) {
+                franchisee_.defaultSearchRadiusMiles = 5.0;
+            }
+            franchisee_.searchCriteria.radiusMiles = franchisee_.defaultSearchRadiusMiles;
+
+            auto ranges = Models::EmployeeRange::getStandardRanges();
+            int sizeIdx = sizeCombo->currentIndex();
+            if (sizeIdx >= 0 && sizeIdx < static_cast<int>(ranges.size())) {
+                franchisee_.searchCriteria.minEmployees = ranges[sizeIdx].minEmployees;
+                franchisee_.searchCriteria.maxEmployees = ranges[sizeIdx].maxEmployees;
+            }
+
+            franchisee_.searchCriteria.clearBusinessTypes();
+            std::vector<Models::BusinessType> allTypes = {
+                Models::BusinessType::CORPORATE_OFFICE, Models::BusinessType::CONFERENCE_CENTER,
+                Models::BusinessType::HOTEL, Models::BusinessType::MEDICAL_FACILITY,
+                Models::BusinessType::EDUCATIONAL_INSTITUTION, Models::BusinessType::MANUFACTURING,
+                Models::BusinessType::WAREHOUSE, Models::BusinessType::GOVERNMENT_OFFICE,
+                Models::BusinessType::TECH_COMPANY, Models::BusinessType::FINANCIAL_SERVICES,
+                Models::BusinessType::COWORKING_SPACE, Models::BusinessType::NONPROFIT
+            };
+
+            for (size_t i = 0; i < typeCheckboxes.size() && i < allTypes.size(); ++i) {
+                if (typeCheckboxes[i]->isChecked()) {
+                    franchisee_.searchCriteria.addBusinessType(allTypes[i]);
+                }
+            }
+
+            franchisee_.isConfigured = true;
+            sidebar_->setUserInfo(franchisee_.ownerName.empty() ? "Franchise Owner" : franchisee_.ownerName,
+                                   franchisee_.storeName);
+            changed = true;
+        }
+
+        // === Save AI Configuration ===
         std::string openaiKey = openaiInput->text().toUTF8();
         if (!openaiKey.empty()) {
             appConfig.setOpenAIApiKey(openaiKey);
             changed = true;
         }
 
-        // Update OpenAI Model
         std::vector<std::string> models = {"gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"};
         int modelIdx = modelSelect->currentIndex();
         if (modelIdx >= 0 && modelIdx < static_cast<int>(models.size())) {
             appConfig.setOpenAIModel(models[modelIdx]);
-            changed = true;
         }
 
-        // Update Gemini API Key if provided
         std::string geminiKey = geminiInput->text().toUTF8();
         if (!geminiKey.empty()) {
             appConfig.setGeminiApiKey(geminiKey);
             changed = true;
         }
 
-        // Update Google API Key if provided
+        // === Save Data Sources ===
         std::string googleKey = googleInput->text().toUTF8();
         if (!googleKey.empty()) {
             appConfig.setGoogleApiKey(googleKey);
             changed = true;
         }
 
-        // Update BBB API Key if provided
         std::string bbbKey = bbbInput->text().toUTF8();
         if (!bbbKey.empty()) {
             appConfig.setBBBApiKey(bbbKey);
             changed = true;
         }
 
-        // Update Census API Key if provided
         std::string censusKey = censusInput->text().toUTF8();
         if (!censusKey.empty()) {
             appConfig.setCensusApiKey(censusKey);
@@ -1936,54 +2057,28 @@ void FranchiseApp::showSettingsPage() {
         }
 
         if (changed) {
-            // Save to config file
             appConfig.saveToFile("config/app_config.json");
 
-            // Update the search service with new AI configuration
             if (appConfig.hasOpenAIKey()) {
-                searchService_->setAIProvider(
-                    Services::AIProvider::OPENAI,
-                    appConfig.getOpenAIApiKey()
-                );
+                searchService_->setAIProvider(Services::AIProvider::OPENAI, appConfig.getOpenAIApiKey());
                 aiStatus->setText("AI Engine: OpenAI (" + appConfig.getOpenAIModel() + ")");
                 aiStatus->setStyleClass("status-indicator status-configured");
             } else if (appConfig.hasGeminiKey()) {
-                searchService_->setAIProvider(
-                    Services::AIProvider::GEMINI,
-                    appConfig.getGeminiApiKey()
-                );
+                searchService_->setAIProvider(Services::AIProvider::GEMINI, appConfig.getGeminiApiKey());
                 aiStatus->setText("AI Engine: Google Gemini");
                 aiStatus->setStyleClass("status-indicator status-configured");
             }
 
-            // Show success message
-            statusMessage->setText("Settings saved successfully!");
+            statusMessage->setText("All settings saved successfully!");
             statusMessage->setStyleClass("settings-status-message status-success");
             statusMessage->setHidden(false);
 
-            // Clear input fields (they now show as configured)
+            // Clear password fields
             openaiInput->setText("");
             geminiInput->setText("");
             googleInput->setText("");
             bbbInput->setText("");
             censusInput->setText("");
-
-            // Update placeholders
-            if (appConfig.hasOpenAIKey()) {
-                openaiInput->setPlaceholderText("sk-****...****(configured)");
-            }
-            if (appConfig.hasGeminiKey()) {
-                geminiInput->setPlaceholderText("AIza****...****(configured)");
-            }
-            if (appConfig.hasGoogleKey()) {
-                googleInput->setPlaceholderText("AIza****...****(configured)");
-            }
-            if (appConfig.hasBBBKey()) {
-                bbbInput->setPlaceholderText("****...****(configured)");
-            }
-            if (appConfig.hasCensusKey()) {
-                censusInput->setPlaceholderText("****...****(configured)");
-            }
         } else {
             statusMessage->setText("No changes to save.");
             statusMessage->setStyleClass("settings-status-message status-info");
