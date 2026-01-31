@@ -56,7 +56,8 @@ FranchiseApp::FranchiseApp(const Wt::WEnvironment& env)
     // Initialize ApiLogicServer client and load data
     alsClient_ = std::make_unique<Services::ApiLogicServerClient>();
     alsClient_->loadAppConfigs();  // Load all app config into memory cache
-    loadStoreLocationFromALS();
+    loadFranchiseeFromALS();       // Load current franchisee first (for linking)
+    loadStoreLocationFromALS();    // Then load store location
 
     // Load styles
     loadStyleSheet();
@@ -2235,6 +2236,7 @@ bool FranchiseApp::saveStoreLocationToALS() {
 
     Services::StoreLocationDTO dto;
     dto.id = currentStoreLocationId_;  // Empty for new, set for update
+    dto.franchiseeId = currentFranchiseeId_;  // Link to current franchisee
     dto.storeName = franchisee_.storeName;
     dto.addressLine1 = franchisee_.address;
     dto.city = franchisee_.location.city;
@@ -2328,6 +2330,157 @@ void FranchiseApp::selectStoreById(const std::string& storeId) {
 
         // Save as current store
         alsClient_->setAppConfigValue("current_store_id", storeId);
+
+        // Update sidebar
+        sidebar_->setUserInfo(
+            franchisee_.ownerName.empty() ? "Franchise Owner" : franchisee_.ownerName,
+            franchisee_.storeName
+        );
+    }
+}
+
+// ============================================================================
+// Franchisee ALS Integration
+// ============================================================================
+
+void FranchiseApp::loadFranchiseeFromALS() {
+    // Get the saved current_franchisee_id from app_config
+    std::string savedFranchiseeId = alsClient_->getAppConfigValue("current_franchisee_id");
+
+    if (!savedFranchiseeId.empty()) {
+        std::cout << "  [App] Loading franchisee from ALS: " << savedFranchiseeId << std::endl;
+        auto response = alsClient_->getFranchisee(savedFranchiseeId);
+
+        if (response.success) {
+            auto dto = Services::FranchiseeDTO::fromJson(response.body);
+            if (!dto.id.empty()) {
+                currentFranchiseeId_ = dto.id;
+                // Update franchisee_ with loaded data
+                franchisee_.ownerName = dto.ownerFirstName;
+                if (!dto.ownerLastName.empty()) {
+                    franchisee_.ownerName += " " + dto.ownerLastName;
+                }
+                franchisee_.phone = dto.phone;
+                franchisee_.email = dto.email;
+                // Address info can be used if store location isn't set
+                if (franchisee_.address.empty()) {
+                    franchisee_.address = dto.addressLine1;
+                    franchisee_.location.city = dto.city;
+                    franchisee_.location.state = dto.stateProvince;
+                    franchisee_.location.postalCode = dto.postalCode;
+                    franchisee_.location.latitude = dto.latitude;
+                    franchisee_.location.longitude = dto.longitude;
+                }
+                std::cout << "  [App] Loaded franchisee: " << dto.businessName << std::endl;
+                return;
+            }
+        }
+    }
+
+    // No saved franchisee - will be created when user saves settings
+    std::cout << "  [App] No current franchisee configured" << std::endl;
+}
+
+bool FranchiseApp::saveFranchiseeToALS() {
+    std::cout << "  [App] Saving franchisee to ApiLogicServer..." << std::endl;
+
+    Services::FranchiseeDTO dto;
+    dto.id = currentFranchiseeId_;  // Empty for new, set for update
+    dto.businessName = franchisee_.storeName.empty() ? franchisee_.franchiseName : franchisee_.storeName;
+
+    // Parse owner name into first/last
+    std::string ownerName = franchisee_.ownerName;
+    size_t spacePos = ownerName.find(' ');
+    if (spacePos != std::string::npos) {
+        dto.ownerFirstName = ownerName.substr(0, spacePos);
+        dto.ownerLastName = ownerName.substr(spacePos + 1);
+    } else {
+        dto.ownerFirstName = ownerName;
+    }
+
+    dto.phone = franchisee_.phone;
+    dto.email = franchisee_.email;
+    dto.addressLine1 = franchisee_.address;
+    dto.city = franchisee_.location.city;
+    dto.stateProvince = franchisee_.location.state;
+    dto.postalCode = franchisee_.location.postalCode;
+    dto.latitude = franchisee_.location.latitude;
+    dto.longitude = franchisee_.location.longitude;
+    dto.isActive = true;
+
+    auto response = alsClient_->saveFranchisee(dto);
+
+    if (response.success) {
+        // Parse the response to get the ID if this was a create
+        if (currentFranchiseeId_.empty()) {
+            auto created = Services::FranchiseeDTO::fromJson(response.body);
+            if (!created.id.empty()) {
+                currentFranchiseeId_ = created.id;
+                std::cout << "  [App] Created franchisee with ID: " << currentFranchiseeId_ << std::endl;
+            }
+        }
+
+        // Save the current franchisee ID to app_config so it loads on next startup
+        if (!currentFranchiseeId_.empty()) {
+            alsClient_->setAppConfigValue("current_franchisee_id", currentFranchiseeId_);
+        }
+
+        return true;
+    } else {
+        std::cerr << "  [App] Failed to save franchisee to ALS: " << response.errorMessage << std::endl;
+        return false;
+    }
+}
+
+std::vector<Services::FranchiseeDTO> FranchiseApp::loadAvailableFranchisees() {
+    auto response = alsClient_->getFranchisees();
+
+    if (response.success) {
+        availableFranchisees_ = Services::ApiLogicServerClient::parseFranchisees(response);
+    }
+
+    return availableFranchisees_;
+}
+
+void FranchiseApp::selectFranchiseeById(const std::string& franchiseeId) {
+    // Validate franchiseeId to prevent empty UUID queries
+    if (franchiseeId.empty()) {
+        std::cerr << "  [App] selectFranchiseeById: empty franchiseeId, ignoring" << std::endl;
+        return;
+    }
+
+    // Find the franchisee in cached list or load it
+    Services::FranchiseeDTO selectedFranchisee;
+    bool found = false;
+
+    for (const auto& f : availableFranchisees_) {
+        if (f.id == franchiseeId) {
+            selectedFranchisee = f;
+            found = true;
+            break;
+        }
+    }
+
+    if (!found) {
+        // Load directly from API
+        auto response = alsClient_->getFranchisee(franchiseeId);
+        if (response.success) {
+            selectedFranchisee = Services::FranchiseeDTO::fromJson(response.body);
+            found = !selectedFranchisee.id.empty();
+        }
+    }
+
+    if (found) {
+        currentFranchiseeId_ = selectedFranchisee.id;
+        franchisee_.ownerName = selectedFranchisee.ownerFirstName;
+        if (!selectedFranchisee.ownerLastName.empty()) {
+            franchisee_.ownerName += " " + selectedFranchisee.ownerLastName;
+        }
+        franchisee_.phone = selectedFranchisee.phone;
+        franchisee_.email = selectedFranchisee.email;
+
+        // Save as current franchisee
+        alsClient_->setAppConfigValue("current_franchisee_id", franchiseeId);
 
         // Update sidebar
         sidebar_->setUserInfo(

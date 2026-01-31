@@ -82,15 +82,25 @@ private:
     // Franchisee data
     Models::Franchisee franchisee_;
     std::string currentStoreLocationId_;  // UUID for ALS updates
+    std::string currentFranchiseeId_;     // UUID for ALS updates
 
-    // ApiLogicServer integration
+    // ApiLogicServer integration - Store Location
     void loadStoreLocationFromALS();
     bool saveStoreLocationToALS();
     void selectStoreById(const std::string& storeId);
     std::vector<Services::StoreLocationDTO> loadAvailableStores();
 
+    // ApiLogicServer integration - Franchisee
+    void loadFranchiseeFromALS();
+    bool saveFranchiseeToALS();
+    void selectFranchiseeById(const std::string& franchiseeId);
+    std::vector<Services::FranchiseeDTO> loadAvailableFranchisees();
+
     // Cached list of available stores (for selector)
     std::vector<Services::StoreLocationDTO> availableStores_;
+
+    // Cached list of available franchisees (for selector)
+    std::vector<Services::FranchiseeDTO> availableFranchisees_;
 
     // Services
     std::unique_ptr<Services::AISearchService> searchService_;
