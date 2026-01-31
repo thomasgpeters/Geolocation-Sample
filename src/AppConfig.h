@@ -81,8 +81,11 @@ public:
 
         std::ifstream file(filepath);
         if (!file.is_open()) {
+            std::cerr << "  [Config] Failed to open: " << filepath << std::endl;
             return false;
         }
+
+        std::cout << "  [Config] Reading from: " << filepath << std::endl;
 
         // Simple JSON parsing for key-value pairs
         std::string line;
@@ -94,16 +97,29 @@ public:
             std::string key = extractJsonKey(line);
             std::string value = extractJsonValue(line);
 
+            // Debug output for ALS settings
+            if (key == "host" || key == "port" || key == "protocol" || key == "api_prefix") {
+                std::cout << "  [Config] Found: " << key << " = '" << value << "'" << std::endl;
+            }
+
             // Only load from file if not already set (env vars take precedence)
             // ApiLogicServer settings
             if (key == "host" && !value.empty() && apiLogicServerHost_.empty()) {
                 apiLogicServerHost_ = value;
+                std::cout << "  [Config] Set host = " << value << std::endl;
             } else if (key == "port" && !value.empty() && apiLogicServerPort_ == 0) {
-                try { apiLogicServerPort_ = std::stoi(value); } catch (...) {}
+                try {
+                    apiLogicServerPort_ = std::stoi(value);
+                    std::cout << "  [Config] Set port = " << apiLogicServerPort_ << std::endl;
+                } catch (...) {
+                    std::cerr << "  [Config] Failed to parse port: " << value << std::endl;
+                }
             } else if (key == "protocol" && !value.empty() && apiLogicServerProtocol_.empty()) {
                 apiLogicServerProtocol_ = value;
+                std::cout << "  [Config] Set protocol = " << value << std::endl;
             } else if (key == "api_prefix" && !value.empty() && apiLogicServerApiPrefix_.empty()) {
                 apiLogicServerApiPrefix_ = value;
+                std::cout << "  [Config] Set api_prefix = " << value << std::endl;
             } else if (key == "timeout_ms" && !value.empty()) {
                 try { apiLogicServerTimeoutMs_ = std::stoi(value); } catch (...) {}
             }
