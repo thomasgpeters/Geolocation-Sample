@@ -12,7 +12,8 @@ namespace Services {
 
 std::string StoreLocationDTO::toJson() const {
     std::ostringstream json;
-    json << "{";
+    // Wrap in JSON:API format for ApiLogicServer
+    json << "{\"data\": {\"attributes\": {";
     json << "\"store_name\": \"" << storeName << "\"";
 
     if (!storeCode.empty()) {
@@ -55,7 +56,7 @@ std::string StoreLocationDTO::toJson() const {
     json << ", \"is_active\": " << (isActive ? "true" : "false");
     json << ", \"is_primary\": " << (isPrimary ? "true" : "false");
 
-    json << "}";
+    json << "}}}";  // Close attributes, data, and root
     return json.str();
 }
 
@@ -435,16 +436,17 @@ bool ApiLogicServerClient::setAppConfigValue(const std::string& key, const std::
         std::string id = extractJsonString(getResponse.body, "id");
 
         if (!id.empty()) {
-            // Update existing config
-            std::string json = "{\"config_value\": \"" + value + "\"}";
+            // Update existing config - JSON:API format
+            std::string json = "{\"data\": {\"attributes\": {\"config_value\": \"" + value + "\"}}}";
             auto response = httpPatch("/AppConfig/" + id, json);
             return response.success;
         }
     }
 
-    // Create new config entry
-    std::string json = "{\"config_key\": \"" + key + "\", \"config_value\": \"" + value +
-                       "\", \"config_type\": \"string\", \"category\": \"system\"}";
+    // Create new config entry - JSON:API format
+    std::string json = "{\"data\": {\"attributes\": {\"config_key\": \"" + key +
+                       "\", \"config_value\": \"" + value +
+                       "\", \"config_type\": \"string\", \"category\": \"system\"}}}";
     auto response = httpPost("/AppConfig", json);
     return response.success;
 }
