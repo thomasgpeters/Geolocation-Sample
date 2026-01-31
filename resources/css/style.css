@@ -2433,6 +2433,12 @@ html, body {
     border: 1px solid #7dd3fc;
 }
 
+.settings-status-message.status-warning {
+    background-color: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fcd34d;
+}
+
 .settings-status-message.status-error {
     background-color: #fee2e2;
     color: #991b1b;
