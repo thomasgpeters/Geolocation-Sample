@@ -14,6 +14,8 @@
 #include "DemographicsAPI.h"
 #include "OpenStreetMapAPI.h"
 #include "GeocodingService.h"
+#include "GoogleGeocodingAPI.h"
+#include "GooglePlacesAPI.h"
 #include "AIEngine.h"
 #include "models/GeoLocation.h"
 
@@ -31,6 +33,10 @@ struct AISearchConfig {
     OSMAPIConfig osmConfig;
     GeocodingConfig geocodingConfig;
 
+    // Google API configurations (high-performance, paid tier)
+    GoogleGeocodingConfig googleGeocodingConfig;
+    GooglePlacesConfig googlePlacesConfig;
+
     // AI Engine configuration
     AIEngineConfig aiEngineConfig;
 
@@ -43,6 +49,26 @@ struct AISearchConfig {
     bool enableAIAnalysis = true;
     bool enableScoring = true;
     bool combineDataSources = true;
+
+    // Google API preference (use Google APIs when available for faster performance)
+    bool preferGoogleAPIs = true;
+
+    // Thread pool settings for background geocoding
+    int geocodingThreadPoolSize = 4;
+
+    /**
+     * @brief Check if Google APIs are configured
+     */
+    bool isGoogleConfigured() const {
+        return googleGeocodingConfig.isConfigured() && googlePlacesConfig.isConfigured();
+    }
+
+    /**
+     * @brief Get recommended memory for current thread pool settings
+     */
+    int getRecommendedMemoryMB() const {
+        return ThreadPoolConfig::getRecommendedMemoryMB(geocodingThreadPoolSize);
+    }
 };
 
 /**
@@ -165,6 +191,58 @@ public:
     OpenStreetMapAPI& getOSMAPI() { return osmAPI_; }
     IGeocodingService& getGeocodingService() { return *geocodingService_; }
 
+    // Google API access (high-performance)
+    GoogleGeocodingAPI& getGoogleGeocodingAPI() { return googleGeocodingAPI_; }
+    GooglePlacesAPI& getGooglePlacesAPI() { return googlePlacesAPI_; }
+
+    /**
+     * @brief Check if Google APIs are configured and available
+     */
+    bool isGoogleAPIAvailable() const;
+
+    /**
+     * @brief Set Google API key for both geocoding and places
+     * @param apiKey Google API key
+     */
+    void setGoogleAPIKey(const std::string& apiKey);
+
+    /**
+     * @brief Set thread pool size for background geocoding
+     * @param threadCount Number of threads
+     */
+    void setGeocodingThreadPoolSize(int threadCount);
+
+    /**
+     * @brief Get current thread pool size
+     */
+    int getGeocodingThreadPoolSize() const;
+
+    /**
+     * @brief Get recommended memory for current thread pool size
+     */
+    int getRecommendedMemoryMB() const;
+
+    /**
+     * @brief Get thread pool description for current settings
+     */
+    std::string getThreadPoolDescription() const;
+
+    /**
+     * @brief Pre-warm geocoding cache with addresses (background)
+     * @param addresses Addresses to pre-cache
+     */
+    void prewarmGeocodingCache(const std::vector<std::string>& addresses);
+
+    /**
+     * @brief Geocode multiple addresses concurrently
+     * @param addresses List of addresses
+     * @param callback Callback with batch results
+     */
+    void geocodeBatch(
+        const std::vector<std::string>& addresses,
+        std::function<void(BatchGeocodeResult)> callback
+    );
+
     /**
      * @brief Geocode an address to GeoLocation
      * @param address Address string (city, state or full address)
@@ -198,6 +276,10 @@ private:
     DemographicsAPI demographicsAPI_;
     OpenStreetMapAPI osmAPI_;
     std::unique_ptr<IGeocodingService> geocodingService_;
+
+    // Google high-performance APIs
+    GoogleGeocodingAPI googleGeocodingAPI_;
+    GooglePlacesAPI googlePlacesAPI_;
 
     // AI Engine for analysis
     std::unique_ptr<AIEngine> aiEngine_;

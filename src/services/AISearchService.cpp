@@ -22,6 +22,10 @@ AISearchService::AISearchService() {
         config_.geocodingConfig
     );
 
+    // Initialize Google APIs (will be used if API key is configured)
+    googleGeocodingAPI_.setConfig(config_.googleGeocodingConfig);
+    googlePlacesAPI_.setConfig(config_.googlePlacesConfig);
+
     // Initialize AI engine if configured
     if (config_.aiEngineConfig.provider != AIProvider::LOCAL &&
         !config_.aiEngineConfig.apiKey.empty()) {
@@ -40,6 +44,10 @@ AISearchService::AISearchService(const AISearchConfig& config) : config_(config)
         config_.geocodingConfig.provider,
         config_.geocodingConfig
     );
+
+    // Initialize Google APIs (will be used if API key is configured)
+    googleGeocodingAPI_.setConfig(config_.googleGeocodingConfig);
+    googlePlacesAPI_.setConfig(config_.googlePlacesConfig);
 
     // Initialize AI engine if configured
     if (config_.aiEngineConfig.provider != AIProvider::LOCAL &&
@@ -65,6 +73,10 @@ void AISearchService::setConfig(const AISearchConfig& config) {
         config_.geocodingConfig
     );
 
+    // Update Google APIs
+    googleGeocodingAPI_.setConfig(config_.googleGeocodingConfig);
+    googlePlacesAPI_.setConfig(config_.googlePlacesConfig);
+
     // Update AI engine if configuration changed
     if (config_.aiEngineConfig.provider != AIProvider::LOCAL &&
         !config_.aiEngineConfig.apiKey.empty()) {
@@ -74,7 +86,74 @@ void AISearchService::setConfig(const AISearchConfig& config) {
     }
 }
 
+bool AISearchService::isGoogleAPIAvailable() const {
+    return config_.isGoogleConfigured();
+}
+
+void AISearchService::setGoogleAPIKey(const std::string& apiKey) {
+    config_.googleGeocodingConfig.apiKey = apiKey;
+    config_.googlePlacesConfig.apiKey = apiKey;
+    googleGeocodingAPI_.setConfig(config_.googleGeocodingConfig);
+    googlePlacesAPI_.setConfig(config_.googlePlacesConfig);
+}
+
+void AISearchService::setGeocodingThreadPoolSize(int threadCount) {
+    config_.geocodingThreadPoolSize = std::max(1, threadCount);
+    config_.googleGeocodingConfig.threadPoolSize = config_.geocodingThreadPoolSize;
+    config_.googlePlacesConfig.threadPoolSize = config_.geocodingThreadPoolSize;
+
+    googleGeocodingAPI_.setThreadPoolSize(config_.geocodingThreadPoolSize);
+    googlePlacesAPI_.setThreadPoolSize(config_.geocodingThreadPoolSize);
+}
+
+int AISearchService::getGeocodingThreadPoolSize() const {
+    return config_.geocodingThreadPoolSize;
+}
+
+int AISearchService::getRecommendedMemoryMB() const {
+    return config_.getRecommendedMemoryMB();
+}
+
+std::string AISearchService::getThreadPoolDescription() const {
+    return ThreadPoolConfig::getThreadCountDescription(config_.geocodingThreadPoolSize);
+}
+
+void AISearchService::prewarmGeocodingCache(const std::vector<std::string>& addresses) {
+    if (isGoogleAPIAvailable()) {
+        googleGeocodingAPI_.prewarmCache(addresses);
+    }
+}
+
+void AISearchService::geocodeBatch(
+    const std::vector<std::string>& addresses,
+    std::function<void(BatchGeocodeResult)> callback
+) {
+    if (isGoogleAPIAvailable()) {
+        googleGeocodingAPI_.geocodeBatch(addresses, callback);
+    } else if (callback) {
+        // Fall back to sync geocoding
+        BatchGeocodeResult result;
+        for (const auto& address : addresses) {
+            auto location = geocodeAddress(address);
+            result.results.push_back(location);
+            if (location.isValid) {
+                result.successCount++;
+            } else {
+                result.failureCount++;
+                result.errors.push_back("Geocoding failed for: " + address);
+            }
+        }
+        callback(result);
+    }
+}
+
 Models::GeoLocation AISearchService::geocodeAddress(const std::string& address) {
+    // Use Google Geocoding API if configured (faster and more reliable)
+    if (config_.preferGoogleAPIs && isGoogleAPIAvailable()) {
+        return googleGeocodingAPI_.geocodeSync(address);
+    }
+
+    // Fall back to Nominatim or other configured service
     if (!geocodingService_) {
         // Fallback: return default location
         return Models::GeoLocation(39.7392, -104.9903, "Denver", "CO");
@@ -254,12 +333,27 @@ void AISearchService::executeSearch(
             searchArea = Models::SearchArea::fromMiles(defaultLocation, query.radiusMiles);
         }
 
-        progress.currentStep = "Searching OpenStreetMap...";
-        progress.percentComplete = 50;
-        if (progressCallback) progressCallback(progress);
+        // Use Google Places API if configured (faster, more reliable)
+        // Fall back to OpenStreetMap if Google is not configured
+        if (config_.preferGoogleAPIs && isGoogleAPIAvailable()) {
+            progress.currentStep = "Searching Google Places...";
+            progress.percentComplete = 50;
+            if (progressCallback) progressCallback(progress);
 
-        // Use SearchArea-based API for OpenStreetMap (free and fast)
-        osmResults = osmAPI_.searchBusinessesSync(searchArea);
+            // Use Google Places API for business search (faster, paid tier)
+            auto googlePlacesResults = googlePlacesAPI_.searchBusinessesSync(searchArea);
+            osmResults = googlePlacesResults;  // Use same variable for downstream processing
+            progress.googleComplete = true;
+            progress.googleResultCount = static_cast<int>(googlePlacesResults.size());
+        } else {
+            progress.currentStep = "Searching OpenStreetMap...";
+            progress.percentComplete = 50;
+            if (progressCallback) progressCallback(progress);
+
+            // Use SearchArea-based API for OpenStreetMap (free but slower)
+            osmResults = osmAPI_.searchBusinessesSync(searchArea);
+        }
+
         progress.osmComplete = true;
         progress.osmResultCount = static_cast<int>(osmResults.size());
         progress.percentComplete = 80;
