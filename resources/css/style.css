@@ -1667,8 +1667,8 @@ html, body {
     color: var(--text-secondary);
 }
 
-/* ==================== Demographics View ==================== */
-.demographics-page {
+/* ==================== Open Street Map View ==================== */
+.openstreetmap-page {
     display: flex;
     flex-direction: column;
     height: calc(100vh - var(--nav-height) - 48px);
@@ -1725,7 +1725,7 @@ html, body {
     color: #9ca3af;
 }
 
-.demographics-map {
+.osm-map {
     width: 100%;
     height: 100%;
     position: absolute;
@@ -1737,12 +1737,12 @@ html, body {
 }
 
 /* Ensure Leaflet tiles render correctly */
-.demographics-map .leaflet-container {
+.osm-map .leaflet-container {
     width: 100%;
     height: 100%;
 }
 
-.demographics-map .leaflet-tile-pane {
+.osm-map .leaflet-tile-pane {
     /* No border radius needed now */
 }
 
@@ -1761,24 +1761,24 @@ html, body {
     background: transparent;
 }
 
-/* Demographics search controls */
-.demographics-search-row {
+/* OSM search controls */
+.osm-search-row {
     display: flex;
     align-items: center;
     gap: 12px;
     margin-bottom: 16px;
 }
 
-.demographics-search-row .location-input {
+.osm-search-row .location-input {
     flex: 1;
     min-width: 250px;
 }
 
-.demographics-search-row .radius-select {
+.osm-search-row .radius-select {
     width: 100px;
 }
 
-.demographics-search-row .analyze-btn {
+.osm-search-row .analyze-btn {
     margin-left: auto;
 }
 
@@ -2183,7 +2183,7 @@ html, body {
     color: var(--text-primary);
 }
 
-.demographics-columns {
+.osm-columns {
     display: flex;
     gap: 24px;
     min-height: 200px;
@@ -2241,7 +2241,7 @@ html, body {
     min-width: 0;
 }
 
-.demographics-map {
+.osm-map {
     width: 100%;
     height: 100%;
     min-height: 500px;
@@ -2374,7 +2374,7 @@ html, body {
 
 /* Responsive adjustments */
 @media (max-width: 900px) {
-    .demographics-columns {
+    .osm-columns {
         flex-direction: column;
         height: auto;
     }

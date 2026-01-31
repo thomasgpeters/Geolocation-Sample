@@ -11,7 +11,7 @@ Sidebar::Sidebar() {
     menuItems_ = {
         {"dashboard", "Dashboard", "📊", false, false},
         {"ai-search", "AI Search", "🔍", true, false},
-        {"demographics", "Demographics", "📍", false, false},
+        {"openstreetmap", "Open Street Map", "📍", false, false},
         {"divider-1", "", "", false, true},  // Dividing line
         {"prospects", "My Prospects", "👥", false, false},
         {"reports", "Reports", "📈", false, false},
