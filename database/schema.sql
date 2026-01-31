@@ -875,6 +875,7 @@ CREATE TABLE users (
 );
 
 CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_email_password ON users(email, password_hash);
 CREATE INDEX idx_users_franchisee ON users(franchisee_id);
 
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
