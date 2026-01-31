@@ -2321,3 +2321,80 @@ html, body {
         width: 100%;
     }
 }
+
+/* ==================== Settings Page Styles ==================== */
+.api-status-container {
+    margin: 16px 0;
+}
+
+.status-indicator {
+    display: inline-block;
+    padding: 8px 16px;
+    border-radius: var(--border-radius);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.status-indicator.status-configured {
+    background-color: #dcfce7;
+    color: #166534;
+    border: 1px solid #86efac;
+}
+
+.status-indicator.status-not-configured {
+    background-color: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fcd34d;
+}
+
+.settings-status-message {
+    display: inline-block;
+    padding: 10px 16px;
+    border-radius: var(--border-radius);
+    margin-left: 16px;
+    font-size: 14px;
+}
+
+.settings-status-message.status-success {
+    background-color: #dcfce7;
+    color: #166534;
+    border: 1px solid #86efac;
+}
+
+.settings-status-message.status-info {
+    background-color: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #7dd3fc;
+}
+
+.settings-status-message.status-error {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+}
+
+.profile-info {
+    padding: 16px;
+    background-color: var(--bg-primary);
+    border-radius: var(--border-radius);
+    margin-bottom: 16px;
+}
+
+.profile-field {
+    display: block;
+    padding: 4px 0;
+    color: var(--text-primary);
+}
+
+.profile-field:first-child {
+    font-weight: 500;
+}
+
+.form-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px 0;
+    border-top: 1px solid var(--border-color);
+    margin-top: 24px;
+}

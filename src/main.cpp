@@ -24,7 +24,9 @@
 #include <Wt/WServer.h>
 #include <iostream>
 #include <cstdlib>
+#include <fstream>
 #include "FranchiseApp.h"
+#include "AppConfig.h"
 
 /**
  * @brief Print application banner and startup information
@@ -82,6 +84,21 @@ int main(int argc, char** argv) {
     }
 
     printBanner();
+
+    // Load configuration from environment variables and config file
+    std::cout << "Loading configuration..." << std::endl;
+    auto& config = FranchiseAI::AppConfig::instance();
+
+    // First load from environment variables (these take precedence)
+    config.loadFromEnvironment();
+
+    // Then try to load from config file (won't override env vars if already set)
+    if (config.loadFromFile("config/app_config.json")) {
+        std::cout << "Loaded configuration from config/app_config.json" << std::endl;
+    }
+
+    // Print configuration status
+    config.printStatus();
 
     try {
         // Create Wt server

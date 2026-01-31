@@ -30,3 +30,7 @@ Thumbs.db
 # Wt framework symlinks (created by scripts/setup-resources.sh)
 resources/themes
 resources/webkit-transitions.css
+
+# Configuration files with API keys (keep the sample)
+config/app_config.json
+!config/app_config.sample.json
