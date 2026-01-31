@@ -14,6 +14,7 @@ This document outlines the development roadmap for each interface in the Franchi
 6. [Reports Page](#6-reports-page)
 7. [Settings Page](#7-settings-page)
 8. [Cross-Cutting Concerns](#8-cross-cutting-concerns)
+9. [Authentication Sprint](#9-authentication-sprint)
 
 ---
 
@@ -378,6 +379,224 @@ This document outlines the development roadmap for each interface in the Franchi
 
 ---
 
+## 9. Authentication Sprint
+
+### Sprint Overview
+**Goal:** Implement secure user authentication and session management for multi-user support with role-based access control.
+
+**Prerequisites Completed:**
+- ✅ Franchisee/store location loading from ALS
+- ✅ AppConfig caching system
+- ✅ Clean URL routing
+
+### Phase 1: Database Schema & API Setup (Week 1)
+
+#### Users Table
+```sql
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
+    role VARCHAR(50) DEFAULT 'franchisee',  -- 'admin', 'franchisee', 'staff'
+    franchisee_id UUID REFERENCES franchisees(id),
+    is_active BOOLEAN DEFAULT true,
+    last_login TIMESTAMP WITH TIME ZONE,
+    failed_login_attempts INTEGER DEFAULT 0,
+    locked_until TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+#### Sessions Table
+```sql
+CREATE TABLE user_sessions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    session_token VARCHAR(255) NOT NULL UNIQUE,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+#### Tasks
+- [ ] Add users table to schema.sql
+- [ ] Add user_sessions table to schema.sql
+- [ ] Create default admin user in seed data
+- [ ] Update ApiLogicServer model
+- [ ] Test CRUD operations via ALS API
+
+### Phase 2: Authentication Service (Week 1)
+
+#### AuthService Class Design
+```cpp
+class AuthService {
+public:
+    struct LoginResult {
+        bool success;
+        std::string userId;
+        std::string sessionToken;
+        std::string role;
+        std::string franchiseeId;
+        std::string errorMessage;
+    };
+
+    LoginResult login(const std::string& email, const std::string& password);
+    bool logout(const std::string& sessionToken);
+    bool validateSession(const std::string& sessionToken);
+    bool changePassword(const std::string& userId,
+                       const std::string& oldPassword,
+                       const std::string& newPassword);
+};
+```
+
+#### Tasks
+- [ ] Create AuthService.h header file
+- [ ] Implement AuthService.cpp
+- [ ] Add password hashing (bcrypt)
+- [ ] Add secure session token generation
+- [ ] Add unit tests for AuthService
+
+### Phase 3: Login UI (Week 1)
+
+#### Components
+- Email input field
+- Password input field
+- "Remember me" checkbox
+- Login button
+- Error message display
+
+#### Tasks
+- [ ] Create showLoginPage() in FranchiseApp
+- [ ] Design login page CSS
+- [ ] Implement form validation
+- [ ] Handle login success/failure
+- [ ] Store session token in app state
+
+### Phase 4: Session Management (Week 2)
+
+#### Features
+- Session token storage in memory
+- Validate session on route changes
+- Auto-refresh before expiration
+- Handle session timeout gracefully
+
+#### Tasks
+- [ ] Add session token member to FranchiseApp
+- [ ] Add currentUser_ member (UserDTO)
+- [ ] Implement session validation on navigation
+- [ ] Add logout button to sidebar
+- [ ] Handle session expiration notification
+
+### Phase 5: Route Protection (Week 2)
+
+#### Protected Routes
+| Route | Roles Allowed |
+|-------|---------------|
+| /dashboard | all authenticated |
+| /search | all authenticated |
+| /prospects | all authenticated |
+| /settings | all authenticated |
+| /admin/* | admin only |
+
+#### Tasks
+- [ ] Add requireAuth() check to route handler
+- [ ] Add requireRole() check for admin routes
+- [ ] Redirect unauthenticated users to login
+- [ ] Show "Access Denied" for unauthorized access
+- [ ] Add admin menu items (conditional)
+
+### Phase 6: User Profile (Week 3)
+
+#### Features
+- View/edit name
+- Change password
+- View associated franchisee
+- Last login timestamp
+
+#### Tasks
+- [ ] Add Profile tab to Settings page
+- [ ] Implement profile update form
+- [ ] Implement change password form
+- [ ] Show user info in sidebar header
+
+### Phase 7: Admin User Management (Week 3)
+
+#### Features
+- List all users with filters
+- Create/edit/deactivate users
+- Assign users to franchisees
+- Change user roles
+
+#### Tasks
+- [ ] Create showAdminUsersPage()
+- [ ] Implement user list table
+- [ ] Implement user create/edit modal
+- [ ] Add role/franchisee dropdowns
+
+### Phase 8: Security Hardening (Week 4)
+
+#### Measures
+- [ ] Password requirements (min 8 chars, mixed case, numbers)
+- [ ] Rate limiting on login attempts
+- [ ] Account lockout after 5 failures
+- [ ] Secure session tokens (256-bit random)
+- [ ] SQL injection prevention
+- [ ] XSS prevention
+
+#### Audit Logging
+```sql
+CREATE TABLE audit_log (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id),
+    action VARCHAR(100) NOT NULL,
+    entity_type VARCHAR(50),
+    entity_id UUID,
+    ip_address VARCHAR(45),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### Phase 9: Testing (Week 4)
+
+#### Test Cases
+- [ ] Login with valid/invalid credentials
+- [ ] Login with locked account
+- [ ] Session validation and expiration
+- [ ] Password change flow
+- [ ] Role-based access control
+- [ ] Admin user management CRUD
+
+### Definition of Done
+
+- [ ] Users can login and logout
+- [ ] Sessions persist across page refreshes
+- [ ] Sessions expire after timeout
+- [ ] Protected routes redirect to login
+- [ ] Role-based access control works
+- [ ] Users can change passwords
+- [ ] Admins can manage users
+- [ ] All auth test cases pass
+- [ ] Security review completed
+
+### Dependencies
+
+- **bcrypt library** - password hashing (add to CMakeLists.txt)
+- **ApiLogicServer** - users/sessions endpoints
+- **Secure random generator** - session tokens
+
+### Future Considerations
+
+- OAuth2/OIDC integration (Google, Microsoft login)
+- Two-factor authentication (2FA)
+- Email verification
+- Password reset via email
+
+---
+
 ## Priority Legend
 
 | Priority | Description |
@@ -395,10 +614,13 @@ This document outlines the development roadmap for each interface in the Franchi
 - Basic search and prospect discovery
 - OpenAI integration for AI analysis
 - Stat badges and scoring
-- Demographics map visualization
+- Demographics map visualization (renamed to Open Street Map)
 
-### v1.1 - Persistence
-- Data persistence for prospects and settings
+### v1.1 - Persistence ✅
+- ✅ Data persistence via ApiLogicServer
+- ✅ AppConfig caching system
+- ✅ Franchisee and StoreLocation CRUD
+- ✅ Clean URL routing
 - Search history
 - Export functionality
 
@@ -412,11 +634,19 @@ This document outlines the development roadmap for each interface in the Franchi
 - Contact management
 - Activity logging
 
+### v1.4 - Authentication (Next Sprint)
+- User login/logout system
+- Session management
+- Role-based access control (admin, franchisee, staff)
+- User profile management
+- Admin user management
+
 ### v2.0 - Enterprise
-- Multi-user support
-- Team collaboration
+- Multi-user collaboration
+- Team features
 - Advanced reporting
 - Territory management
+- OAuth2/OIDC integration
 
 ---
 
