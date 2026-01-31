@@ -2284,6 +2284,12 @@ std::vector<Services::StoreLocationDTO> FranchiseApp::loadAvailableStores() {
 }
 
 void FranchiseApp::selectStoreById(const std::string& storeId) {
+    // Validate storeId to prevent empty UUID queries
+    if (storeId.empty()) {
+        std::cerr << "  [App] selectStoreById: empty storeId, ignoring" << std::endl;
+        return;
+    }
+
     // Find the store in cached list or load it
     Services::StoreLocationDTO selectedStore;
     bool found = false;
