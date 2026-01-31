@@ -2124,7 +2124,7 @@ void FranchiseApp::loadStoreLocationFromALS() {
             franchisee_.address = loc.addressLine1;
             franchisee_.location.city = loc.city;
             franchisee_.location.state = loc.stateProvince;
-            franchisee_.location.zipCode = loc.postalCode;
+            franchisee_.location.postalCode = loc.postalCode;
             franchisee_.location.latitude = loc.latitude;
             franchisee_.location.longitude = loc.longitude;
             franchisee_.defaultSearchRadiusMiles = loc.defaultSearchRadiusMiles;
@@ -2153,7 +2153,7 @@ bool FranchiseApp::saveStoreLocationToALS() {
     dto.addressLine1 = franchisee_.address;
     dto.city = franchisee_.location.city;
     dto.stateProvince = franchisee_.location.state;
-    dto.postalCode = franchisee_.location.zipCode;
+    dto.postalCode = franchisee_.location.postalCode;
     dto.latitude = franchisee_.location.latitude;
     dto.longitude = franchisee_.location.longitude;
     dto.defaultSearchRadiusMiles = franchisee_.defaultSearchRadiusMiles;
