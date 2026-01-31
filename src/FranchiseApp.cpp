@@ -2291,15 +2291,21 @@ void FranchiseApp::showSettingsPage() {
 }
 
 void FranchiseApp::loadStoreLocationFromALS() {
+    std::cout << "  [App] Loading store location from ALS..." << std::endl;
+
     // First, get the saved current_store_id from app_config
     std::string savedStoreId = alsClient_->getAppConfigValue("current_store_id");
+    std::cout << "  [App] current_store_id from AppConfig: '" << savedStoreId << "'" << std::endl;
 
     if (!savedStoreId.empty()) {
         // Load the specific store by ID
+        std::cout << "  [App] Fetching StoreLocation by ID: " << savedStoreId << std::endl;
         auto response = alsClient_->getStoreLocation(savedStoreId);
+        std::cout << "  [App] StoreLocation response success: " << (response.success ? "true" : "false") << std::endl;
 
         if (response.success) {
             auto loc = Services::StoreLocationDTO::fromJson(response.body);
+            std::cout << "  [App] Parsed StoreLocation: id='" << loc.id << "', name='" << loc.storeName << "'" << std::endl;
             if (!loc.id.empty()) {
                 currentStoreLocationId_ = loc.id;
                 franchisee_.storeId = loc.id;
@@ -2315,13 +2321,20 @@ void FranchiseApp::loadStoreLocationFromALS() {
                 franchisee_.phone = loc.phone;
                 franchisee_.email = loc.email;
                 franchisee_.isConfigured = true;
+                std::cout << "  [App] Store location loaded successfully: " << loc.storeName
+                          << " at " << loc.latitude << ", " << loc.longitude << std::endl;
                 return;
             }
+        } else {
+            std::cout << "  [App] Failed to fetch StoreLocation: " << response.body << std::endl;
         }
+    } else {
+        std::cout << "  [App] No current_store_id found in AppConfig" << std::endl;
     }
 
     // No saved store - franchisee remains unconfigured
     // User will need to select a store from the Settings page
+    std::cout << "  [App] No store location configured" << std::endl;
     franchisee_.isConfigured = false;
 }
 
@@ -2438,12 +2451,16 @@ void FranchiseApp::selectStoreById(const std::string& storeId) {
 // ============================================================================
 
 void FranchiseApp::loadFranchiseeFromALS() {
+    std::cout << "  [App] Loading franchisee from ALS..." << std::endl;
+
     // Get the saved current_franchisee_id from app_config
     std::string savedFranchiseeId = alsClient_->getAppConfigValue("current_franchisee_id");
+    std::cout << "  [App] current_franchisee_id from AppConfig: '" << savedFranchiseeId << "'" << std::endl;
 
     if (!savedFranchiseeId.empty()) {
-        std::cout << "  [App] Loading franchisee from ALS: " << savedFranchiseeId << std::endl;
+        std::cout << "  [App] Fetching Franchisee by ID: " << savedFranchiseeId << std::endl;
         auto response = alsClient_->getFranchisee(savedFranchiseeId);
+        std::cout << "  [App] Franchisee response success: " << (response.success ? "true" : "false") << std::endl;
 
         if (response.success) {
             auto dto = Services::FranchiseeDTO::fromJson(response.body);
@@ -2468,12 +2485,18 @@ void FranchiseApp::loadFranchiseeFromALS() {
                 }
                 std::cout << "  [App] Loaded franchisee: " << dto.businessName << std::endl;
                 return;
+            } else {
+                std::cout << "  [App] Franchisee DTO has empty ID" << std::endl;
             }
+        } else {
+            std::cout << "  [App] Failed to fetch Franchisee" << std::endl;
         }
+    } else {
+        std::cout << "  [App] No current_franchisee_id found in AppConfig" << std::endl;
     }
 
     // No saved franchisee - will be created when user saves settings
-    std::cout << "  [App] No current franchisee configured" << std::endl;
+    std::cout << "  [App] No franchisee configured" << std::endl;
 }
 
 bool FranchiseApp::saveFranchiseeToALS() {
