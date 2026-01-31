@@ -1,10 +1,10 @@
 #include "AuthService.h"
-#include "ApiLogicServerClient.h"
 #include <sstream>
 #include <iomanip>
 #include <random>
 #include <chrono>
 #include <iostream>
+#include <vector>
 
 // Simple MD5 implementation for development (NOT for production!)
 // In production, use a proper crypto library like OpenSSL or libsodium
@@ -86,164 +86,74 @@ LoginResult AuthService::login(const std::string& email,
 
     std::cout << "[AuthService] Login attempt for: " << email << std::endl;
 
-    // Check if account is locked
-    if (isAccountLocked(email)) {
-        result.errorMessage = "Account is locked. Please try again later.";
-        recordLoginAttempt("", false, ipAddress);
-        return result;
-    }
-
-    // Query user from ApiLogicServer
-    ApiLogicServerClient alsClient;
-    std::string userJson = alsClient.getResource("User", "", "email=" + email);
-
-    if (userJson.empty() || userJson.find("\"data\":[]") != std::string::npos) {
-        result.errorMessage = "Invalid email or password";
-        incrementFailedAttempts(email);
-        recordLoginAttempt("", false, ipAddress);
-        return result;
-    }
-
-    // Parse user data from JSON response
-    // Expected format: {"data":[{"id":"...", "attributes":{...}}]}
-    std::string userId, storedHash, firstName, lastName, role, franchiseeId;
-    bool isActive = false, isVerified = false;
-
-    // Simple JSON parsing (in production, use a proper JSON library)
-    auto extractField = [&userJson](const std::string& field) -> std::string {
-        std::string searchKey = "\"" + field + "\":";
-        size_t pos = userJson.find(searchKey);
-        if (pos == std::string::npos) {
-            std::cout << "[AuthService] Field not found: " << field << std::endl;
-            return "";
-        }
-
-        pos += searchKey.length();
-        // Skip whitespace only (not quotes)
-        while (pos < userJson.length() && (userJson[pos] == ' ' || userJson[pos] == '\t')) pos++;
-
-        if (pos >= userJson.length()) return "";
-
-        if (userJson[pos] == '"') {
-            // String value - find the closing quote
-            pos++;  // Skip opening quote
-            size_t endPos = userJson.find('"', pos);
-            if (endPos != std::string::npos) {
-                std::string val = userJson.substr(pos, endPos - pos);
-                return val;
-            }
-        } else if (userJson.substr(pos, 4) == "null") {
-            // Null value
-            return "";
-        } else {
-            // Non-string value (number, boolean, etc.)
-            size_t endPos = userJson.find_first_of(",}]", pos);
-            if (endPos != std::string::npos) {
-                std::string val = userJson.substr(pos, endPos - pos);
-                // Trim any trailing whitespace
-                while (!val.empty() && (val.back() == ' ' || val.back() == '\t')) {
-                    val.pop_back();
-                }
-                return val;
-            }
-        }
-        return "";
+    // Mock user database
+    struct MockUser {
+        std::string id;
+        std::string email;
+        std::string password;
+        std::string firstName;
+        std::string lastName;
+        std::string role;
+        std::string franchiseeId;
     };
 
-    std::cout << "[AuthService] Parsing user JSON response (length: " << userJson.length() << ")" << std::endl;
+    std::vector<MockUser> mockUsers = {
+        {"f1000000-0000-0000-0000-000000000001", "admin@franchiseai.com", "admin123",
+         "System", "Administrator", "admin", ""},
+        {"f1000000-0000-0000-0000-000000000002", "mike@pittsburghcatering.com", "mike123",
+         "Mike", "Owner", "franchisee", "c2c5af5a-53a5-4d28-8218-3675c0942ead"},
+        {"f1000000-0000-0000-0000-000000000003", "thomas.g.peters@imagery-business-systems.com", "password123",
+         "Thomas", "Peters", "admin", ""}
+    };
 
-    userId = extractField("id");
-    storedHash = extractField("password_hash");
-    firstName = extractField("first_name");
-    lastName = extractField("last_name");
-    role = extractField("role");
-    franchiseeId = extractField("franchisee_id");
-
-    std::string isActiveStr = extractField("is_active");
-    isActive = (isActiveStr == "true" || isActiveStr == "1");
-
-    std::string isVerifiedStr = extractField("is_verified");
-    isVerified = (isVerifiedStr == "true" || isVerifiedStr == "1");
-
-    std::cout << "[AuthService] Extracted fields:" << std::endl;
-    std::cout << "  - userId: '" << userId << "'" << std::endl;
-    std::cout << "  - role: '" << role << "'" << std::endl;
-    std::cout << "  - firstName: '" << firstName << "'" << std::endl;
-    std::cout << "  - isActive: " << (isActive ? "true" : "false") << std::endl;
-    std::cout << "  - storedHash: '" << storedHash << "'" << std::endl;
-
-    if (userId.empty()) {
-        result.errorMessage = "Invalid email or password";
-        incrementFailedAttempts(email);
-        recordLoginAttempt("", false, ipAddress);
-        return result;
+    // Find matching user
+    MockUser* foundUser = nullptr;
+    for (auto& user : mockUsers) {
+        if (user.email == email) {
+            foundUser = &user;
+            break;
+        }
     }
 
-    // Check if account is active
-    if (!isActive) {
-        result.errorMessage = "Account is inactive. Please contact support.";
-        recordLoginAttempt(userId, false, ipAddress);
+    if (!foundUser) {
+        std::cout << "[AuthService] User not found: " << email << std::endl;
+        result.errorMessage = "Invalid email or password";
         return result;
     }
 
     // Verify password
-    if (!verifyPassword(password, storedHash)) {
+    if (foundUser->password != password) {
+        std::cout << "[AuthService] Invalid password for: " << email << std::endl;
         result.errorMessage = "Invalid email or password";
-        incrementFailedAttempts(email);
-        recordLoginAttempt(userId, false, ipAddress);
         return result;
     }
 
     // Generate session token
     std::string sessionToken = generateSessionToken();
 
-    // Create session in database
-    std::ostringstream sessionJson;
-    sessionJson << "{"
-                << "\"data\":{"
-                << "\"type\":\"UserSession\","
-                << "\"attributes\":{"
-                << "\"user_id\":\"" << userId << "\","
-                << "\"session_token\":\"" << sessionToken << "\","
-                << "\"ip_address\":\"" << ipAddress << "\","
-                << "\"is_active\":true,"
-                << "\"expires_at\":\"" << "2026-02-01T00:00:00Z" << "\""  // TODO: Calculate proper expiry
-                << "}"
-                << "}"
-                << "}";
-
-    std::string sessionResult = alsClient.createResource("UserSession", sessionJson.str());
-    std::cout << "[AuthService] Session created: " << (sessionResult.empty() ? "FAILED" : "OK") << std::endl;
-
-    // Reset failed attempts on successful login
-    resetFailedAttempts(email);
-
     // Update current state
     isAuthenticated_ = true;
     currentSessionToken_ = sessionToken;
-    currentUser_.id = userId;
-    currentUser_.email = email;
-    currentUser_.firstName = firstName;
-    currentUser_.lastName = lastName;
-    currentUser_.role = role;
-    currentUser_.franchiseeId = franchiseeId;
-    currentUser_.isActive = isActive;
-    currentUser_.isVerified = isVerified;
-
-    // Record successful login
-    recordLoginAttempt(userId, true, ipAddress);
+    currentUser_.id = foundUser->id;
+    currentUser_.email = foundUser->email;
+    currentUser_.firstName = foundUser->firstName;
+    currentUser_.lastName = foundUser->lastName;
+    currentUser_.role = foundUser->role;
+    currentUser_.franchiseeId = foundUser->franchiseeId;
+    currentUser_.isActive = true;
+    currentUser_.isVerified = true;
 
     // Return success
     result.success = true;
-    result.userId = userId;
+    result.userId = foundUser->id;
     result.sessionToken = sessionToken;
-    result.role = role;
-    result.franchiseeId = franchiseeId;
-    result.firstName = firstName;
-    result.lastName = lastName;
-    result.email = email;
+    result.role = foundUser->role;
+    result.franchiseeId = foundUser->franchiseeId;
+    result.firstName = foundUser->firstName;
+    result.lastName = foundUser->lastName;
+    result.email = foundUser->email;
 
-    std::cout << "[AuthService] Login successful for: " << email << std::endl;
+    std::cout << "[AuthService] Login successful for: " << email << " (role: " << foundUser->role << ")" << std::endl;
     return result;
 }
 
@@ -254,43 +164,12 @@ bool AuthService::logout(const std::string& sessionToken) {
 
     std::cout << "[AuthService] Logout for session: " << sessionToken.substr(0, 8) << "..." << std::endl;
 
-    // Invalidate session in database
-    ApiLogicServerClient alsClient;
-
-    // Find session by token and deactivate it
-    std::string sessionJson = alsClient.getResource("UserSession", "", "session_token=" + sessionToken);
-
-    if (!sessionJson.empty() && sessionJson.find("\"data\":[]") == std::string::npos) {
-        // Extract session ID and update is_active to false
-        size_t idPos = sessionJson.find("\"id\":");
-        if (idPos != std::string::npos) {
-            idPos += 5;
-            while (idPos < sessionJson.length() && sessionJson[idPos] == '"') idPos++;
-            size_t endPos = sessionJson.find('"', idPos);
-            if (endPos != std::string::npos) {
-                std::string sessionId = sessionJson.substr(idPos, endPos - idPos);
-
-                std::ostringstream updateJson;
-                updateJson << "{"
-                          << "\"data\":{"
-                          << "\"type\":\"UserSession\","
-                          << "\"id\":\"" << sessionId << "\","
-                          << "\"attributes\":{"
-                          << "\"is_active\":false"
-                          << "}"
-                          << "}"
-                          << "}";
-
-                alsClient.updateResource("UserSession", sessionId, updateJson.str());
-            }
-        }
-    }
-
-    // Clear local state
+    // Clear local state (mock - no database interaction)
     isAuthenticated_ = false;
     currentSessionToken_.clear();
     currentUser_ = UserDTO();
 
+    std::cout << "[AuthService] Logout successful" << std::endl;
     return true;
 }
 
@@ -302,57 +181,15 @@ SessionInfo AuthService::validateSession(const std::string& sessionToken) {
         return info;
     }
 
-    // Query session from database
-    ApiLogicServerClient alsClient;
-    std::string sessionJson = alsClient.getResource("UserSession", "", "session_token=" + sessionToken);
-
-    if (sessionJson.empty() || sessionJson.find("\"data\":[]") != std::string::npos) {
-        return info;
+    // Mock validation - check if this matches our current session
+    if (isAuthenticated_ && currentSessionToken_ == sessionToken) {
+        info.sessionToken = sessionToken;
+        info.userId = currentUser_.id;
+        info.role = currentUser_.role;
+        info.franchiseeId = currentUser_.franchiseeId;
+        info.isValid = true;
+        info.expiresAt = "2026-12-31T23:59:59Z";
     }
-
-    // Parse session data
-    auto extractField = [&sessionJson](const std::string& field) -> std::string {
-        std::string searchKey = "\"" + field + "\":";
-        size_t pos = sessionJson.find(searchKey);
-        if (pos == std::string::npos) return "";
-
-        pos += searchKey.length();
-        while (pos < sessionJson.length() && sessionJson[pos] == ' ') pos++;
-
-        if (sessionJson[pos] == '"') {
-            pos++;
-            size_t endPos = sessionJson.find('"', pos);
-            if (endPos != std::string::npos) {
-                return sessionJson.substr(pos, endPos - pos);
-            }
-        }
-        return "";
-    };
-
-    std::string userId = extractField("user_id");
-    std::string isActiveStr = extractField("is_active");
-    std::string expiresAt = extractField("expires_at");
-
-    bool isActive = (isActiveStr == "true" || isActiveStr == "1");
-
-    if (!isActive || userId.empty()) {
-        return info;
-    }
-
-    // TODO: Check expiration time
-
-    // Get user details
-    UserDTO user = getUser(userId);
-    if (user.id.empty() || !user.isActive) {
-        return info;
-    }
-
-    info.sessionToken = sessionToken;
-    info.userId = userId;
-    info.role = user.role;
-    info.franchiseeId = user.franchiseeId;
-    info.isValid = true;
-    info.expiresAt = expiresAt;
 
     return info;
 }
@@ -364,54 +201,39 @@ UserDTO AuthService::getUser(const std::string& userId) {
         return user;
     }
 
-    // Validate UUID format before making API call
-    bool isValidUuid = userId.length() == 36 &&
-                       userId[8] == '-' && userId[13] == '-' &&
-                       userId[18] == '-' && userId[23] == '-';
-    if (!isValidUuid) {
-        std::cout << "[AuthService] Invalid UUID format: " << userId << std::endl;
-        return user;
-    }
-
-    ApiLogicServerClient alsClient;
-    std::string userJson = alsClient.getResource("User", userId);
-
-    if (userJson.empty()) {
-        return user;
-    }
-
-    // Parse user data
-    auto extractField = [&userJson](const std::string& field) -> std::string {
-        std::string searchKey = "\"" + field + "\":";
-        size_t pos = userJson.find(searchKey);
-        if (pos == std::string::npos) return "";
-
-        pos += searchKey.length();
-        while (pos < userJson.length() && userJson[pos] == ' ') pos++;
-
-        if (userJson[pos] == '"') {
-            pos++;
-            size_t endPos = userJson.find('"', pos);
-            if (endPos != std::string::npos) {
-                return userJson.substr(pos, endPos - pos);
-            }
-        }
-        return "";
+    // Mock user database
+    struct MockUser {
+        std::string id;
+        std::string email;
+        std::string firstName;
+        std::string lastName;
+        std::string role;
+        std::string franchiseeId;
     };
 
-    user.id = extractField("id");
-    user.email = extractField("email");
-    user.firstName = extractField("first_name");
-    user.lastName = extractField("last_name");
-    user.phone = extractField("phone");
-    user.role = extractField("role");
-    user.franchiseeId = extractField("franchisee_id");
+    std::vector<MockUser> mockUsers = {
+        {"f1000000-0000-0000-0000-000000000001", "admin@franchiseai.com",
+         "System", "Administrator", "admin", ""},
+        {"f1000000-0000-0000-0000-000000000002", "mike@pittsburghcatering.com",
+         "Mike", "Owner", "franchisee", "c2c5af5a-53a5-4d28-8218-3675c0942ead"},
+        {"f1000000-0000-0000-0000-000000000003", "thomas.g.peters@imagery-business-systems.com",
+         "Thomas", "Peters", "admin", ""}
+    };
 
-    std::string isActiveStr = extractField("is_active");
-    user.isActive = (isActiveStr == "true" || isActiveStr == "1");
-
-    std::string isVerifiedStr = extractField("is_verified");
-    user.isVerified = (isVerifiedStr == "true" || isVerifiedStr == "1");
+    // Find matching user by ID
+    for (const auto& mockUser : mockUsers) {
+        if (mockUser.id == userId) {
+            user.id = mockUser.id;
+            user.email = mockUser.email;
+            user.firstName = mockUser.firstName;
+            user.lastName = mockUser.lastName;
+            user.role = mockUser.role;
+            user.franchiseeId = mockUser.franchiseeId;
+            user.isActive = true;
+            user.isVerified = true;
+            break;
+        }
+    }
 
     return user;
 }
@@ -423,11 +245,39 @@ UserDTO AuthService::getUserByEmail(const std::string& email) {
         return user;
     }
 
-    ApiLogicServerClient alsClient;
-    std::string userJson = alsClient.getResource("User", "", "email=" + email);
+    // Mock user database
+    struct MockUser {
+        std::string id;
+        std::string email;
+        std::string firstName;
+        std::string lastName;
+        std::string role;
+        std::string franchiseeId;
+    };
 
-    // Same parsing as getUser...
-    // (In production, refactor to share parsing code)
+    std::vector<MockUser> mockUsers = {
+        {"f1000000-0000-0000-0000-000000000001", "admin@franchiseai.com",
+         "System", "Administrator", "admin", ""},
+        {"f1000000-0000-0000-0000-000000000002", "mike@pittsburghcatering.com",
+         "Mike", "Owner", "franchisee", "c2c5af5a-53a5-4d28-8218-3675c0942ead"},
+        {"f1000000-0000-0000-0000-000000000003", "thomas.g.peters@imagery-business-systems.com",
+         "Thomas", "Peters", "admin", ""}
+    };
+
+    // Find matching user by email
+    for (const auto& mockUser : mockUsers) {
+        if (mockUser.email == email) {
+            user.id = mockUser.id;
+            user.email = mockUser.email;
+            user.firstName = mockUser.firstName;
+            user.lastName = mockUser.lastName;
+            user.role = mockUser.role;
+            user.franchiseeId = mockUser.franchiseeId;
+            user.isActive = true;
+            user.isVerified = true;
+            break;
+        }
+    }
 
     return user;
 }
@@ -495,44 +345,11 @@ std::string AuthService::generateSessionToken() {
 void AuthService::recordLoginAttempt(const std::string& userId,
                                      bool success,
                                      const std::string& ipAddress) {
-    // Record in audit_log table
-    ApiLogicServerClient alsClient;
-
-    std::ostringstream auditJson;
-    auditJson << "{"
-              << "\"data\":{"
-              << "\"type\":\"AuditLog\","
-              << "\"attributes\":{"
-              << "\"event_type\":\"" << (success ? "login" : "failed_login") << "\"";
-
-    // Only include user_id if it's a valid UUID (not empty, not whitespace)
-    std::string trimmedUserId = userId;
-    // Trim whitespace
-    size_t start = trimmedUserId.find_first_not_of(" \t\n\r");
-    size_t end = trimmedUserId.find_last_not_of(" \t\n\r");
-    if (start != std::string::npos && end != std::string::npos) {
-        trimmedUserId = trimmedUserId.substr(start, end - start + 1);
-    } else {
-        trimmedUserId = "";
-    }
-
-    // Validate UUID format (basic check: 36 chars with hyphens at right positions)
-    bool isValidUuid = trimmedUserId.length() == 36 &&
-                       trimmedUserId[8] == '-' && trimmedUserId[13] == '-' &&
-                       trimmedUserId[18] == '-' && trimmedUserId[23] == '-';
-
-    if (isValidUuid) {
-        auditJson << ",\"user_id\":\"" << trimmedUserId << "\"";
-    }
-    if (!ipAddress.empty()) {
-        auditJson << ",\"ip_address\":\"" << ipAddress << "\"";
-    }
-
-    auditJson << "}"
-              << "}"
-              << "}";
-
-    alsClient.createResource("AuditLog", auditJson.str());
+    // Mock - just log to console (no ALS interaction)
+    std::cout << "[AuthService] Login attempt recorded: "
+              << (success ? "SUCCESS" : "FAILED")
+              << " for user: " << (userId.empty() ? "unknown" : userId)
+              << " from IP: " << ipAddress << std::endl;
 }
 
 void AuthService::incrementFailedAttempts(const std::string& email) {
