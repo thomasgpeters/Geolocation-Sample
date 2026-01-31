@@ -2795,24 +2795,31 @@ html, body {
 
 /* ==================== Hot Prospects Section ==================== */
 .hot-prospects-section {
-    background: var(--bg-card);
-    border-radius: var(--border-radius-lg);
-    padding: 24px;
-    margin-top: 24px;
-    box-shadow: var(--shadow-md);
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 28px 32px;
+    margin-top: 28px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border: 1px solid var(--border-color);
 }
 
 .hot-prospects-section .section-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .hot-prospects-section .section-title {
-    font-size: 1.25rem;
-    font-weight: 600;
+    font-size: 1.35rem;
+    font-weight: 700;
     color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 0;
 }
 
 .hot-prospects-placeholder {
@@ -2820,48 +2827,53 @@ html, body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 40px 20px;
+    padding: 48px 24px;
     text-align: center;
-    background: var(--bg-primary);
-    border-radius: var(--border-radius);
-    border: 2px dashed var(--border-color);
+    background: #f8fafc;
+    border-radius: 10px;
+    border: 2px dashed #e2e8f0;
+    margin-top: 8px;
 }
 
 .placeholder-icon-sm {
-    font-size: 2.5rem;
-    margin-bottom: 12px;
-    opacity: 0.6;
+    font-size: 3rem;
+    margin-bottom: 16px;
+    opacity: 0.7;
 }
 
 .placeholder-text-sm {
     color: var(--text-secondary);
-    font-size: 0.95rem;
-    max-width: 400px;
+    font-size: 1rem;
+    max-width: 420px;
+    line-height: 1.6;
 }
 
 /* Hot Prospects Table */
 .hot-prospects-table {
     width: 100%;
-    border-radius: var(--border-radius);
+    border-radius: 10px;
     overflow: hidden;
-    border: 1px solid var(--border-color);
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    margin-top: 8px;
 }
 
 .prospect-table-header {
     display: flex;
-    background: var(--bg-primary);
-    border-bottom: 2px solid var(--border-color);
+    background: linear-gradient(to bottom, #f8fafc, #f1f5f9);
+    border-bottom: 2px solid #e2e8f0;
     font-weight: 600;
-    color: var(--text-secondary);
-    font-size: 0.85rem;
+    color: #64748b;
+    font-size: 0.8rem;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.6px;
 }
 
 .prospect-table-row {
     display: flex;
-    border-bottom: 1px solid var(--border-color);
-    transition: background var(--transition-fast);
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.15s ease;
+    background: #ffffff;
 }
 
 .prospect-table-row:last-child {
@@ -2869,12 +2881,12 @@ html, body {
 }
 
 .prospect-table-row:hover {
-    background: var(--bg-primary);
+    background: #f8fafc;
 }
 
 .header-cell,
 .table-cell {
-    padding: 14px 16px;
+    padding: 16px 20px;
     display: flex;
     align-items: center;
 }
