@@ -789,9 +789,9 @@ CREATE TABLE store_locations (
     -- Address
     address_line1 VARCHAR(200) NOT NULL,
     address_line2 VARCHAR(100),
-    city VARCHAR(100) NOT NULL,
-    state_province VARCHAR(50) NOT NULL,
-    postal_code VARCHAR(20) NOT NULL,
+    city VARCHAR(100) DEFAULT '',
+    state_province VARCHAR(50) DEFAULT '',
+    postal_code VARCHAR(20) DEFAULT '',
     country_code CHAR(2) DEFAULT 'US',
 
     -- Geolocation (simple lat/lng)

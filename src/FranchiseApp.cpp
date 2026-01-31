@@ -396,6 +396,12 @@ void FranchiseApp::onFranchiseeSetupComplete(const Models::Franchisee& franchise
     // Update the sidebar with franchisee info
     updateHeaderWithFranchisee();
 
+    // Save to ApiLogicServer
+    if (franchisee_.location.hasValidCoordinates()) {
+        std::cout << "  [Setup] Saving store location to ALS..." << std::endl;
+        saveStoreLocationToALS();
+    }
+
     // Navigate to AI Search page
     sidebar_->setActiveItem("ai-search");
     setInternalPath("/search", false);
