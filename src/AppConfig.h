@@ -286,11 +286,22 @@ public:
     void printStatus() const {
         std::lock_guard<std::mutex> lock(mutex_);
 
-        std::cout << "Infrastructure Configuration:" << std::endl;
-        std::cout << "  ALS Host:        " << (apiLogicServerHost_.empty() ? "localhost (default)" : apiLogicServerHost_) << std::endl;
-        std::cout << "  ALS Port:        " << (apiLogicServerPort_ == 0 ? "5656 (default)" : std::to_string(apiLogicServerPort_)) << std::endl;
-        std::cout << "  ALS Protocol:    " << (apiLogicServerProtocol_.empty() ? "http (default)" : apiLogicServerProtocol_) << std::endl;
-        std::cout << "  ALS API Prefix:  " << (apiLogicServerApiPrefix_.empty() ? "/api (default)" : apiLogicServerApiPrefix_) << std::endl;
+        // Build the effective values
+        std::string effectiveHost = apiLogicServerHost_.empty() ? "localhost" : apiLogicServerHost_;
+        int effectivePort = apiLogicServerPort_ > 0 ? apiLogicServerPort_ : 5656;
+        std::string effectiveProtocol = apiLogicServerProtocol_.empty() ? "http" : apiLogicServerProtocol_;
+        std::string effectivePrefix = apiLogicServerApiPrefix_.empty() ? "/api" : apiLogicServerApiPrefix_;
+
+        // Build the full endpoint URL
+        std::string endpointUrl = effectiveProtocol + "://" + effectiveHost + ":" +
+                                  std::to_string(effectivePort) + effectivePrefix;
+
+        std::cout << "ApiLogicServer Configuration:" << std::endl;
+        std::cout << "  Host:            " << effectiveHost << (apiLogicServerHost_.empty() ? " (default)" : "") << std::endl;
+        std::cout << "  Port:            " << effectivePort << (apiLogicServerPort_ == 0 ? " (default)" : "") << std::endl;
+        std::cout << "  Protocol:        " << effectiveProtocol << (apiLogicServerProtocol_.empty() ? " (default)" : "") << std::endl;
+        std::cout << "  API Prefix:      " << effectivePrefix << (apiLogicServerApiPrefix_.empty() ? " (default)" : "") << std::endl;
+        std::cout << "  Endpoint URL:    " << endpointUrl << std::endl;
         std::cout << std::endl;
 
         std::cout << "API Configuration Status:" << std::endl;
