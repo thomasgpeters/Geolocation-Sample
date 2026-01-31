@@ -2298,7 +2298,12 @@ void FranchiseApp::loadStoreLocationFromALS() {
     std::cout << "  [App] current_store_id from AppConfig: '" << savedStoreId << "'" << std::endl;
 
     if (!savedStoreId.empty()) {
-        // Load the specific store by ID
+        // IMPORTANT: Set the member variable from AppConfig cache FIRST
+        // This ensures PATCH (not POST) on save, even if fetch fails
+        currentStoreLocationId_ = savedStoreId;
+        std::cout << "  [App] Set currentStoreLocationId_ = " << currentStoreLocationId_ << std::endl;
+
+        // Now fetch the full store data to populate the UI
         std::cout << "  [App] Fetching StoreLocation by ID: " << savedStoreId << std::endl;
         auto response = alsClient_->getStoreLocation(savedStoreId);
         std::cout << "  [App] StoreLocation response success: " << (response.success ? "true" : "false") << std::endl;
@@ -2307,7 +2312,6 @@ void FranchiseApp::loadStoreLocationFromALS() {
             auto loc = Services::StoreLocationDTO::fromJson(response.body);
             std::cout << "  [App] Parsed StoreLocation: id='" << loc.id << "', name='" << loc.storeName << "'" << std::endl;
             if (!loc.id.empty()) {
-                currentStoreLocationId_ = loc.id;
                 franchisee_.storeId = loc.id;
                 franchisee_.storeName = loc.storeName;
                 franchisee_.address = loc.addressLine1;
@@ -2458,6 +2462,12 @@ void FranchiseApp::loadFranchiseeFromALS() {
     std::cout << "  [App] current_franchisee_id from AppConfig: '" << savedFranchiseeId << "'" << std::endl;
 
     if (!savedFranchiseeId.empty()) {
+        // IMPORTANT: Set the member variable from AppConfig cache FIRST
+        // This ensures PATCH (not POST) on save, even if fetch fails
+        currentFranchiseeId_ = savedFranchiseeId;
+        std::cout << "  [App] Set currentFranchiseeId_ = " << currentFranchiseeId_ << std::endl;
+
+        // Now fetch the full franchisee data to populate the UI
         std::cout << "  [App] Fetching Franchisee by ID: " << savedFranchiseeId << std::endl;
         auto response = alsClient_->getFranchisee(savedFranchiseeId);
         std::cout << "  [App] Franchisee response success: " << (response.success ? "true" : "false") << std::endl;
@@ -2465,7 +2475,6 @@ void FranchiseApp::loadFranchiseeFromALS() {
         if (response.success) {
             auto dto = Services::FranchiseeDTO::fromJson(response.body);
             if (!dto.id.empty()) {
-                currentFranchiseeId_ = dto.id;
                 // Update franchisee_ with loaded data
                 franchisee_.ownerName = dto.ownerFirstName;
                 if (!dto.ownerLastName.empty()) {
