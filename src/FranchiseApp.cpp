@@ -1253,16 +1253,18 @@ void FranchiseApp::showProspectsPage() {
     auto header = container->addWidget(std::make_unique<Wt::WContainerWidget>());
     header->setStyleClass("page-header");
 
-    auto title = header->addWidget(std::make_unique<Wt::WText>("My Prospects"));
-    title->setStyleClass("page-title");
-
-    // Show count if there are saved prospects
+    // Tagline - show count if there are saved prospects, otherwise show welcome message
     if (!savedProspects_.empty()) {
-        auto subtitle = header->addWidget(std::make_unique<Wt::WText>(
+        auto tagline = header->addWidget(std::make_unique<Wt::WText>(
             std::to_string(savedProspects_.size()) + " saved prospect" +
-            (savedProspects_.size() == 1 ? "" : "s")
+            (savedProspects_.size() == 1 ? "" : "s") + " ready for outreach"
         ));
-        subtitle->setStyleClass("page-subtitle");
+        tagline->setStyleClass("page-tagline");
+    } else {
+        auto tagline = header->addWidget(std::make_unique<Wt::WText>(
+            "Save prospects from your searches to track and manage them here"
+        ));
+        tagline->setStyleClass("page-tagline");
     }
 
     if (savedProspects_.empty()) {
@@ -2148,8 +2150,10 @@ void FranchiseApp::showReportsPage() {
     auto header = container->addWidget(std::make_unique<Wt::WContainerWidget>());
     header->setStyleClass("page-header");
 
-    auto title = header->addWidget(std::make_unique<Wt::WText>("Reports & Analytics"));
-    title->setStyleClass("page-title");
+    auto tagline = header->addWidget(std::make_unique<Wt::WText>(
+        "Detailed reports and analytics for your prospect discovery efforts"
+    ));
+    tagline->setStyleClass("page-tagline");
 
     auto placeholder = container->addWidget(std::make_unique<Wt::WContainerWidget>());
     placeholder->setStyleClass("placeholder-content");
@@ -2158,7 +2162,7 @@ void FranchiseApp::showReportsPage() {
     icon->setStyleClass("placeholder-icon");
 
     auto text = placeholder->addWidget(std::make_unique<Wt::WText>(
-        "Detailed reports and analytics for your prospect discovery efforts."
+        "Coming soon: Track your outreach performance and conversion metrics."
     ));
     text->setStyleClass("placeholder-text");
 }
