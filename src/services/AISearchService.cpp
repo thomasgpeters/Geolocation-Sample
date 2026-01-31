@@ -221,28 +221,22 @@ void AISearchService::executeSearch(
     auto startTime = std::chrono::high_resolution_clock::now();
 
     SearchProgress progress;
-    std::vector<Models::BusinessInfo> googleResults;
-    std::vector<Models::BusinessInfo> bbbResults;
+    std::vector<Models::BusinessInfo> googleResults;  // Not used in lightweight search
+    std::vector<Models::BusinessInfo> bbbResults;     // Not used in lightweight search
     std::vector<Models::BusinessInfo> osmResults;
-    std::vector<Models::DemographicData> demographicResults;
+    std::vector<Models::DemographicData> demographicResults;  // Not used in lightweight search
 
-    // Step 1: Google My Business search
-    if (query.includeGoogleMyBusiness && !cancelRequested_) {
-        progress.currentStep = "Searching Google My Business...";
-        progress.percentComplete = 10;
-        if (progressCallback) progressCallback(progress);
+    // ============================================================================
+    // LIGHTWEIGHT SEARCH MODE
+    // Only perform geocoding and OpenStreetMap search for fast results.
+    // Full analysis (Google, BBB, Demographics, AI) is deferred until the user
+    // chooses to add a prospect to their "My Prospects" list.
+    // ============================================================================
 
-        googleResults = googleAPI_.searchBusinessesSync(query);
-        progress.googleComplete = true;
-        progress.googleResultCount = static_cast<int>(googleResults.size());
-        progress.percentComplete = 25;
-        if (progressCallback) progressCallback(progress);
-    }
-
-    // Step 2: OpenStreetMap search
-    if (query.includeOpenStreetMap && !cancelRequested_) {
+    // Step 1: Geocoding and OpenStreetMap search (fast, free)
+    if (!cancelRequested_) {
         progress.currentStep = "Geocoding address...";
-        progress.percentComplete = 28;
+        progress.percentComplete = 20;
         if (progressCallback) progressCallback(progress);
 
         // Create search area from location using geocoding service
@@ -261,50 +255,24 @@ void AISearchService::executeSearch(
         }
 
         progress.currentStep = "Searching OpenStreetMap...";
-        progress.percentComplete = 32;
-        if (progressCallback) progressCallback(progress);
-
-        // Use SearchArea-based API
-        osmResults = osmAPI_.searchBusinessesSync(searchArea);
-        progress.osmComplete = true;
-        progress.osmResultCount = static_cast<int>(osmResults.size());
-        progress.percentComplete = 45;
-        if (progressCallback) progressCallback(progress);
-    }
-
-    // Step 3: BBB search
-    if (query.includeBBB && !cancelRequested_) {
-        progress.currentStep = "Searching Better Business Bureau...";
         progress.percentComplete = 50;
         if (progressCallback) progressCallback(progress);
 
-        bbbResults = bbbAPI_.searchBusinessesSync(query);
-        progress.bbbComplete = true;
-        progress.bbbResultCount = static_cast<int>(bbbResults.size());
-        progress.percentComplete = 65;
-        if (progressCallback) progressCallback(progress);
-    }
-
-    // Step 4: Demographics search
-    if (query.includeDemographics && !cancelRequested_) {
-        progress.currentStep = "Analyzing demographic data...";
-        progress.percentComplete = 70;
-        if (progressCallback) progressCallback(progress);
-
-        std::string zipCode = query.zipCode.empty() ? "62701" : query.zipCode;
-        demographicResults = demographicsAPI_.getZipCodesInRadiusSync(zipCode, query.radiusMiles);
-        progress.demographicsComplete = true;
-        progress.demographicsResultCount = static_cast<int>(demographicResults.size());
+        // Use SearchArea-based API for OpenStreetMap (free and fast)
+        osmResults = osmAPI_.searchBusinessesSync(searchArea);
+        progress.osmComplete = true;
+        progress.osmResultCount = static_cast<int>(osmResults.size());
         progress.percentComplete = 80;
         if (progressCallback) progressCallback(progress);
     }
 
-    // Step 5: Aggregate and analyze results
+    // Step 2: Aggregate results (no AI analysis in lightweight mode)
     if (!cancelRequested_) {
-        progress.currentStep = "Performing AI analysis...";
-        progress.percentComplete = 85;
+        progress.currentStep = "Preparing results...";
+        progress.percentComplete = 90;
         if (progressCallback) progressCallback(progress);
 
+        // Aggregate with empty Google, BBB, and Demographics results
         auto results = aggregateResults(googleResults, bbbResults, osmResults, demographicResults, query);
 
         auto endTime = std::chrono::high_resolution_clock::now();
@@ -312,10 +280,9 @@ void AISearchService::executeSearch(
             endTime - startTime
         );
 
-        // Generate AI analysis
-        if (config_.enableAIAnalysis) {
-            analyzeResults(results);
-        }
+        // NOTE: AI analysis is SKIPPED here - it will be performed on-demand
+        // when the user adds a prospect to their "My Prospects" list.
+        // See FranchiseApp::analyzeProspect() for the on-demand analysis.
 
         progress.analysisComplete = true;
         progress.percentComplete = 100;

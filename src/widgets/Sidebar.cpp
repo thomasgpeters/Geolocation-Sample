@@ -16,9 +16,9 @@ Sidebar::Sidebar() {
         {"divider-1", "", "", false, true, false},  // Dividing line
         {"prospects", "My Prospects", "👥", false, false, false},
         {"reports", "Reports", "📈", false, false, false},
-        {"settings", "Settings", "⚙️", false, false, false},
-        {"divider-2", "", "", false, true, true},  // Admin divider
-        {"audit-trail", "Audit Trail", "📋", false, false, true}  // Admin only
+        {"audit-trail", "Audit Trail", "📋", false, false, true},  // Admin only, grouped with reports
+        {"divider-2", "", "", false, true, false},  // Divider before settings
+        {"settings", "Settings", "⚙️", false, false, false}
     };
 
     activeItemId_ = "dashboard";

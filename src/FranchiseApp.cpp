@@ -933,6 +933,228 @@ void FranchiseApp::showDashboardPage() {
     viewReports->clicked().connect([this] {
         onMenuItemSelected("reports");
     });
+
+    // Hot Prospects section
+    auto hotProspectsSection = container->addWidget(std::make_unique<Wt::WContainerWidget>());
+    hotProspectsSection->setStyleClass("hot-prospects-section");
+
+    auto hotProspectsHeader = hotProspectsSection->addWidget(std::make_unique<Wt::WContainerWidget>());
+    hotProspectsHeader->setStyleClass("section-header");
+
+    auto hotProspectsTitle = hotProspectsHeader->addWidget(std::make_unique<Wt::WText>("🔥 Hot Prospects"));
+    hotProspectsTitle->setStyleClass("section-title");
+
+    auto viewAllBtn = hotProspectsHeader->addWidget(std::make_unique<Wt::WPushButton>("View All"));
+    viewAllBtn->setStyleClass("btn btn-outline btn-sm");
+    viewAllBtn->clicked().connect([this] {
+        onMenuItemSelected("prospects");
+    });
+
+    // Get top 5 prospects from last search results or saved prospects
+    std::vector<Models::SearchResultItem> hotProspects;
+
+    // First try to get from last search results
+    if (!lastResults_.items.empty()) {
+        auto topResults = lastResults_.getTopResults(5);
+        hotProspects = topResults;
+    } else if (!savedProspects_.empty()) {
+        // Fall back to saved prospects
+        hotProspects = savedProspects_;
+        // Sort by score descending
+        std::sort(hotProspects.begin(), hotProspects.end(),
+            [](const Models::SearchResultItem& a, const Models::SearchResultItem& b) {
+                return a.overallScore > b.overallScore;
+            });
+        if (hotProspects.size() > 5) {
+            hotProspects.resize(5);
+        }
+    }
+
+    if (hotProspects.empty()) {
+        // Show placeholder when no prospects
+        auto placeholder = hotProspectsSection->addWidget(std::make_unique<Wt::WContainerWidget>());
+        placeholder->setStyleClass("hot-prospects-placeholder");
+
+        auto placeholderIcon = placeholder->addWidget(std::make_unique<Wt::WText>("🔍"));
+        placeholderIcon->setStyleClass("placeholder-icon-sm");
+
+        auto placeholderText = placeholder->addWidget(std::make_unique<Wt::WText>(
+            "No hot prospects yet. Start an AI Search to discover potential clients in your area."
+        ));
+        placeholderText->setStyleClass("placeholder-text-sm");
+    } else {
+        // Create prospect table
+        auto prospectTable = hotProspectsSection->addWidget(std::make_unique<Wt::WContainerWidget>());
+        prospectTable->setStyleClass("hot-prospects-table");
+
+        // Table header
+        auto tableHeader = prospectTable->addWidget(std::make_unique<Wt::WContainerWidget>());
+        tableHeader->setStyleClass("prospect-table-header");
+
+        auto headerName = tableHeader->addWidget(std::make_unique<Wt::WText>("Business Name"));
+        headerName->setStyleClass("header-cell name-col");
+
+        auto headerScore = tableHeader->addWidget(std::make_unique<Wt::WText>("Score"));
+        headerScore->setStyleClass("header-cell score-col");
+
+        auto headerAddress = tableHeader->addWidget(std::make_unique<Wt::WText>("Address"));
+        headerAddress->setStyleClass("header-cell address-col");
+
+        auto headerActions = tableHeader->addWidget(std::make_unique<Wt::WText>("Actions"));
+        headerActions->setStyleClass("header-cell actions-col");
+
+        // Table rows
+        for (const auto& prospect : hotProspects) {
+            auto row = prospectTable->addWidget(std::make_unique<Wt::WContainerWidget>());
+            row->setStyleClass("prospect-table-row");
+
+            // Business name
+            std::string businessName = prospect.getTitle();
+            if (businessName.empty() && prospect.business) {
+                businessName = prospect.business->name;
+            }
+            if (businessName.empty()) {
+                businessName = "Unknown Business";
+            }
+            auto nameCell = row->addWidget(std::make_unique<Wt::WText>(businessName));
+            nameCell->setStyleClass("table-cell name-col");
+
+            // Score with color coding
+            auto scoreCell = row->addWidget(std::make_unique<Wt::WContainerWidget>());
+            scoreCell->setStyleClass("table-cell score-col");
+
+            int score = prospect.overallScore;
+            std::string scoreClass = "score-badge";
+            if (score >= 80) scoreClass += " score-excellent";
+            else if (score >= 60) scoreClass += " score-good";
+            else if (score >= 40) scoreClass += " score-fair";
+            else scoreClass += " score-low";
+
+            auto scoreBadge = scoreCell->addWidget(std::make_unique<Wt::WText>(std::to_string(score)));
+            scoreBadge->setStyleClass(scoreClass);
+
+            // Address
+            std::string address = "";
+            if (prospect.business) {
+                address = prospect.business->address.city;
+                if (!prospect.business->address.state.empty()) {
+                    if (!address.empty()) address += ", ";
+                    address += prospect.business->address.state;
+                }
+            }
+            if (address.empty()) {
+                address = prospect.getSubtitle();
+            }
+            auto addressCell = row->addWidget(std::make_unique<Wt::WText>(address));
+            addressCell->setStyleClass("table-cell address-col");
+
+            // Actions
+            auto actionsCell = row->addWidget(std::make_unique<Wt::WContainerWidget>());
+            actionsCell->setStyleClass("table-cell actions-col");
+
+            // Preview button (popup)
+            auto previewBtn = actionsCell->addWidget(std::make_unique<Wt::WPushButton>("👁️"));
+            previewBtn->setStyleClass("btn btn-icon btn-preview");
+            previewBtn->setToolTip("Preview Details");
+
+            // Capture prospect data for popup
+            std::string prospectId = prospect.id;
+            std::string fullName = businessName;
+            std::string fullAddress = prospect.business ? prospect.business->address.getFullAddress() : "";
+            std::string matchReason = prospect.matchReason;
+            std::string phone = prospect.business ? prospect.business->contact.primaryPhone : "";
+            std::string website = prospect.business ? prospect.business->contact.website : "";
+            int prospectScore = score;
+
+            previewBtn->clicked().connect([this, fullName, fullAddress, matchReason, phone, website, prospectScore] {
+                // Create popup dialog
+                auto dialog = addChild(std::make_unique<Wt::WDialog>("Business Preview"));
+                dialog->setStyleClass("preview-dialog");
+                dialog->setModal(true);
+                dialog->setClosable(true);
+                dialog->setResizable(false);
+
+                auto content = dialog->contents();
+                content->setStyleClass("preview-content");
+
+                // Business name header
+                auto nameHeader = content->addWidget(std::make_unique<Wt::WText>(fullName));
+                nameHeader->setStyleClass("preview-name");
+
+                // Score badge
+                std::string scoreClass = "score-badge large";
+                if (prospectScore >= 80) scoreClass += " score-excellent";
+                else if (prospectScore >= 60) scoreClass += " score-good";
+                else if (prospectScore >= 40) scoreClass += " score-fair";
+                else scoreClass += " score-low";
+
+                auto scoreDisplay = content->addWidget(std::make_unique<Wt::WContainerWidget>());
+                scoreDisplay->setStyleClass("preview-score-row");
+                auto scoreLabel = scoreDisplay->addWidget(std::make_unique<Wt::WText>("Prospect Score: "));
+                auto scoreBadge = scoreDisplay->addWidget(std::make_unique<Wt::WText>(std::to_string(prospectScore)));
+                scoreBadge->setStyleClass(scoreClass);
+
+                // Details grid
+                auto detailsGrid = content->addWidget(std::make_unique<Wt::WContainerWidget>());
+                detailsGrid->setStyleClass("preview-details");
+
+                if (!fullAddress.empty()) {
+                    auto addrRow = detailsGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
+                    addrRow->setStyleClass("detail-row");
+                    addrRow->addWidget(std::make_unique<Wt::WText>("📍 "))->setStyleClass("detail-icon");
+                    addrRow->addWidget(std::make_unique<Wt::WText>(fullAddress))->setStyleClass("detail-value");
+                }
+
+                if (!phone.empty()) {
+                    auto phoneRow = detailsGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
+                    phoneRow->setStyleClass("detail-row");
+                    phoneRow->addWidget(std::make_unique<Wt::WText>("📞 "))->setStyleClass("detail-icon");
+                    phoneRow->addWidget(std::make_unique<Wt::WText>(phone))->setStyleClass("detail-value");
+                }
+
+                if (!website.empty()) {
+                    auto webRow = detailsGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
+                    webRow->setStyleClass("detail-row");
+                    webRow->addWidget(std::make_unique<Wt::WText>("🌐 "))->setStyleClass("detail-icon");
+                    webRow->addWidget(std::make_unique<Wt::WText>(website))->setStyleClass("detail-value");
+                }
+
+                if (!matchReason.empty()) {
+                    auto reasonSection = content->addWidget(std::make_unique<Wt::WContainerWidget>());
+                    reasonSection->setStyleClass("preview-reason");
+                    reasonSection->addWidget(std::make_unique<Wt::WText>("Why This Prospect?"))->setStyleClass("reason-title");
+                    reasonSection->addWidget(std::make_unique<Wt::WText>(matchReason))->setStyleClass("reason-text");
+                }
+
+                // Dialog footer
+                auto footer = dialog->footer();
+                footer->setStyleClass("preview-footer");
+
+                auto closeBtn = footer->addWidget(std::make_unique<Wt::WPushButton>("Close"));
+                closeBtn->setStyleClass("btn btn-secondary");
+                closeBtn->clicked().connect([dialog] {
+                    dialog->reject();
+                });
+
+                dialog->finished().connect([dialog] {
+                    delete dialog;
+                });
+
+                dialog->show();
+            });
+
+            // Add to Prospects button
+            auto addBtn = actionsCell->addWidget(std::make_unique<Wt::WPushButton>("➕"));
+            addBtn->setStyleClass("btn btn-icon btn-add");
+            addBtn->setToolTip("Add to My Prospects");
+
+            addBtn->clicked().connect([this, prospectId] {
+                onAddToProspects(prospectId);
+                // Refresh dashboard to update the list
+                showDashboardPage();
+            });
+        }
+    }
 }
 
 void FranchiseApp::showAISearchPage() {

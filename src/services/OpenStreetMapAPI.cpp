@@ -105,9 +105,12 @@ void OpenStreetMapAPI::searchNearby(
         }
     }
 
-    // For demo/prototype, generate sample data
-    // In production, this would call the actual Overpass API
-    auto results = generateDemoPOIs(latitude, longitude, radiusMeters);
+    // Build and execute real Overpass API query for catering prospects
+    std::string query = buildCateringProspectQuery(latitude, longitude, radiusMeters);
+    std::string response = executeOverpassQuery(query);
+
+    // Parse the JSON response
+    auto results = parseOverpassResponse(response);
 
     // Cache results
     if (config_.enableCaching) {
@@ -225,36 +228,35 @@ void OpenStreetMapAPI::geocodeAddress(
 ) {
     ++totalApiCalls_;
 
-    // Demo: Return coordinates for common test locations
-    // In production, this would call Nominatim API
-    double lat = 39.7392;  // Denver, CO default
-    double lon = -104.9903;
-
-    // Simple pattern matching for demo
-    if (address.find("New York") != std::string::npos || address.find("NYC") != std::string::npos) {
-        lat = 40.7128; lon = -74.0060;
-    } else if (address.find("Los Angeles") != std::string::npos || address.find("LA") != std::string::npos) {
-        lat = 34.0522; lon = -118.2437;
-    } else if (address.find("Chicago") != std::string::npos) {
-        lat = 41.8781; lon = -87.6298;
-    } else if (address.find("Houston") != std::string::npos) {
-        lat = 29.7604; lon = -95.3698;
-    } else if (address.find("Phoenix") != std::string::npos) {
-        lat = 33.4484; lon = -112.0740;
-    } else if (address.find("San Francisco") != std::string::npos || address.find("SF") != std::string::npos) {
-        lat = 37.7749; lon = -122.4194;
-    } else if (address.find("Seattle") != std::string::npos) {
-        lat = 37.7749; lon = -122.4194;
-    } else if (address.find("Austin") != std::string::npos) {
-        lat = 30.2672; lon = -97.7431;
-    } else if (address.find("Boston") != std::string::npos) {
-        lat = 42.3601; lon = -71.0589;
-    } else if (address.find("Atlanta") != std::string::npos) {
-        lat = 33.7490; lon = -84.3880;
+    // URL encode the address
+    CURL* curl = curl_easy_init();
+    if (!curl) {
+        if (callback) callback(0.0, 0.0, "Failed to initialize CURL");
+        return;
     }
 
-    if (callback) {
-        callback(lat, lon, "");
+    char* encodedAddress = curl_easy_escape(curl, address.c_str(), static_cast<int>(address.length()));
+    if (!encodedAddress) {
+        curl_easy_cleanup(curl);
+        if (callback) callback(0.0, 0.0, "Failed to encode address");
+        return;
+    }
+
+    // Build Nominatim search URL
+    std::string url = config_.nominatimEndpoint + "/search?format=json&limit=1&q=" + std::string(encodedAddress);
+    curl_free(encodedAddress);
+    curl_easy_cleanup(curl);
+
+    // Execute the query
+    std::string response = executeNominatimQuery(url);
+
+    // Parse response
+    OSMPoi poi = parseNominatimResponse(response);
+
+    if (poi.latitude != 0.0 && poi.longitude != 0.0) {
+        if (callback) callback(poi.latitude, poi.longitude, "");
+    } else {
+        if (callback) callback(0.0, 0.0, "Geocoding failed: no results found");
     }
 }
 
@@ -265,16 +267,21 @@ void OpenStreetMapAPI::reverseGeocode(
 ) {
     ++totalApiCalls_;
 
-    OSMPoi result;
-    result.latitude = latitude;
-    result.longitude = longitude;
-    result.city = "Sample City";
-    result.state = "ST";
-    result.postcode = "12345";
-    result.country = "USA";
+    // Build Nominatim reverse geocode URL
+    std::ostringstream url;
+    url << std::fixed << std::setprecision(6);
+    url << config_.nominatimEndpoint << "/reverse?format=json&lat=" << latitude << "&lon=" << longitude;
+
+    // Execute the query
+    std::string response = executeNominatimQuery(url.str());
+
+    // Parse response
+    OSMPoi poi = parseNominatimResponse(response);
+    poi.latitude = latitude;
+    poi.longitude = longitude;
 
     if (callback) {
-        callback(result, "");
+        callback(poi, "");
     }
 }
 
@@ -532,6 +539,315 @@ std::string OpenStreetMapAPI::executeOverpassQuery(const std::string& query) {
     }
 
     return response;
+}
+
+std::string OpenStreetMapAPI::executeNominatimQuery(const std::string& endpoint) {
+    CURL* curl = curl_easy_init();
+    std::string response;
+
+    if (curl) {
+        curl_easy_setopt(curl, CURLOPT_URL, endpoint.c_str());
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, config_.requestTimeoutMs);
+        curl_easy_setopt(curl, CURLOPT_USERAGENT, config_.userAgent.c_str());
+
+        CURLcode res = curl_easy_perform(curl);
+        if (res != CURLE_OK) {
+            response = "{\"error\": \"" + std::string(curl_easy_strerror(res)) + "\"}";
+        }
+
+        curl_easy_cleanup(curl);
+    }
+
+    return response;
+}
+
+// Helper to extract JSON string value
+static std::string extractJsonString(const std::string& json, const std::string& key) {
+    std::string searchKey = "\"" + key + "\"";
+    size_t keyPos = json.find(searchKey);
+    if (keyPos == std::string::npos) return "";
+
+    size_t colonPos = json.find(':', keyPos + searchKey.length());
+    if (colonPos == std::string::npos) return "";
+
+    // Skip whitespace
+    size_t valueStart = colonPos + 1;
+    while (valueStart < json.length() && std::isspace(json[valueStart])) valueStart++;
+
+    if (valueStart >= json.length()) return "";
+
+    if (json[valueStart] == '"') {
+        // String value
+        size_t valueEnd = json.find('"', valueStart + 1);
+        if (valueEnd == std::string::npos) return "";
+        return json.substr(valueStart + 1, valueEnd - valueStart - 1);
+    } else if (json[valueStart] == '-' || std::isdigit(json[valueStart])) {
+        // Numeric value
+        size_t valueEnd = valueStart;
+        while (valueEnd < json.length() && (std::isdigit(json[valueEnd]) || json[valueEnd] == '.' || json[valueEnd] == '-')) {
+            valueEnd++;
+        }
+        return json.substr(valueStart, valueEnd - valueStart);
+    }
+
+    return "";
+}
+
+// Helper to extract JSON number value
+static double extractJsonNumber(const std::string& json, const std::string& key) {
+    std::string value = extractJsonString(json, key);
+    if (value.empty()) return 0.0;
+    try {
+        return std::stod(value);
+    } catch (...) {
+        return 0.0;
+    }
+}
+
+// Helper to extract tags from JSON object
+static std::map<std::string, std::string> extractJsonTags(const std::string& json) {
+    std::map<std::string, std::string> tags;
+
+    size_t tagsStart = json.find("\"tags\"");
+    if (tagsStart == std::string::npos) return tags;
+
+    size_t braceStart = json.find('{', tagsStart);
+    if (braceStart == std::string::npos) return tags;
+
+    // Find matching closing brace
+    int braceCount = 1;
+    size_t braceEnd = braceStart + 1;
+    while (braceEnd < json.length() && braceCount > 0) {
+        if (json[braceEnd] == '{') braceCount++;
+        else if (json[braceEnd] == '}') braceCount--;
+        braceEnd++;
+    }
+
+    std::string tagsJson = json.substr(braceStart + 1, braceEnd - braceStart - 2);
+
+    // Parse key-value pairs
+    size_t pos = 0;
+    while (pos < tagsJson.length()) {
+        // Find key
+        size_t keyStart = tagsJson.find('"', pos);
+        if (keyStart == std::string::npos) break;
+        size_t keyEnd = tagsJson.find('"', keyStart + 1);
+        if (keyEnd == std::string::npos) break;
+        std::string key = tagsJson.substr(keyStart + 1, keyEnd - keyStart - 1);
+
+        // Find value
+        size_t colonPos = tagsJson.find(':', keyEnd);
+        if (colonPos == std::string::npos) break;
+
+        size_t valueStart = tagsJson.find('"', colonPos);
+        if (valueStart == std::string::npos) break;
+        size_t valueEnd = tagsJson.find('"', valueStart + 1);
+        if (valueEnd == std::string::npos) break;
+        std::string value = tagsJson.substr(valueStart + 1, valueEnd - valueStart - 1);
+
+        tags[key] = value;
+        pos = valueEnd + 1;
+    }
+
+    return tags;
+}
+
+std::vector<OSMPoi> OpenStreetMapAPI::parseOverpassResponse(const std::string& json) {
+    std::vector<OSMPoi> pois;
+
+    // Check for error
+    if (json.find("\"error\"") != std::string::npos) {
+        return pois;
+    }
+
+    // Find "elements" array
+    size_t elementsPos = json.find("\"elements\"");
+    if (elementsPos == std::string::npos) {
+        return pois;
+    }
+
+    size_t arrayStart = json.find('[', elementsPos);
+    if (arrayStart == std::string::npos) {
+        return pois;
+    }
+
+    // Parse each element object
+    size_t pos = arrayStart + 1;
+    while (pos < json.length()) {
+        // Find next object
+        size_t objStart = json.find('{', pos);
+        if (objStart == std::string::npos) break;
+
+        // Find end of object (matching brace)
+        int braceCount = 1;
+        size_t objEnd = objStart + 1;
+        while (objEnd < json.length() && braceCount > 0) {
+            if (json[objEnd] == '{') braceCount++;
+            else if (json[objEnd] == '}') braceCount--;
+            objEnd++;
+        }
+
+        std::string objJson = json.substr(objStart, objEnd - objStart);
+
+        OSMPoi poi;
+
+        // Extract basic fields
+        poi.osmType = extractJsonString(objJson, "type");
+        std::string idStr = extractJsonString(objJson, "id");
+        if (!idStr.empty()) {
+            try {
+                poi.osmId = std::stoll(idStr);
+            } catch (...) {
+                poi.osmId = 0;
+            }
+        }
+
+        // Get coordinates - check for "center" (for ways) or direct lat/lon (for nodes)
+        if (objJson.find("\"center\"") != std::string::npos) {
+            size_t centerPos = objJson.find("\"center\"");
+            size_t centerStart = objJson.find('{', centerPos);
+            size_t centerEnd = objJson.find('}', centerStart);
+            if (centerStart != std::string::npos && centerEnd != std::string::npos) {
+                std::string centerJson = objJson.substr(centerStart, centerEnd - centerStart + 1);
+                poi.latitude = extractJsonNumber(centerJson, "lat");
+                poi.longitude = extractJsonNumber(centerJson, "lon");
+            }
+        } else {
+            poi.latitude = extractJsonNumber(objJson, "lat");
+            poi.longitude = extractJsonNumber(objJson, "lon");
+        }
+
+        // Extract tags
+        poi.tags = extractJsonTags(objJson);
+
+        // Set common tag fields
+        auto tagIt = poi.tags.find("name");
+        if (tagIt != poi.tags.end()) poi.name = tagIt->second;
+
+        tagIt = poi.tags.find("amenity");
+        if (tagIt != poi.tags.end()) poi.amenity = tagIt->second;
+
+        tagIt = poi.tags.find("building");
+        if (tagIt != poi.tags.end()) poi.building = tagIt->second;
+
+        tagIt = poi.tags.find("office");
+        if (tagIt != poi.tags.end()) poi.office = tagIt->second;
+
+        tagIt = poi.tags.find("shop");
+        if (tagIt != poi.tags.end()) poi.shop = tagIt->second;
+
+        tagIt = poi.tags.find("tourism");
+        if (tagIt != poi.tags.end()) poi.tourism = tagIt->second;
+
+        tagIt = poi.tags.find("healthcare");
+        if (tagIt != poi.tags.end()) poi.healthcare = tagIt->second;
+
+        // Address info
+        tagIt = poi.tags.find("addr:street");
+        if (tagIt != poi.tags.end()) poi.street = tagIt->second;
+
+        tagIt = poi.tags.find("addr:housenumber");
+        if (tagIt != poi.tags.end()) poi.houseNumber = tagIt->second;
+
+        tagIt = poi.tags.find("addr:city");
+        if (tagIt != poi.tags.end()) poi.city = tagIt->second;
+
+        tagIt = poi.tags.find("addr:postcode");
+        if (tagIt != poi.tags.end()) poi.postcode = tagIt->second;
+
+        tagIt = poi.tags.find("addr:state");
+        if (tagIt != poi.tags.end()) poi.state = tagIt->second;
+
+        tagIt = poi.tags.find("addr:country");
+        if (tagIt != poi.tags.end()) poi.country = tagIt->second;
+
+        // Contact info
+        tagIt = poi.tags.find("phone");
+        if (tagIt != poi.tags.end()) poi.phone = tagIt->second;
+
+        tagIt = poi.tags.find("website");
+        if (tagIt != poi.tags.end()) poi.website = tagIt->second;
+
+        tagIt = poi.tags.find("email");
+        if (tagIt != poi.tags.end()) poi.email = tagIt->second;
+
+        tagIt = poi.tags.find("opening_hours");
+        if (tagIt != poi.tags.end()) poi.openingHours = tagIt->second;
+
+        // Only add POIs with valid coordinates and preferably a name
+        if (poi.latitude != 0.0 && poi.longitude != 0.0) {
+            // Generate a name from type if name is empty
+            if (poi.name.empty()) {
+                if (!poi.office.empty()) {
+                    poi.name = "Office (" + poi.office + ")";
+                } else if (!poi.building.empty()) {
+                    poi.name = "Building (" + poi.building + ")";
+                } else if (!poi.amenity.empty()) {
+                    poi.name = poi.amenity.substr(0, 1);
+                    std::transform(poi.name.begin(), poi.name.end(), poi.name.begin(), ::toupper);
+                    poi.name += poi.amenity.substr(1);
+                } else if (!poi.tourism.empty()) {
+                    poi.name = poi.tourism;
+                }
+            }
+            pois.push_back(poi);
+        }
+
+        pos = objEnd;
+        if (pos < json.length() && json[pos] == ']') break;
+    }
+
+    // Limit results to configured maximum
+    if (pois.size() > static_cast<size_t>(config_.maxResultsPerQuery)) {
+        pois.resize(config_.maxResultsPerQuery);
+    }
+
+    return pois;
+}
+
+OSMPoi OpenStreetMapAPI::parseNominatimResponse(const std::string& json) {
+    OSMPoi poi;
+
+    // Check for error or empty result
+    if (json.empty() || json.find("\"error\"") != std::string::npos || json == "[]") {
+        return poi;
+    }
+
+    // Handle array response (search returns array)
+    std::string objJson = json;
+    if (json[0] == '[') {
+        size_t objStart = json.find('{');
+        if (objStart == std::string::npos) return poi;
+        size_t objEnd = json.find('}', objStart);
+        if (objEnd == std::string::npos) return poi;
+        objJson = json.substr(objStart, objEnd - objStart + 1);
+    }
+
+    poi.latitude = extractJsonNumber(objJson, "lat");
+    poi.longitude = extractJsonNumber(objJson, "lon");
+    poi.name = extractJsonString(objJson, "display_name");
+
+    // Extract address components if present
+    size_t addrPos = objJson.find("\"address\"");
+    if (addrPos != std::string::npos) {
+        size_t addrStart = objJson.find('{', addrPos);
+        size_t addrEnd = objJson.find('}', addrStart);
+        if (addrStart != std::string::npos && addrEnd != std::string::npos) {
+            std::string addrJson = objJson.substr(addrStart, addrEnd - addrStart + 1);
+            poi.street = extractJsonString(addrJson, "road");
+            poi.houseNumber = extractJsonString(addrJson, "house_number");
+            poi.city = extractJsonString(addrJson, "city");
+            if (poi.city.empty()) poi.city = extractJsonString(addrJson, "town");
+            if (poi.city.empty()) poi.city = extractJsonString(addrJson, "village");
+            poi.state = extractJsonString(addrJson, "state");
+            poi.postcode = extractJsonString(addrJson, "postcode");
+            poi.country = extractJsonString(addrJson, "country");
+        }
+    }
+
+    return poi;
 }
 
 std::vector<std::string> OpenStreetMapAPI::getOSMFiltersForBusinessTypes(
@@ -890,110 +1206,82 @@ std::vector<OSMPoi> OpenStreetMapAPI::searchByCategorySync(
     const Models::SearchArea& searchArea,
     const std::string& category
 ) {
-    // Category to OSM tag mapping
-    static const std::map<std::string, std::vector<std::pair<std::string, std::string>>> categoryTagMap = {
-        {"offices", {{"office", "company"}, {"office", "corporate"}, {"office", "it"}, {"building", "office"}, {"building", "commercial"}}},
-        {"hotels", {{"tourism", "hotel"}, {"building", "hotel"}}},
-        {"conference", {{"amenity", "conference_centre"}, {"amenity", "events_venue"}}},
-        {"hospitals", {{"amenity", "hospital"}, {"amenity", "clinic"}, {"building", "hospital"}}},
-        {"universities", {{"amenity", "university"}, {"amenity", "college"}, {"building", "university"}}},
-        {"schools", {{"amenity", "school"}, {"building", "school"}}},
-        {"industrial", {{"building", "industrial"}, {"landuse", "industrial"}}},
-        {"warehouses", {{"building", "warehouse"}}},
-        {"banks", {{"amenity", "bank"}, {"office", "financial"}}},
-        {"government", {{"office", "government"}, {"building", "government"}}},
-        {"restaurants", {{"amenity", "restaurant"}, {"amenity", "fast_food"}}},
-        {"cafes", {{"amenity", "cafe"}}}
-    };
+    ++totalApiCalls_;
 
     // Normalize category name
     std::string categoryLower = category;
     std::transform(categoryLower.begin(), categoryLower.end(), categoryLower.begin(), ::tolower);
 
-    auto tagIt = categoryTagMap.find(categoryLower);
-    if (tagIt == categoryTagMap.end()) {
-        return {};  // Unknown category
-    }
+    // Build Overpass query for this category
+    std::ostringstream query;
+    query << std::fixed << std::setprecision(6);
+    query << "[out:json][timeout:30];(";
 
-    // Generate demo POIs for this category
-    std::vector<OSMPoi> pois;
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<> latDist(-0.008, 0.008);
-    std::uniform_real_distribution<> lonDist(-0.008, 0.008);
-    std::uniform_int_distribution<> idDist(100000, 999999);
-    std::uniform_int_distribution<> numDist(100, 500);
+    int radiusMeters = searchArea.radiusMeters();
+    double lat = searchArea.center.latitude;
+    double lon = searchArea.center.longitude;
 
-    // Sample business names by category (expanded for more POIs)
-    static const std::map<std::string, std::vector<std::string>> categoryNames = {
-        {"offices", {"TechVenture Corp", "Metro Business Center", "Innovation Hub", "Enterprise Solutions", "Global Dynamics", "Summit Partners", "Apex Consulting", "Premier Holdings", "DataTech Inc", "CloudWorks HQ", "Synergy Group", "Vanguard Systems", "NextGen Solutions", "Pioneer Analytics", "Quantum Enterprises", "Horizon Partners", "Cascade Business Park", "Sterling Office Complex", "Matrix Technologies", "Vertex Solutions", "Catalyst Group", "Pinnacle Partners", "Nexus Business Center", "Elevate Workspace", "Momentum Labs"}},
-        {"hotels", {"Downtown Marriott", "Grand Plaza Hotel", "Valley Conference Hotel", "Business Suites Inn", "Executive Stay Hotel", "Metro Lodge", "Corporate Inn", "Parkview Hotel", "Summit Hotel & Spa", "Riverside Suites", "Capitol Hotel", "Gateway Inn", "Prestige Hotel", "Ambassador Suites", "Crown Plaza", "Heritage Hotel", "Lakeside Resort", "Urban Stay Hotel", "Beacon Hotel", "Skyline Suites", "Cornerstone Inn", "Westgate Hotel", "Eastside Suites", "Northpoint Hotel", "Central Station Hotel"}},
-        {"conference", {"Grand Convention Center", "Metro Events Center", "City Conference Hall", "Business Expo Center", "Summit Meeting Center", "Premier Conference Venue", "Lakeside Convention Hall", "Executive Conference Center", "Innovation Summit Hall", "Trade Show Arena", "Corporate Events Plaza", "Business Forum Center", "Leadership Conference Hall", "Tech Summit Venue", "Regional Expo Center", "Downtown Conference Complex", "Riverside Meeting Hall", "Skyline Events Center", "Capitol Conference Center", "Unity Convention Hall"}},
-        {"hospitals", {"Regional Medical Center", "St. Mary Hospital", "Community Health Center", "Valley Medical Clinic", "Metro Healthcare", "Sunrise Medical Center", "General Hospital", "University Medical Center", "Children's Hospital", "Veterans Medical Center", "Mercy Hospital", "Providence Health", "Sacred Heart Medical", "Good Samaritan Hospital", "Memorial Medical Center", "County General Hospital", "Westside Medical Center", "Eastgate Health Clinic", "Northview Hospital", "Southpark Medical"}},
-        {"universities", {"State University", "Metro Technical College", "City Community College", "Regional University", "Business Academy", "Technology Institute", "Liberal Arts College", "Graduate School of Business", "Engineering University", "Medical School Campus", "Law School", "Design Institute", "Performing Arts Academy", "Science & Research University", "Agricultural College", "Maritime Academy", "Aviation Institute", "Culinary School", "Trade Technical College", "Online University Campus"}},
-        {"schools", {"Central High School", "Lincoln Middle School", "Washington Elementary", "Oak Valley Academy", "Metro Prep School", "Riverside High", "Lakeview Middle School", "Jefferson Elementary", "Madison Academy", "Roosevelt High School", "Kennedy Middle School", "Franklin Elementary", "Adams Preparatory", "Hamilton High", "Monroe Middle School", "Jackson Elementary", "Wilson Academy", "Taylor High School", "Polk Middle School", "Harrison Elementary"}},
-        {"industrial", {"Apex Manufacturing", "Metro Industrial Park", "Valley Production Center", "Summit Factory", "Industrial Tech Center", "Precision Manufacturing", "Advanced Materials Plant", "Heavy Industries Complex", "Assembly Line Facility", "Production Hub", "Manufacturing Solutions", "Industrial Dynamics", "Fabrication Center", "Process Industries", "Component Factory", "Quality Manufacturing", "Integrated Production", "Supply Chain Hub", "Logistics Manufacturing", "Industrial Innovation Center"}},
-        {"warehouses", {"Pacific Logistics Center", "Metro Distribution", "Valley Storage Solutions", "Central Fulfillment", "Express Warehouse", "Regional Distribution Hub", "Supply Chain Warehouse", "E-Commerce Fulfillment", "Cold Storage Facility", "Bulk Storage Center", "Cross-Dock Facility", "Inventory Hub", "Distribution Solutions", "Freight Warehouse", "Import Export Storage", "Last Mile Hub", "Returns Processing Center", "Overflow Storage", "Seasonal Warehouse", "Archive Storage Facility"}},
-        {"banks", {"First National Bank", "Metro Credit Union", "Valley Savings Bank", "Business Financial Center", "Regional Trust Bank", "Commerce Bank", "Citizens Bank", "Peoples Credit Union", "Investment Banking Corp", "Community Savings", "Capital One Branch", "Wells Financial", "Chase Business Center", "Bank of Commerce", "Savings & Loan", "Federal Credit Union", "Merchant Bank", "Private Banking Suite", "Corporate Finance Center", "Agricultural Credit Bank"}},
-        {"government", {"City Hall Complex", "County Administration", "State Services Building", "Federal Office Building", "Municipal Center", "Department of Motor Vehicles", "Social Services Office", "Tax Assessment Office", "Planning & Zoning Dept", "Public Works Building", "Parks & Recreation Office", "Health Department", "Employment Services", "Veterans Affairs Office", "Environmental Agency", "Housing Authority", "Licensing Bureau", "Court House", "Police Administration", "Fire Department HQ"}},
-        {"restaurants", {"The Corporate Grill", "Business District Cafe", "Executive Dining", "Metro Bistro", "Downtown Eatery", "Valley Kitchen", "Summit Restaurant", "Riverside Grill", "The Meeting Place", "Power Lunch Spot", "Uptown Brasserie", "Financial District Deli", "Corner Office Cafe", "The Board Room Restaurant", "Midtown Kitchen", "Professional Plaza Dining", "Commerce Cafe", "Trade Center Grill", "Convention Catering", "Lobby Lounge Restaurant"}},
-        {"cafes", {"Metro Coffee House", "Business Brew", "Morning Cup Cafe", "Espresso Corner", "Valley Roasters", "Quick Cafe", "Java Junction", "The Daily Grind", "Latte Lounge", "Bean Counter Cafe", "Sunrise Coffee", "Artisan Roasters", "The Coffee Spot", "Brew & Beyond", "Mocha Moments", "Caffeine Fix", "The Percolator", "Steam Coffee Bar", "Drip Drop Cafe", "Pour Over Place"}}
-    };
-
-    auto nameIt = categoryNames.find(categoryLower);
-    if (nameIt == categoryNames.end()) {
+    // Category-specific queries
+    if (categoryLower == "offices") {
+        query << "node[\"office\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+        query << "way[\"office\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+        query << "way[\"building\"=\"office\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+        query << "way[\"building\"=\"commercial\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+    } else if (categoryLower == "hotels") {
+        query << "node[\"tourism\"=\"hotel\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+        query << "way[\"tourism\"=\"hotel\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+        query << "node[\"tourism\"=\"motel\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+        query << "way[\"tourism\"=\"motel\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+    } else if (categoryLower == "conference") {
+        query << "node[\"amenity\"=\"conference_centre\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+        query << "way[\"amenity\"=\"conference_centre\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+        query << "node[\"amenity\"=\"events_venue\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+        query << "way[\"amenity\"=\"events_venue\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+    } else if (categoryLower == "hospitals") {
+        query << "node[\"amenity\"=\"hospital\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+        query << "way[\"amenity\"=\"hospital\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+        query << "node[\"amenity\"=\"clinic\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+        query << "way[\"amenity\"=\"clinic\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+    } else if (categoryLower == "universities") {
+        query << "node[\"amenity\"=\"university\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+        query << "way[\"amenity\"=\"university\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+        query << "node[\"amenity\"=\"college\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+        query << "way[\"amenity\"=\"college\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+    } else if (categoryLower == "schools") {
+        query << "node[\"amenity\"=\"school\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+        query << "way[\"amenity\"=\"school\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+    } else if (categoryLower == "industrial") {
+        query << "way[\"building\"=\"industrial\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+        query << "way[\"landuse\"=\"industrial\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+    } else if (categoryLower == "warehouses") {
+        query << "way[\"building\"=\"warehouse\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+    } else if (categoryLower == "banks") {
+        query << "node[\"amenity\"=\"bank\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+        query << "way[\"amenity\"=\"bank\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+        query << "node[\"office\"=\"financial\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+        query << "way[\"office\"=\"financial\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+    } else if (categoryLower == "government") {
+        query << "node[\"office\"=\"government\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+        query << "way[\"office\"=\"government\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+        query << "way[\"building\"=\"government\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+    } else if (categoryLower == "restaurants") {
+        query << "node[\"amenity\"=\"restaurant\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+        query << "way[\"amenity\"=\"restaurant\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+    } else if (categoryLower == "cafes") {
+        query << "node[\"amenity\"=\"cafe\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+        query << "way[\"amenity\"=\"cafe\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+    } else {
+        // Unknown category - return empty
         return {};
     }
 
-    const auto& names = nameIt->second;
-    const auto& tags = tagIt->second;
+    query << ");out center;";
 
-    std::vector<std::string> streets = {
-        "Main Street", "Commerce Drive", "Business Park Way", "Corporate Boulevard",
-        "Innovation Lane", "Enterprise Road", "Technology Circle", "Professional Parkway"
-    };
+    // Execute the Overpass query
+    std::string response = executeOverpassQuery(query.str());
 
-    int numResults = std::min(static_cast<int>(names.size()), config_.maxResultsPerQuery);
-
-    for (int i = 0; i < numResults; ++i) {
-        OSMPoi poi;
-        poi.osmId = idDist(gen);
-        poi.osmType = "way";
-        poi.name = names[i % names.size()];
-        poi.latitude = searchArea.center.latitude + latDist(gen);
-        poi.longitude = searchArea.center.longitude + lonDist(gen);
-
-        // Set appropriate tags for this category
-        if (!tags.empty()) {
-            const auto& [tagKey, tagValue] = tags[i % tags.size()];
-            poi.tags[tagKey] = tagValue;
-            if (tagKey == "office") poi.office = tagValue;
-            else if (tagKey == "building") poi.building = tagValue;
-            else if (tagKey == "amenity") poi.amenity = tagValue;
-            else if (tagKey == "tourism") poi.tourism = tagValue;
-        }
-
-        // Address
-        poi.houseNumber = std::to_string(numDist(gen));
-        poi.street = streets[i % streets.size()];
-        poi.city = searchArea.center.city.empty() ? "Sample City" : searchArea.center.city;
-        poi.state = searchArea.center.state.empty() ? "ST" : searchArea.center.state;
-        poi.postcode = searchArea.center.postalCode.empty() ? "12345" : searchArea.center.postalCode;
-        poi.country = "USA";
-
-        // Contact info
-        poi.phone = "(555) " + std::to_string(100 + i) + "-" + std::to_string(1000 + i * 111);
-        std::string domain = poi.name.substr(0, poi.name.find(' '));
-        std::transform(domain.begin(), domain.end(), domain.begin(), ::tolower);
-        // Remove special chars from domain
-        domain.erase(std::remove_if(domain.begin(), domain.end(), [](char c) { return !std::isalnum(c); }), domain.end());
-        poi.website = "www." + domain + ".com";
-        poi.email = "info@" + domain + ".com";
-
-        pois.push_back(poi);
-    }
-
-    return pois;
+    // Parse and return results
+    return parseOverpassResponse(response);
 }
 
 } // namespace Services

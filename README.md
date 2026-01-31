@@ -44,6 +44,20 @@ The application currently uses hardcoded credentials for authentication:
 - **admin**: Full access to all features including the Audit Trail
 - **franchisee**: Access to standard features (search, prospects, settings)
 
+### Sidebar Menu
+
+```
+📊 Dashboard
+🔍 AI Search
+📍 Open Street Map
+─────────────────
+👥 My Prospects
+📈 Reports
+📋 Audit Trail (admin only)
+─────────────────
+⚙️ Settings
+```
+
 ### Planned Enterprise Features (Future Sprint)
 
 The production authentication system will include:
