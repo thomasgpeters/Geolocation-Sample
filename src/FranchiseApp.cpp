@@ -1720,9 +1720,184 @@ void FranchiseApp::showOpenStreetMapPage() {
     };
     auto usedColorIndex = std::make_shared<int>(0);
 
+    // Helper function to build rich popup HTML for a POI
+    auto buildRichPopupHtml = [](const Services::OSMPoi& poi,
+                                  const Models::BusinessInfo& bizInfo,
+                                  const std::string& categoryName,
+                                  const std::string& markerColor) -> std::string {
+        std::ostringstream popup;
+
+        // Sanitize strings for JavaScript
+        auto sanitize = [](const std::string& str) -> std::string {
+            std::string result = str;
+            for (auto& c : result) {
+                if (c == '\'' || c == '"' || c == '\\' || c == '\n' || c == '\r') c = ' ';
+            }
+            return result;
+        };
+
+        std::string safeName = sanitize(poi.name);
+        std::string safeAddress = sanitize(poi.street.empty() ? "" :
+            (poi.houseNumber.empty() ? poi.street : poi.houseNumber + " " + poi.street));
+        std::string safeCity = sanitize(poi.city);
+        std::string safeState = sanitize(poi.state);
+
+        // Get score color based on catering potential
+        std::string scoreColor;
+        std::string scoreLabel;
+        int score = bizInfo.cateringPotentialScore;
+        if (score >= 70) {
+            scoreColor = "#28a745";  // Green - High potential
+            scoreLabel = "High";
+        } else if (score >= 40) {
+            scoreColor = "#ffc107";  // Yellow - Medium potential
+            scoreLabel = "Medium";
+        } else {
+            scoreColor = "#6c757d";  // Gray - Low potential
+            scoreLabel = "Low";
+        }
+
+        // Build popup HTML
+        popup << "<div class=\"poi-popup\" style=\"min-width: 280px; max-width: 320px; font-family: -apple-system, BlinkMacSystemFont, sans-serif;\">";
+
+        // Header with name and category badge
+        popup << "<div style=\"border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;\">";
+        popup << "<div style=\"display: flex; justify-content: space-between; align-items: flex-start;\">";
+        popup << "<h4 style=\"margin: 0 0 4px 0; font-size: 15px; color: #333; font-weight: 600;\">" << safeName << "</h4>";
+        popup << "<span style=\"background: " << markerColor << "; color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 500; white-space: nowrap;\">" << categoryName << "</span>";
+        popup << "</div>";
+
+        // Address
+        if (!safeAddress.empty() || !safeCity.empty()) {
+            popup << "<div style=\"color: #666; font-size: 12px;\">";
+            if (!safeAddress.empty()) popup << safeAddress;
+            if (!safeAddress.empty() && !safeCity.empty()) popup << ", ";
+            if (!safeCity.empty()) popup << safeCity;
+            if (!safeState.empty()) popup << ", " << safeState;
+            popup << "</div>";
+        }
+        popup << "</div>";
+
+        // Scoring section with visual gauge
+        popup << "<div style=\"background: #f8f9fa; border-radius: 8px; padding: 10px; margin-bottom: 10px;\">";
+        popup << "<div style=\"display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;\">";
+        popup << "<span style=\"font-size: 11px; color: #666; font-weight: 500;\">CATERING POTENTIAL</span>";
+        popup << "<span style=\"background: " << scoreColor << "; color: #fff; padding: 2px 10px; border-radius: 10px; font-size: 12px; font-weight: 600;\">" << score << "/100</span>";
+        popup << "</div>";
+
+        // Score bar
+        popup << "<div style=\"background: #e9ecef; border-radius: 4px; height: 8px; overflow: hidden;\">";
+        popup << "<div style=\"background: " << scoreColor << "; width: " << score << "%; height: 100%; border-radius: 4px; transition: width 0.3s;\"></div>";
+        popup << "</div>";
+        popup << "<div style=\"text-align: right; font-size: 10px; color: " << scoreColor << "; margin-top: 2px; font-weight: 500;\">" << scoreLabel << " Potential</div>";
+        popup << "</div>";
+
+        // Business details grid
+        popup << "<div style=\"display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;\">";
+
+        // Business Type
+        popup << "<div style=\"background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 8px;\">";
+        popup << "<div style=\"font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: 0.5px;\">Type</div>";
+        popup << "<div style=\"font-size: 12px; color: #333; font-weight: 500;\">" << bizInfo.getBusinessTypeString() << "</div>";
+        popup << "</div>";
+
+        // Estimated Size
+        popup << "<div style=\"background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 8px;\">";
+        popup << "<div style=\"font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: 0.5px;\">Est. Size</div>";
+        popup << "<div style=\"font-size: 12px; color: #333; font-weight: 500;\">";
+        if (bizInfo.employeeCount > 0) {
+            popup << bizInfo.employeeCount << " employees";
+        } else {
+            popup << bizInfo.getBusinessSizeCategory();
+        }
+        popup << "</div></div>";
+        popup << "</div>";
+
+        // Features/Amenities row
+        popup << "<div style=\"display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px;\">";
+        if (bizInfo.hasConferenceRoom) {
+            popup << "<span style=\"background: #e3f2fd; color: #1565c0; padding: 3px 8px; border-radius: 4px; font-size: 10px;\">📊 Conference Room</span>";
+        }
+        if (bizInfo.hasEventSpace) {
+            popup << "<span style=\"background: #fce4ec; color: #c2185b; padding: 3px 8px; border-radius: 4px; font-size: 10px;\">🎉 Event Space</span>";
+        }
+        if (bizInfo.regularMeetings) {
+            popup << "<span style=\"background: #e8f5e9; color: #2e7d32; padding: 3px 8px; border-radius: 4px; font-size: 10px;\">📅 Regular Meetings</span>";
+        }
+        if (bizInfo.isVerified) {
+            popup << "<span style=\"background: #fff3e0; color: #e65100; padding: 3px 8px; border-radius: 4px; font-size: 10px;\">✓ Verified</span>";
+        }
+        popup << "</div>";
+
+        // Marketing insights
+        popup << "<div style=\"background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 10px; color: #fff;\">";
+        popup << "<div style=\"font-size: 10px; opacity: 0.9; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;\">💡 Marketing Insight</div>";
+        popup << "<div style=\"font-size: 12px; line-height: 1.4;\">";
+
+        // Generate contextual insight based on business type
+        switch (bizInfo.type) {
+            case Models::BusinessType::CORPORATE_OFFICE:
+            case Models::BusinessType::TECH_COMPANY:
+                popup << "Great for recurring lunch catering and team meetings. Target office managers for weekly orders.";
+                break;
+            case Models::BusinessType::CONFERENCE_CENTER:
+            case Models::BusinessType::HOTEL:
+                popup << "High-volume opportunity for events and conferences. Build relationship with event planners.";
+                break;
+            case Models::BusinessType::MEDICAL_FACILITY:
+                popup << "Staff appreciation meals and medical conference catering. Regular scheduling potential.";
+                break;
+            case Models::BusinessType::EDUCATIONAL_INSTITUTION:
+                popup << "Faculty meetings, graduation events, and parent nights. Seasonal opportunities.";
+                break;
+            case Models::BusinessType::WAREHOUSE:
+            case Models::BusinessType::MANUFACTURING:
+                popup << "Employee meal programs and shift catering. Volume discounts for large orders.";
+                break;
+            case Models::BusinessType::GOVERNMENT_OFFICE:
+                popup << "Government contract potential. Public meetings and civic events.";
+                break;
+            case Models::BusinessType::FINANCIAL_SERVICES:
+                popup << "Client meetings and quarterly reviews. Premium catering opportunities.";
+                break;
+            default:
+                popup << "Potential catering client. Contact for needs assessment.";
+                break;
+        }
+        popup << "</div></div>";
+
+        // Contact info footer (if available)
+        if (!poi.phone.empty() || !poi.website.empty() || !poi.email.empty()) {
+            popup << "<div style=\"border-top: 1px solid #eee; margin-top: 10px; padding-top: 8px; display: flex; gap: 12px; flex-wrap: wrap;\">";
+            if (!poi.phone.empty()) {
+                std::string safePhone = sanitize(poi.phone);
+                popup << "<a href=\"tel:" << safePhone << "\" style=\"color: #1976d2; font-size: 11px; text-decoration: none;\">📞 " << safePhone << "</a>";
+            }
+            if (!poi.website.empty()) {
+                std::string safeWebsite = sanitize(poi.website);
+                popup << "<a href=\"" << safeWebsite << "\" target=\"_blank\" style=\"color: #1976d2; font-size: 11px; text-decoration: none;\">🌐 Website</a>";
+            }
+            if (!poi.email.empty()) {
+                std::string safeEmail = sanitize(poi.email);
+                popup << "<a href=\"mailto:" << safeEmail << "\" style=\"color: #1976d2; font-size: 11px; text-decoration: none;\">✉️ Email</a>";
+            }
+            popup << "</div>";
+        }
+
+        // Opening hours (if available)
+        if (!poi.openingHours.empty()) {
+            std::string safeHours = sanitize(poi.openingHours);
+            popup << "<div style=\"border-top: 1px solid #eee; margin-top: 8px; padding-top: 8px; font-size: 11px; color: #666;\">🕐 " << safeHours << "</div>";
+        }
+
+        popup << "</div>";
+
+        return popup.str();
+    };
+
     // Function to refresh all POI markers
     auto refreshMarkers = std::make_shared<std::function<void()>>();
-    *refreshMarkers = [this, activePills, currentSearchAreaPtr]() {
+    *refreshMarkers = [this, activePills, currentSearchAreaPtr, buildRichPopupHtml]() {
         // Clear existing markers
         std::ostringstream clearMarkersJs;
         clearMarkersJs << "if (window.osmMarkers) {"
@@ -1743,9 +1918,19 @@ void FranchiseApp::showOpenStreetMapPage() {
             for (const auto& poi : pois) {
                 if (markerCount >= currentLimit) break;
 
-                std::string safeName = poi.name;
-                for (auto& c : safeName) {
-                    if (c == '\'' || c == '"' || c == '\\') c = ' ';
+                // Convert POI to BusinessInfo for scoring and insights
+                Models::BusinessInfo bizInfo = osmAPI.poiToBusinessInfo(poi);
+
+                // Build rich popup HTML
+                std::string popupHtml = buildRichPopupHtml(poi, bizInfo, pill.displayName, pill.markerColor);
+
+                // Escape the popup HTML for JavaScript string
+                std::string escapedPopup;
+                for (char c : popupHtml) {
+                    if (c == '\'') escapedPopup += "\\'";
+                    else if (c == '\n') escapedPopup += " ";
+                    else if (c == '\r') continue;
+                    else escapedPopup += c;
                 }
 
                 // Create colored circle marker with deep vivid color
@@ -1755,14 +1940,15 @@ void FranchiseApp::showOpenStreetMapPage() {
                            << "    className: 'custom-marker',"
                            << "    html: '<div style=\"background-color: " << pill.markerColor << "; "
                            << "      width: 22px; height: 22px; border-radius: 50%; "
-                           << "      border: 2px solid rgba(0,0,0,0.5); "
+                           << "      border: 2px solid rgba(0,0,0,0.5); cursor: pointer; "
                            << "      box-shadow: 0 2px 4px rgba(0,0,0,0.4), inset 0 1px 2px rgba(255,255,255,0.3);\"></div>',"
                            << "    iconSize: [22, 22],"
-                           << "    iconAnchor: [11, 11]"
+                           << "    iconAnchor: [11, 11],"
+                           << "    popupAnchor: [0, -11]"
                            << "  });"
                            << "  var marker = L.marker([" << poi.latitude << ", " << poi.longitude << "], {icon: markerIcon})"
                            << "    .addTo(window.osmMap)"
-                           << "    .bindPopup('<b>" << safeName << "</b><br><small>" << pill.displayName << "</small>');"
+                           << "    .bindPopup('" << escapedPopup << "', {maxWidth: 350, className: 'rich-popup'});"
                            << "  if (!window.osmMarkers) window.osmMarkers = [];"
                            << "  window.osmMarkers.push(marker);"
                            << "}";
