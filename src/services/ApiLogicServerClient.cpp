@@ -230,8 +230,8 @@ ApiResponse ApiLogicServerClient::httpPost(const std::string& path, const std::s
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);
 
     struct curl_slist* headers = nullptr;
-    headers = curl_slist_append(headers, "Content-Type: application/json");
-    headers = curl_slist_append(headers, "Accept: application/json");
+    headers = curl_slist_append(headers, "Content-Type: application/vnd.api+json");
+    headers = curl_slist_append(headers, "Accept: application/vnd.api+json");
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
     CURLcode res = curl_easy_perform(curl);
@@ -248,6 +248,8 @@ ApiResponse ApiLogicServerClient::httpPost(const std::string& path, const std::s
         std::cout << "  [ALS] Response: " << httpCode << std::endl;
         if (!response.success) {
             std::cerr << "  [ALS] Error body: " << responseBody << std::endl;
+        } else {
+            std::cout << "  [ALS] Success body: " << responseBody << std::endl;
         }
     }
 
@@ -269,6 +271,7 @@ ApiResponse ApiLogicServerClient::httpPatch(const std::string& path, const std::
     std::string responseBody;
 
     std::cout << "  [ALS] PATCH " << url << std::endl;
+    std::cout << "  [ALS] Body: " << body << std::endl;
 
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PATCH");
@@ -278,8 +281,8 @@ ApiResponse ApiLogicServerClient::httpPatch(const std::string& path, const std::
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);
 
     struct curl_slist* headers = nullptr;
-    headers = curl_slist_append(headers, "Content-Type: application/json");
-    headers = curl_slist_append(headers, "Accept: application/json");
+    headers = curl_slist_append(headers, "Content-Type: application/vnd.api+json");
+    headers = curl_slist_append(headers, "Accept: application/vnd.api+json");
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
     CURLcode res = curl_easy_perform(curl);
@@ -293,6 +296,12 @@ ApiResponse ApiLogicServerClient::httpPatch(const std::string& path, const std::
         response.statusCode = static_cast<int>(httpCode);
         response.body = responseBody;
         response.success = (httpCode >= 200 && httpCode < 300);
+        std::cout << "  [ALS] Response: " << httpCode << std::endl;
+        if (!response.success) {
+            std::cerr << "  [ALS] Error body: " << responseBody << std::endl;
+        } else {
+            std::cout << "  [ALS] Success body: " << responseBody << std::endl;
+        }
     }
 
     curl_slist_free_all(headers);
