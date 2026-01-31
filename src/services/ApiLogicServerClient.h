@@ -41,7 +41,7 @@ struct StoreLocationDTO {
         dto.addressLine1 = f.address;
         dto.city = f.location.city;
         dto.stateProvince = f.location.state;
-        dto.postalCode = f.location.zipCode;
+        dto.postalCode = f.location.postalCode;
         dto.latitude = f.location.latitude;
         dto.longitude = f.location.longitude;
         dto.defaultSearchRadiusMiles = f.defaultSearchRadiusMiles;
@@ -60,7 +60,7 @@ struct StoreLocationDTO {
         f.address = addressLine1;
         f.location.city = city;
         f.location.state = stateProvince;
-        f.location.zipCode = postalCode;
+        f.location.postalCode = postalCode;
         f.location.latitude = latitude;
         f.location.longitude = longitude;
         f.defaultSearchRadiusMiles = defaultSearchRadiusMiles;
