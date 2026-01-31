@@ -184,15 +184,12 @@ public:
         return apiLogicServerTimeoutMs_ > 0 ? apiLogicServerTimeoutMs_ : 30000;
     }
 
-    // Constructed URLs (built from components)
-    std::string getApiLogicServerUrl() const {
+    // Constructed endpoint (assembled from individual components)
+    std::string getApiLogicServerEndpoint() const {
         return getApiLogicServerProtocol() + "://" +
                getApiLogicServerHost() + ":" +
-               std::to_string(getApiLogicServerPort());
-    }
-
-    std::string getApiLogicServerEndpoint() const {
-        return getApiLogicServerUrl() + getApiLogicServerApiPrefix();
+               std::to_string(getApiLogicServerPort()) +
+               getApiLogicServerApiPrefix();
     }
 
     // Getters - API Keys
