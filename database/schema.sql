@@ -1084,9 +1084,9 @@ INSERT INTO territory_demographics (territory_id, total_population, population_d
 -- ============================================================================
 
 -- ---------------------------------------------------------------------------
--- Function: Get config value by key
+-- Function: Get app config value by key
 -- ---------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION get_config(p_key VARCHAR)
+CREATE OR REPLACE FUNCTION get_app_config(p_key VARCHAR)
 RETURNS TEXT AS $$
 DECLARE
     v_value TEXT;
@@ -1105,12 +1105,12 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-COMMENT ON FUNCTION get_config IS 'Get configuration value by key, returns default if null';
+COMMENT ON FUNCTION get_app_config IS 'Get application configuration value by key, returns default if null';
 
 -- ---------------------------------------------------------------------------
--- Function: Set config value
+-- Function: Set app config value
 -- ---------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION set_config(p_key VARCHAR, p_value TEXT)
+CREATE OR REPLACE FUNCTION set_app_config(p_key VARCHAR, p_value TEXT)
 RETURNS BOOLEAN AS $$
 BEGIN
     UPDATE app_config
@@ -1122,4 +1122,4 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-COMMENT ON FUNCTION set_config IS 'Set configuration value by key';
+COMMENT ON FUNCTION set_app_config IS 'Set application configuration value by key';
