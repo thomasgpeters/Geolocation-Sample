@@ -2472,6 +2472,123 @@ html, body {
     font-size: 13px;
 }
 
+/* Stat Badges for Prospect Cards */
+.prospect-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+    margin-bottom: 16px;
+}
+
+.stat-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* Business Type Badge */
+.stat-badge.stat-type {
+    background-color: #e0e7ff;
+    color: #3730a3;
+}
+
+/* Employee Count Badges with Levels */
+.stat-badge.stat-employees {
+    background-color: #f3f4f6;
+    color: #374151;
+}
+
+.stat-badge.stat-employees.level-high {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+.stat-badge.stat-employees.level-high::before {
+    content: "▲ ";
+    font-size: 8px;
+}
+
+.stat-badge.stat-employees.level-medium {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.stat-badge.stat-employees.level-medium::before {
+    content: "● ";
+    font-size: 8px;
+}
+
+.stat-badge.stat-employees.level-low {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.stat-badge.stat-employees.level-low::before {
+    content: "▼ ";
+    font-size: 8px;
+}
+
+/* Rating Badges with Levels */
+.stat-badge.stat-rating {
+    background-color: #f3f4f6;
+    color: #374151;
+}
+
+.stat-badge.stat-rating::before {
+    content: "★ ";
+    color: #fbbf24;
+}
+
+.stat-badge.stat-rating.level-high {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.stat-badge.stat-rating.level-high::before {
+    color: #f59e0b;
+}
+
+.stat-badge.stat-rating.level-medium {
+    background-color: #f3f4f6;
+    color: #6b7280;
+}
+
+.stat-badge.stat-rating.level-low {
+    background-color: #fef2f2;
+    color: #991b1b;
+}
+
+.stat-badge.stat-rating.level-low::before {
+    color: #dc2626;
+}
+
+/* Feature Badges (Conference Room, Event Space) */
+.stat-badge.stat-feature {
+    background-color: #dbeafe;
+    color: #1e40af;
+}
+
+.stat-badge.stat-feature::before {
+    content: "✓ ";
+    color: #3b82f6;
+}
+
+/* Verified/Accredited Badge */
+.stat-badge.stat-verified {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.stat-badge.stat-verified::before {
+    content: "✓ ";
+    color: #10b981;
+}
+
 .prospect-summary {
     background-color: var(--bg-primary);
     border-radius: var(--border-radius);

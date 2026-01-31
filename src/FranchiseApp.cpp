@@ -873,11 +873,68 @@ void FranchiseApp::showProspectsPage() {
                     addressText->setStyleClass("prospect-address");
                 }
 
-                auto typeText = infoContainer->addWidget(std::make_unique<Wt::WText>(
-                    prospect.business->getBusinessTypeString() + " | ~" +
-                    std::to_string(prospect.business->employeeCount) + " employees"
+                // Stat badges container
+                auto statsContainer = card->addWidget(std::make_unique<Wt::WContainerWidget>());
+                statsContainer->setStyleClass("prospect-stats");
+
+                // Business type badge
+                auto typeBadge = statsContainer->addWidget(std::make_unique<Wt::WText>(
+                    prospect.business->getBusinessTypeString()
                 ));
-                typeText->setStyleClass("prospect-type");
+                typeBadge->setStyleClass("stat-badge stat-type");
+
+                // Employee count badge with color levels
+                int empCount = prospect.business->employeeCount;
+                std::string empClass = "stat-badge stat-employees";
+                if (empCount >= 100) empClass += " level-high";
+                else if (empCount >= 50) empClass += " level-medium";
+                else empClass += " level-low";
+
+                auto empBadge = statsContainer->addWidget(std::make_unique<Wt::WText>(
+                    std::to_string(empCount) + " employees"
+                ));
+                empBadge->setStyleClass(empClass);
+
+                // Google rating badge (if available)
+                if (prospect.business->googleRating > 0) {
+                    std::ostringstream ratingStr;
+                    ratingStr.precision(1);
+                    ratingStr << std::fixed << prospect.business->googleRating;
+
+                    std::string ratingClass = "stat-badge stat-rating";
+                    if (prospect.business->googleRating >= 4.5) ratingClass += " level-high";
+                    else if (prospect.business->googleRating >= 3.5) ratingClass += " level-medium";
+                    else ratingClass += " level-low";
+
+                    auto ratingBadge = statsContainer->addWidget(std::make_unique<Wt::WText>(
+                        ratingStr.str() + " rating"
+                    ));
+                    ratingBadge->setStyleClass(ratingClass);
+                }
+
+                // Conference room badge
+                if (prospect.business->hasConferenceRoom) {
+                    auto confBadge = statsContainer->addWidget(std::make_unique<Wt::WText>(
+                        "Conference Room"
+                    ));
+                    confBadge->setStyleClass("stat-badge stat-feature");
+                }
+
+                // Event space badge
+                if (prospect.business->hasEventSpace) {
+                    auto eventBadge = statsContainer->addWidget(std::make_unique<Wt::WText>(
+                        "Event Space"
+                    ));
+                    eventBadge->setStyleClass("stat-badge stat-feature");
+                }
+
+                // BBB Accredited badge
+                if (prospect.business->bbbAccredited) {
+                    auto bbbBadge = statsContainer->addWidget(std::make_unique<Wt::WText>(
+                        "BBB Accredited"
+                    ));
+                    bbbBadge->setStyleClass("stat-badge stat-verified");
+                }
             }
 
             // AI Summary (if available)
