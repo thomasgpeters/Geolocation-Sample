@@ -2926,8 +2926,8 @@ html, body {
 .hot-prospects-section {
     background: #ffffff;
     border-radius: 12px;
-    padding: 20px 24px;
-    margin-top: 20px;
+    padding: 14px 18px;
+    margin-top: 16px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     border: 1px solid var(--border-color);
     max-height: calc(100vh - 480px);
@@ -2940,20 +2940,20 @@ html, body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 16px;
-    padding-bottom: 12px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
     border-bottom: 1px solid var(--border-color);
     flex-shrink: 0;
 }
 
 .hot-prospects-section .section-title {
-    font-size: 1.2rem;
+    font-size: 1rem;
     font-weight: 700;
     color: var(--text-primary);
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 2px 0;
+    gap: 8px;
+    padding: 0;
 }
 
 .hot-prospects-placeholder {
@@ -3023,7 +3023,7 @@ html, body {
 
 .header-cell,
 .table-cell {
-    padding: 12px 16px;
+    padding: 8px 12px;
     display: flex;
     align-items: center;
 }
@@ -3059,17 +3059,17 @@ html, body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 40px;
-    padding: 4px 10px;
-    border-radius: 20px;
+    min-width: 32px;
+    padding: 2px 8px;
+    border-radius: 12px;
     font-weight: 600;
-    font-size: 0.85rem;
+    font-size: 0.75rem;
 }
 
 .score-badge.large {
-    min-width: 50px;
-    padding: 6px 14px;
-    font-size: 1rem;
+    min-width: 40px;
+    padding: 4px 10px;
+    font-size: 0.85rem;
 }
 
 .score-excellent {
@@ -3094,8 +3094,8 @@ html, body {
 
 /* Action Buttons */
 .btn-icon {
-    width: 36px;
-    height: 36px;
+    width: 28px;
+    height: 28px;
     padding: 0;
     display: inline-flex;
     align-items: center;
@@ -3105,7 +3105,7 @@ html, body {
     background: var(--bg-secondary);
     cursor: pointer;
     transition: all var(--transition-fast);
-    font-size: 1rem;
+    font-size: 0.8rem;
 }
 
 .btn-icon:hover {
