@@ -620,24 +620,11 @@ void AISearchService::generateOverallAnalysis(Models::SearchResults& results) {
         }
     }
 
-    // Use AI engine for market analysis if available
-    if (aiEngine_ && aiEngine_->isConfigured() && !businesses.empty()) {
-        auto marketAnalysis = aiEngine_->analyzeMarketPotentialSync(demographics, businesses);
-        results.aiOverallAnalysis = marketAnalysis.overallAnalysis;
-        results.topRecommendations = marketAnalysis.topRecommendations;
-        results.marketSummary = marketAnalysis.marketSummary;
+    // NOTE: We intentionally skip AI analysis during search to keep it fast.
+    // AI analysis is performed on-demand when user adds a prospect to their saved list.
+    // This provides instant search results while still offering deep AI insights for selected prospects.
 
-        // Also generate a search summary using AI
-        std::vector<std::string> businessSummaries;
-        for (const auto& biz : businesses) {
-            if (businessSummaries.size() >= 5) break;
-            businessSummaries.push_back(biz.name + " (" + biz.getBusinessTypeString() + ")");
-        }
-        // The market analysis already covers what we need
-        return;
-    }
-
-    // Fall back to local analysis
+    // Use fast local analysis for search results
     std::ostringstream analysis;
     analysis << "Found " << results.totalResults << " potential catering prospects. ";
     analysis << highPotentialCount << " are high-potential leads (score 60+). ";
