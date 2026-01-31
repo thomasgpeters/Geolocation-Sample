@@ -195,6 +195,7 @@ ApiResponse ApiLogicServerClient::httpGet(const std::string& path) {
         response.body = responseBody;
         response.success = (httpCode >= 200 && httpCode < 300);
         std::cout << "  [ALS] Response: " << httpCode << " (" << responseBody.length() << " bytes)" << std::endl;
+        std::cout << "  [ALS] Body: " << responseBody << std::endl;
     }
 
     curl_slist_free_all(headers);
@@ -440,12 +441,16 @@ bool ApiLogicServerClient::setAppConfigValue(const std::string& key, const std::
     // First check if the config exists
     auto getResponse = httpGet("/AppConfig?filter[config_key]=" + key);
 
+    std::cout << "  [ALS] setAppConfigValue: key=" << key << ", checking if exists..." << std::endl;
+
     if (getResponse.success && !getResponse.body.empty()) {
         // Try to extract the ID
         std::string id = extractJsonString(getResponse.body, "id");
+        std::cout << "  [ALS] Extracted ID: '" << id << "'" << std::endl;
 
         if (!id.empty()) {
             // Update existing config - JSON:API format with type and id for PATCH
+            std::cout << "  [ALS] Record exists, doing PATCH" << std::endl;
             std::string json = "{\"data\": {\"attributes\": {\"config_value\": \"" + value +
                                "\"}, \"type\": \"AppConfig\", \"id\": \"" + id + "\"}}";
             auto response = httpPatch("/AppConfig/" + id, json);
@@ -454,6 +459,7 @@ bool ApiLogicServerClient::setAppConfigValue(const std::string& key, const std::
     }
 
     // Create new config entry - JSON:API format with all required fields
+    std::cout << "  [ALS] Record does not exist, doing POST" << std::endl;
     std::string json = "{\"data\": {\"attributes\": {"
                        "\"config_key\": \"" + key + "\", "
                        "\"config_value\": \"" + value + "\", "
