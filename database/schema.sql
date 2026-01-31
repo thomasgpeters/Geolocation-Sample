@@ -851,6 +851,10 @@ INSERT INTO app_config (config_key, config_value, config_type, category, descrip
 ('geocoding_cache_minutes', '1440', 'integer', 'business', 'Cache duration for geocoding results (minutes)', false, false, '1440'),
 ('max_search_results', '100', 'integer', 'business', 'Maximum results returned from search', false, false, '100');
 
+-- System Settings (runtime state)
+INSERT INTO app_config (config_key, config_value, config_type, category, description, is_sensitive, is_required, default_value) VALUES
+('current_store_id', '', 'string', 'system', 'Currently selected store location ID', false, false, '');
+
 
 -- ============================================================================
 -- SEED DATA: Industries
