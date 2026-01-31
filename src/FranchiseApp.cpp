@@ -1973,6 +1973,7 @@ void FranchiseApp::showSettingsPage() {
         std::string storeName = nameInput->text().toUTF8();
         std::string address = addressInput->text().toUTF8();
 
+        bool geocodeSuccess = false;
         if (!storeName.empty() && !address.empty()) {
             Models::GeoLocation location = searchService_->geocodeAddress(address);
 
@@ -1981,6 +1982,9 @@ void FranchiseApp::showSettingsPage() {
             franchisee_.ownerName = ownerInput->text().toUTF8();
             franchisee_.phone = phoneInput->text().toUTF8();
             franchisee_.location = location;
+
+            // Check if geocoding was successful
+            geocodeSuccess = location.hasValidCoordinates();
 
             try {
                 franchisee_.defaultSearchRadiusMiles = std::stod(radiusInput->text().toUTF8());
@@ -2012,7 +2016,7 @@ void FranchiseApp::showSettingsPage() {
                 }
             }
 
-            franchisee_.isConfigured = true;
+            franchisee_.isConfigured = geocodeSuccess;  // Only mark configured if geocoding succeeded
             sidebar_->setUserInfo(franchisee_.ownerName.empty() ? "Franchise Owner" : franchisee_.ownerName,
                                    franchisee_.storeName);
             changed = true;
@@ -2069,8 +2073,13 @@ void FranchiseApp::showSettingsPage() {
                 aiStatus->setStyleClass("status-indicator status-configured");
             }
 
-            statusMessage->setText("All settings saved successfully!");
-            statusMessage->setStyleClass("settings-status-message status-success");
+            if (!geocodeSuccess && !address.empty()) {
+                statusMessage->setText("Settings saved, but address could not be geocoded. Check the address and try again.");
+                statusMessage->setStyleClass("settings-status-message status-warning");
+            } else {
+                statusMessage->setText("All settings saved successfully!");
+                statusMessage->setStyleClass("settings-status-message status-success");
+            }
             statusMessage->setHidden(false);
 
             // Clear password fields

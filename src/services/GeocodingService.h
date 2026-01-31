@@ -119,7 +119,8 @@ private:
 
     std::string buildGeocodeUrl(const std::string& address);
     std::string buildReverseGeocodeUrl(double lat, double lon);
-    Models::GeoLocation parseNominatimResponse(const std::string& json);
+    Models::GeoLocation callNominatimAPI(const std::string& address);
+    Models::GeoLocation parseNominatimResponse(const std::string& json, const std::string& originalAddress);
     std::string normalizeAddress(const std::string& address);
 };
 

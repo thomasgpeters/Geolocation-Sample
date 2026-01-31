@@ -138,7 +138,7 @@ Models::GeoLocation NominatimGeocodingService::geocodeSync(const std::string& ad
         }
     }
 
-    // Check known locations (demo data)
+    // Check known locations first (fast path for common cities)
     auto known = knownLocations_.find(cacheKey);
     if (known != knownLocations_.end()) {
         Models::GeoLocation result = known->second;
@@ -152,18 +152,165 @@ Models::GeoLocation NominatimGeocodingService::geocodeSync(const std::string& ad
         return result;
     }
 
-    // For demo/prototype, return Denver as default for unknown addresses
-    // In production, this would call the actual Nominatim API
-    Models::GeoLocation defaultLocation(39.7392, -104.9903, "Denver", "CO");
-    defaultLocation.source = "local";
-    defaultLocation.formattedAddress = address;
+    // Call Nominatim API for any address not in known locations
+    Models::GeoLocation result = callNominatimAPI(address);
 
-    // Cache the result
+    // Cache the result (even if invalid, to avoid repeated failed calls)
     if (config_.enableCaching) {
-        cache_[cacheKey] = {defaultLocation, std::time(nullptr)};
+        cache_[cacheKey] = {result, std::time(nullptr)};
     }
 
-    return defaultLocation;
+    return result;
+}
+
+Models::GeoLocation NominatimGeocodingService::callNominatimAPI(const std::string& address) {
+    CURL* curl = curl_easy_init();
+    if (!curl) {
+        // Return invalid location on CURL init failure
+        Models::GeoLocation invalid;
+        invalid.isValid = false;
+        return invalid;
+    }
+
+    // Build URL with URL-encoded address
+    std::string url = config_.endpoint + "/search?format=json&limit=1&q=";
+    char* encoded = curl_easy_escape(curl, address.c_str(), static_cast<int>(address.length()));
+    if (encoded) {
+        url += encoded;
+        curl_free(encoded);
+    } else {
+        curl_easy_cleanup(curl);
+        Models::GeoLocation invalid;
+        invalid.isValid = false;
+        return invalid;
+    }
+
+    // Set up CURL request
+    std::string response;
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, config_.userAgent.c_str());
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+
+    CURLcode res = curl_easy_perform(curl);
+    curl_easy_cleanup(curl);
+
+    if (res != CURLE_OK) {
+        // Network error - return invalid location
+        Models::GeoLocation invalid;
+        invalid.isValid = false;
+        return invalid;
+    }
+
+    // Parse JSON response
+    // Nominatim returns: [{"lat":"40.7127281","lon":"-74.0060152","display_name":"...","address":{"city":"...",...}}]
+    return parseNominatimResponse(response, address);
+}
+
+Models::GeoLocation NominatimGeocodingService::parseNominatimResponse(const std::string& json, const std::string& originalAddress) {
+    Models::GeoLocation result;
+    result.isValid = false;
+
+    // Check if response is empty or not a valid array
+    if (json.empty() || json[0] != '[') {
+        return result;
+    }
+
+    // Check for empty array
+    if (json == "[]") {
+        return result;
+    }
+
+    // Extract latitude
+    size_t latPos = json.find("\"lat\"");
+    if (latPos == std::string::npos) {
+        return result;
+    }
+    size_t latStart = json.find("\"", latPos + 5);
+    size_t latEnd = json.find("\"", latStart + 1);
+    if (latStart == std::string::npos || latEnd == std::string::npos) {
+        return result;
+    }
+    std::string latStr = json.substr(latStart + 1, latEnd - latStart - 1);
+
+    // Extract longitude
+    size_t lonPos = json.find("\"lon\"");
+    if (lonPos == std::string::npos) {
+        return result;
+    }
+    size_t lonStart = json.find("\"", lonPos + 5);
+    size_t lonEnd = json.find("\"", lonStart + 1);
+    if (lonStart == std::string::npos || lonEnd == std::string::npos) {
+        return result;
+    }
+    std::string lonStr = json.substr(lonStart + 1, lonEnd - lonStart - 1);
+
+    // Extract display_name for formatted address
+    std::string displayName = originalAddress;
+    size_t displayPos = json.find("\"display_name\"");
+    if (displayPos != std::string::npos) {
+        size_t displayStart = json.find("\"", displayPos + 14);
+        size_t displayEnd = json.find("\"", displayStart + 1);
+        if (displayStart != std::string::npos && displayEnd != std::string::npos) {
+            displayName = json.substr(displayStart + 1, displayEnd - displayStart - 1);
+        }
+    }
+
+    // Parse coordinates
+    try {
+        result.latitude = std::stod(latStr);
+        result.longitude = std::stod(lonStr);
+        result.isValid = true;
+        result.source = "nominatim";
+        result.formattedAddress = displayName;
+
+        // Try to extract city and state from address object
+        size_t cityPos = json.find("\"city\"");
+        if (cityPos != std::string::npos) {
+            size_t cityStart = json.find("\"", cityPos + 6);
+            size_t cityEnd = json.find("\"", cityStart + 1);
+            if (cityStart != std::string::npos && cityEnd != std::string::npos) {
+                result.city = json.substr(cityStart + 1, cityEnd - cityStart - 1);
+            }
+        }
+        // Try town if city not found
+        if (result.city.empty()) {
+            size_t townPos = json.find("\"town\"");
+            if (townPos != std::string::npos) {
+                size_t townStart = json.find("\"", townPos + 6);
+                size_t townEnd = json.find("\"", townStart + 1);
+                if (townStart != std::string::npos && townEnd != std::string::npos) {
+                    result.city = json.substr(townStart + 1, townEnd - townStart - 1);
+                }
+            }
+        }
+        // Try village if town not found
+        if (result.city.empty()) {
+            size_t villagePos = json.find("\"village\"");
+            if (villagePos != std::string::npos) {
+                size_t villageStart = json.find("\"", villagePos + 9);
+                size_t villageEnd = json.find("\"", villageStart + 1);
+                if (villageStart != std::string::npos && villageEnd != std::string::npos) {
+                    result.city = json.substr(villageStart + 1, villageEnd - villageStart - 1);
+                }
+            }
+        }
+
+        size_t statePos = json.find("\"state\"");
+        if (statePos != std::string::npos) {
+            size_t stateStart = json.find("\"", statePos + 7);
+            size_t stateEnd = json.find("\"", stateStart + 1);
+            if (stateStart != std::string::npos && stateEnd != std::string::npos) {
+                result.state = json.substr(stateStart + 1, stateEnd - stateStart - 1);
+            }
+        }
+    } catch (...) {
+        result.isValid = false;
+    }
+
+    return result;
 }
 
 Models::GeoLocation NominatimGeocodingService::reverseGeocodeSync(double latitude, double longitude) {
