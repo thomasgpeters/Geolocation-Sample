@@ -31,9 +31,15 @@ public:
     void loadFromEnvironment() {
         std::lock_guard<std::mutex> lock(mutex_);
 
-        // Load ApiLogicServer URL (infrastructure config)
-        if (const char* url = std::getenv("API_LOGIC_SERVER_URL")) {
-            apiLogicServerUrl_ = url;
+        // Load ApiLogicServer settings (infrastructure config)
+        if (const char* host = std::getenv("API_LOGIC_SERVER_HOST")) {
+            apiLogicServerHost_ = host;
+        }
+        if (const char* port = std::getenv("API_LOGIC_SERVER_PORT")) {
+            try { apiLogicServerPort_ = std::stoi(port); } catch (...) {}
+        }
+        if (const char* protocol = std::getenv("API_LOGIC_SERVER_PROTOCOL")) {
+            apiLogicServerProtocol_ = protocol;
         }
         if (const char* prefix = std::getenv("API_LOGIC_SERVER_API_PREFIX")) {
             apiLogicServerApiPrefix_ = prefix;
@@ -90,8 +96,12 @@ public:
 
             // Only load from file if not already set (env vars take precedence)
             // ApiLogicServer settings
-            if (key == "url" && !value.empty() && apiLogicServerUrl_.empty()) {
-                apiLogicServerUrl_ = value;
+            if (key == "host" && !value.empty() && apiLogicServerHost_.empty()) {
+                apiLogicServerHost_ = value;
+            } else if (key == "port" && !value.empty() && apiLogicServerPort_ == 0) {
+                try { apiLogicServerPort_ = std::stoi(value); } catch (...) {}
+            } else if (key == "protocol" && !value.empty() && apiLogicServerProtocol_.empty()) {
+                apiLogicServerProtocol_ = value;
             } else if (key == "api_prefix" && !value.empty() && apiLogicServerApiPrefix_.empty()) {
                 apiLogicServerApiPrefix_ = value;
             } else if (key == "timeout_ms" && !value.empty()) {
@@ -148,10 +158,20 @@ public:
         return true;
     }
 
-    // Getters - ApiLogicServer
-    std::string getApiLogicServerUrl() const {
+    // Getters - ApiLogicServer (individual components)
+    std::string getApiLogicServerHost() const {
         std::lock_guard<std::mutex> lock(mutex_);
-        return apiLogicServerUrl_.empty() ? "http://localhost:5656" : apiLogicServerUrl_;
+        return apiLogicServerHost_.empty() ? "localhost" : apiLogicServerHost_;
+    }
+
+    int getApiLogicServerPort() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return apiLogicServerPort_ > 0 ? apiLogicServerPort_ : 5656;
+    }
+
+    std::string getApiLogicServerProtocol() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return apiLogicServerProtocol_.empty() ? "http" : apiLogicServerProtocol_;
     }
 
     std::string getApiLogicServerApiPrefix() const {
@@ -162,6 +182,13 @@ public:
     int getApiLogicServerTimeoutMs() const {
         std::lock_guard<std::mutex> lock(mutex_);
         return apiLogicServerTimeoutMs_ > 0 ? apiLogicServerTimeoutMs_ : 30000;
+    }
+
+    // Constructed URLs (built from components)
+    std::string getApiLogicServerUrl() const {
+        return getApiLogicServerProtocol() + "://" +
+               getApiLogicServerHost() + ":" +
+               std::to_string(getApiLogicServerPort());
     }
 
     std::string getApiLogicServerEndpoint() const {
@@ -263,8 +290,10 @@ public:
         std::lock_guard<std::mutex> lock(mutex_);
 
         std::cout << "Infrastructure Configuration:" << std::endl;
-        std::cout << "  ApiLogicServer:  " << (apiLogicServerUrl_.empty() ? "http://localhost:5656 (default)" : apiLogicServerUrl_) << std::endl;
-        std::cout << "  API Prefix:      " << (apiLogicServerApiPrefix_.empty() ? "/api (default)" : apiLogicServerApiPrefix_) << std::endl;
+        std::cout << "  ALS Host:        " << (apiLogicServerHost_.empty() ? "localhost (default)" : apiLogicServerHost_) << std::endl;
+        std::cout << "  ALS Port:        " << (apiLogicServerPort_ == 0 ? "5656 (default)" : std::to_string(apiLogicServerPort_)) << std::endl;
+        std::cout << "  ALS Protocol:    " << (apiLogicServerProtocol_.empty() ? "http (default)" : apiLogicServerProtocol_) << std::endl;
+        std::cout << "  ALS API Prefix:  " << (apiLogicServerApiPrefix_.empty() ? "/api (default)" : apiLogicServerApiPrefix_) << std::endl;
         std::cout << std::endl;
 
         std::cout << "API Configuration Status:" << std::endl;
@@ -285,7 +314,9 @@ private:
     mutable std::mutex mutex_;
 
     // ApiLogicServer settings (infrastructure - from local config only)
-    std::string apiLogicServerUrl_;
+    std::string apiLogicServerHost_;
+    int apiLogicServerPort_ = 0;
+    std::string apiLogicServerProtocol_;
     std::string apiLogicServerApiPrefix_;
     int apiLogicServerTimeoutMs_ = 30000;
 

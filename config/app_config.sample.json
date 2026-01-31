@@ -2,7 +2,9 @@
   "_comment": "Infrastructure configuration - NOT stored in database",
 
   "api_logic_server": {
-    "url": "http://localhost:5656",
+    "host": "localhost",
+    "port": 5656,
+    "protocol": "http",
     "api_prefix": "/api",
     "timeout_ms": 30000
   },
