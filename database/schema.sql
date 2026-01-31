@@ -1261,13 +1261,13 @@ COMMENT ON FUNCTION set_app_config IS 'Set application configuration value by ke
 
 INSERT INTO users (id, email, password_hash, first_name, last_name, role, franchisee_id, is_active, is_verified) VALUES
 -- Admin user (password: admin123)
-('u1000000-0000-0000-0000-000000000001'::uuid,
+('f1000000-0000-0000-0000-000000000001'::uuid,
  'admin@franchiseai.com',
  '240be518fabd2724ddb6f04eeb9d5b59',  -- MD5 hash of 'admin123' (dev only)
  'System', 'Administrator', 'admin', NULL, true, true),
 
 -- Pittsburgh franchisee user (password: mike123)
-('u1000000-0000-0000-0000-000000000002'::uuid,
+('f1000000-0000-0000-0000-000000000002'::uuid,
  'mike@pittsburghcatering.com',
  'e99a18c428cb38d5f260853678922e03',  -- MD5 hash of 'mike123' (dev only)
  'Mike', 'Owner', 'franchisee',
