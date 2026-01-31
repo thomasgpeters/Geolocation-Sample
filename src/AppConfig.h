@@ -301,6 +301,10 @@ public:
         return !brandLogoPath_.empty();
     }
 
+    static const char* getDefaultLogoUrl() {
+        return DEFAULT_LOGO_URL;
+    }
+
     /**
      * @brief Print configuration status (for startup logging)
      */

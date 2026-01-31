@@ -2572,7 +2572,7 @@ void FranchiseApp::showSettingsPage() {
     resetBtn->clicked().connect([this, logoUrlInput, logoPreview] {
         auto& appConfig = AppConfig::instance();
         logoUrlInput->setText("");
-        logoPreview->setImageLink(Wt::WLink(AppConfig::DEFAULT_LOGO_URL));
+        logoPreview->setImageLink(Wt::WLink(AppConfig::getDefaultLogoUrl()));
     });
 
     // ===========================================
@@ -2793,7 +2793,7 @@ void FranchiseApp::showSettingsPage() {
             appConfig.setBrandLogoPath(logoUrl);
             // Update the sidebar logo
             if (sidebar_) {
-                sidebar_->setLogoUrl(logoUrl.empty() ? AppConfig::DEFAULT_LOGO_URL : logoUrl);
+                sidebar_->setLogoUrl(logoUrl.empty() ? AppConfig::getDefaultLogoUrl() : logoUrl);
             }
             changed = true;
         }
