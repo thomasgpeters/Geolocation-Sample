@@ -51,6 +51,9 @@ std::string StoreLocationDTO::toJson() const {
     json << "{\"data\": {\"attributes\": {";
     json << "\"store_name\": \"" << storeName << "\"";
 
+    if (!franchiseeId.empty()) {
+        json << ", \"franchisee_id\": \"" << franchiseeId << "\"";
+    }
     if (!storeCode.empty()) {
         json << ", \"store_code\": \"" << storeCode << "\"";
     }
@@ -168,6 +171,100 @@ StoreLocationDTO StoreLocationDTO::fromJson(const std::string& json) {
 
     std::string primaryStr = extractJsonString(json, "is_primary");
     dto.isPrimary = (primaryStr == "true" || primaryStr == "1");
+
+    return dto;
+}
+
+// ============================================================================
+// FranchiseeDTO implementation
+// ============================================================================
+
+std::string FranchiseeDTO::toJson() const {
+    std::ostringstream json;
+    // Wrap in JSON:API format for ApiLogicServer
+    json << "{\"data\": {\"attributes\": {";
+    json << "\"business_name\": \"" << businessName << "\"";
+
+    if (!dbaName.empty()) {
+        json << ", \"dba_name\": \"" << dbaName << "\"";
+    }
+    if (!franchiseNumber.empty()) {
+        json << ", \"franchise_number\": \"" << franchiseNumber << "\"";
+    }
+    if (!ownerFirstName.empty()) {
+        json << ", \"owner_first_name\": \"" << ownerFirstName << "\"";
+    }
+    if (!ownerLastName.empty()) {
+        json << ", \"owner_last_name\": \"" << ownerLastName << "\"";
+    }
+    if (!email.empty()) {
+        json << ", \"email\": \"" << email << "\"";
+    }
+    if (!phone.empty()) {
+        json << ", \"phone\": \"" << phone << "\"";
+    }
+    if (!addressLine1.empty()) {
+        json << ", \"address_line1\": \"" << addressLine1 << "\"";
+    }
+    if (!addressLine2.empty()) {
+        json << ", \"address_line2\": \"" << addressLine2 << "\"";
+    }
+    if (!city.empty()) {
+        json << ", \"city\": \"" << city << "\"";
+    }
+    if (!stateProvince.empty()) {
+        json << ", \"state_province\": \"" << stateProvince << "\"";
+    }
+    if (!postalCode.empty()) {
+        json << ", \"postal_code\": \"" << postalCode << "\"";
+    }
+    json << ", \"country_code\": \"" << countryCode << "\"";
+
+    if (latitude != 0.0 || longitude != 0.0) {
+        json << ", \"latitude\": " << latitude;
+        json << ", \"longitude\": " << longitude;
+    }
+
+    json << ", \"is_active\": " << (isActive ? "true" : "false");
+
+    json << "}, \"type\": \"Franchisee\"";
+    if (!id.empty()) {
+        json << ", \"id\": \"" << id << "\"";
+    }
+    json << "}}";
+    return json.str();
+}
+
+FranchiseeDTO FranchiseeDTO::fromJson(const std::string& json) {
+    FranchiseeDTO dto;
+
+    dto.id = extractJsonString(json, "id");
+    dto.businessName = extractJsonString(json, "business_name");
+    dto.dbaName = extractJsonString(json, "dba_name");
+    dto.franchiseNumber = extractJsonString(json, "franchise_number");
+    dto.ownerFirstName = extractJsonString(json, "owner_first_name");
+    dto.ownerLastName = extractJsonString(json, "owner_last_name");
+    dto.email = extractJsonString(json, "email");
+    dto.phone = extractJsonString(json, "phone");
+    dto.addressLine1 = extractJsonString(json, "address_line1");
+    dto.addressLine2 = extractJsonString(json, "address_line2");
+    dto.city = extractJsonString(json, "city");
+    dto.stateProvince = extractJsonString(json, "state_province");
+    dto.postalCode = extractJsonString(json, "postal_code");
+    dto.countryCode = extractJsonString(json, "country_code");
+    if (dto.countryCode.empty()) dto.countryCode = "US";
+
+    std::string latStr = extractJsonString(json, "latitude");
+    std::string lngStr = extractJsonString(json, "longitude");
+    if (!latStr.empty()) {
+        try { dto.latitude = std::stod(latStr); } catch (...) {}
+    }
+    if (!lngStr.empty()) {
+        try { dto.longitude = std::stod(lngStr); } catch (...) {}
+    }
+
+    std::string activeStr = extractJsonString(json, "is_active");
+    dto.isActive = (activeStr == "true" || activeStr == "1");
 
     return dto;
 }
@@ -471,6 +568,101 @@ std::vector<StoreLocationDTO> ApiLogicServerClient::parseStoreLocations(const Ap
     }
 
     return locations;
+}
+
+// ============================================================================
+// Franchisee API Operations
+// ============================================================================
+
+ApiResponse ApiLogicServerClient::saveFranchisee(const FranchiseeDTO& franchisee) {
+    if (franchisee.id.empty()) {
+        // Create new record - generate UUID client-side
+        FranchiseeDTO newFranchisee = franchisee;
+        newFranchisee.id = generateUUID();
+        std::string json = newFranchisee.toJson();
+
+        std::cout << "  [ALS] Creating new Franchisee with generated UUID: " << newFranchisee.id << std::endl;
+        return httpPost("/Franchisee", json);
+    } else {
+        // Update existing record
+        std::string json = franchisee.toJson();
+        std::cout << "  [ALS] Updating existing Franchisee: " << franchisee.id << std::endl;
+        return httpPatch("/Franchisee/" + franchisee.id, json);
+    }
+}
+
+ApiResponse ApiLogicServerClient::getFranchisees() {
+    return httpGet("/Franchisee");
+}
+
+ApiResponse ApiLogicServerClient::getFranchisee(const std::string& id) {
+    if (id.empty()) {
+        ApiResponse response;
+        response.success = false;
+        response.statusCode = 400;
+        response.errorMessage = "Franchisee ID cannot be empty";
+        return response;
+    }
+    return httpGet("/Franchisee/" + id);
+}
+
+ApiResponse ApiLogicServerClient::deleteFranchisee(const std::string& id) {
+    if (id.empty()) {
+        ApiResponse response;
+        response.success = false;
+        response.statusCode = 400;
+        response.errorMessage = "Franchisee ID cannot be empty";
+        return response;
+    }
+    return httpDelete("/Franchisee/" + id);
+}
+
+std::vector<FranchiseeDTO> ApiLogicServerClient::parseFranchisees(const ApiResponse& response) {
+    std::vector<FranchiseeDTO> franchisees;
+
+    if (!response.success || response.body.empty()) {
+        return franchisees;
+    }
+
+    const std::string& json = response.body;
+
+    // Find the array start
+    size_t arrayStart = json.find('[');
+    if (arrayStart == std::string::npos) {
+        // Single object?
+        if (json.find('{') != std::string::npos) {
+            franchisees.push_back(FranchiseeDTO::fromJson(json));
+        }
+        return franchisees;
+    }
+
+    // Parse array of objects
+    size_t pos = arrayStart + 1;
+    int braceCount = 0;
+    size_t objStart = std::string::npos;
+
+    while (pos < json.length()) {
+        char c = json[pos];
+
+        if (c == '{') {
+            if (braceCount == 0) {
+                objStart = pos;
+            }
+            braceCount++;
+        } else if (c == '}') {
+            braceCount--;
+            if (braceCount == 0 && objStart != std::string::npos) {
+                std::string objJson = json.substr(objStart, pos - objStart + 1);
+                franchisees.push_back(FranchiseeDTO::fromJson(objJson));
+                objStart = std::string::npos;
+            }
+        } else if (c == ']' && braceCount == 0) {
+            break;
+        }
+        pos++;
+    }
+
+    return franchisees;
 }
 
 bool ApiLogicServerClient::isAvailable() {
