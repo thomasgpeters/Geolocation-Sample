@@ -300,18 +300,78 @@ void FranchiseApp::onViewDetails(const std::string& id) {
 }
 
 void FranchiseApp::onAddToProspects(const std::string& id) {
-    // Find the item and add to prospects list
+    // Find the item in search results
     for (const auto& item : lastResults_.items) {
         if (item.id == id) {
-            // Show confirmation
+            // Check if already saved
+            bool alreadySaved = false;
+            for (const auto& saved : savedProspects_) {
+                if (saved.id == id) {
+                    alreadySaved = true;
+                    break;
+                }
+            }
+
+            if (alreadySaved) {
+                auto dialog = addChild(std::make_unique<Wt::WMessageBox>(
+                    "Already Saved",
+                    item.getTitle() + " is already in your prospects list.",
+                    Wt::Icon::Information,
+                    Wt::StandardButton::Ok
+                ));
+                dialog->show();
+                return;
+            }
+
+            // Create a copy for saving
+            Models::SearchResultItem prospectItem = item;
+
+            // Perform AI analysis for this specific prospect
+            analyzeProspect(prospectItem);
+
+            // Add to saved prospects
+            savedProspects_.push_back(prospectItem);
+
+            // Show confirmation with AI summary if available
+            std::string message = item.getTitle() + " has been added to your prospects list.";
+            if (!prospectItem.aiSummary.empty() && prospectItem.aiSummary != item.aiSummary) {
+                message += "\n\nAI Analysis: " + prospectItem.aiSummary.substr(0, 200);
+                if (prospectItem.aiSummary.length() > 200) {
+                    message += "...";
+                }
+            }
+
             auto dialog = addChild(std::make_unique<Wt::WMessageBox>(
                 "Added to Prospects",
-                item.getTitle() + " has been added to your prospects list.",
+                message,
                 Wt::Icon::Information,
                 Wt::StandardButton::Ok
             ));
             dialog->show();
             break;
+        }
+    }
+}
+
+void FranchiseApp::analyzeProspect(Models::SearchResultItem& item) {
+    if (!item.business) return;
+
+    // Use AI engine if available for deep analysis
+    if (searchService_->isAIEngineConfigured()) {
+        auto* aiEngine = searchService_->getAIEngine();
+        if (aiEngine) {
+            auto analysis = aiEngine->analyzeBusinessPotentialSync(*item.business);
+            if (!analysis.summary.empty()) {
+                item.aiSummary = analysis.summary;
+                item.keyHighlights = analysis.keyHighlights;
+                item.recommendedActions = analysis.recommendedActions;
+                item.matchReason = analysis.matchReason;
+                item.aiConfidenceScore = analysis.confidenceScore;
+
+                if (analysis.cateringPotentialScore > 0) {
+                    item.business->cateringPotentialScore = analysis.cateringPotentialScore;
+                }
+            }
         }
     }
 }
@@ -744,22 +804,135 @@ void FranchiseApp::showProspectsPage() {
     auto title = header->addWidget(std::make_unique<Wt::WText>("My Prospects"));
     title->setStyleClass("page-title");
 
-    auto placeholder = container->addWidget(std::make_unique<Wt::WContainerWidget>());
-    placeholder->setStyleClass("placeholder-content");
+    // Show count if there are saved prospects
+    if (!savedProspects_.empty()) {
+        auto subtitle = header->addWidget(std::make_unique<Wt::WText>(
+            std::to_string(savedProspects_.size()) + " saved prospect" +
+            (savedProspects_.size() == 1 ? "" : "s")
+        ));
+        subtitle->setStyleClass("page-subtitle");
+    }
 
-    auto icon = placeholder->addWidget(std::make_unique<Wt::WText>("👥"));
-    icon->setStyleClass("placeholder-icon");
+    if (savedProspects_.empty()) {
+        // Show placeholder when no prospects saved
+        auto placeholder = container->addWidget(std::make_unique<Wt::WContainerWidget>());
+        placeholder->setStyleClass("placeholder-content");
 
-    auto text = placeholder->addWidget(std::make_unique<Wt::WText>(
-        "Your saved prospects will appear here. Start an AI Search to find new prospects."
-    ));
-    text->setStyleClass("placeholder-text");
+        auto icon = placeholder->addWidget(std::make_unique<Wt::WText>("👥"));
+        icon->setStyleClass("placeholder-icon");
 
-    auto btn = placeholder->addWidget(std::make_unique<Wt::WPushButton>("Start AI Search"));
-    btn->setStyleClass("btn btn-primary");
-    btn->clicked().connect([this] {
-        onMenuItemSelected("ai-search");
-    });
+        auto text = placeholder->addWidget(std::make_unique<Wt::WText>(
+            "Your saved prospects will appear here. Start an AI Search to find new prospects."
+        ));
+        text->setStyleClass("placeholder-text");
+
+        auto btn = placeholder->addWidget(std::make_unique<Wt::WPushButton>("Start AI Search"));
+        btn->setStyleClass("btn btn-primary");
+        btn->clicked().connect([this] {
+            onMenuItemSelected("ai-search");
+        });
+    } else {
+        // Show saved prospects list
+        auto prospectsList = container->addWidget(std::make_unique<Wt::WContainerWidget>());
+        prospectsList->setStyleClass("prospects-list");
+
+        for (size_t i = 0; i < savedProspects_.size(); ++i) {
+            const auto& prospect = savedProspects_[i];
+
+            auto card = prospectsList->addWidget(std::make_unique<Wt::WContainerWidget>());
+            card->setStyleClass("prospect-card");
+
+            // Card header with name and score
+            auto cardHeader = card->addWidget(std::make_unique<Wt::WContainerWidget>());
+            cardHeader->setStyleClass("prospect-card-header");
+
+            auto nameText = cardHeader->addWidget(std::make_unique<Wt::WText>(prospect.getTitle()));
+            nameText->setStyleClass("prospect-name");
+
+            // Score badge
+            std::string scoreClass = "prospect-score";
+            if (prospect.overallScore >= 70) scoreClass += " score-high";
+            else if (prospect.overallScore >= 40) scoreClass += " score-medium";
+            else scoreClass += " score-low";
+
+            auto scoreText = cardHeader->addWidget(std::make_unique<Wt::WText>(
+                std::to_string(prospect.overallScore) + "%"
+            ));
+            scoreText->setStyleClass(scoreClass);
+
+            // Business info
+            if (prospect.business) {
+                auto infoContainer = card->addWidget(std::make_unique<Wt::WContainerWidget>());
+                infoContainer->setStyleClass("prospect-info");
+
+                if (!prospect.business->address.empty()) {
+                    auto addressText = infoContainer->addWidget(std::make_unique<Wt::WText>(
+                        prospect.business->address
+                    ));
+                    addressText->setStyleClass("prospect-address");
+                }
+
+                auto typeText = infoContainer->addWidget(std::make_unique<Wt::WText>(
+                    prospect.business->getBusinessTypeString() + " | ~" +
+                    std::to_string(prospect.business->employeeCount) + " employees"
+                ));
+                typeText->setStyleClass("prospect-type");
+            }
+
+            // AI Summary (if available)
+            if (!prospect.aiSummary.empty()) {
+                auto summaryContainer = card->addWidget(std::make_unique<Wt::WContainerWidget>());
+                summaryContainer->setStyleClass("prospect-summary");
+
+                auto summaryLabel = summaryContainer->addWidget(std::make_unique<Wt::WText>("AI Analysis:"));
+                summaryLabel->setStyleClass("summary-label");
+
+                auto summaryText = summaryContainer->addWidget(std::make_unique<Wt::WText>(
+                    prospect.aiSummary
+                ));
+                summaryText->setStyleClass("summary-text");
+            }
+
+            // Key highlights
+            if (!prospect.keyHighlights.empty()) {
+                auto highlightsContainer = card->addWidget(std::make_unique<Wt::WContainerWidget>());
+                highlightsContainer->setStyleClass("prospect-highlights");
+
+                for (const auto& highlight : prospect.keyHighlights) {
+                    auto highlightText = highlightsContainer->addWidget(std::make_unique<Wt::WText>(
+                        "• " + highlight
+                    ));
+                    highlightText->setStyleClass("highlight-item");
+                }
+            }
+
+            // Actions
+            auto actionsContainer = card->addWidget(std::make_unique<Wt::WContainerWidget>());
+            actionsContainer->setStyleClass("prospect-actions");
+
+            auto removeBtn = actionsContainer->addWidget(std::make_unique<Wt::WPushButton>("Remove"));
+            removeBtn->setStyleClass("btn btn-outline btn-sm");
+
+            // Capture index for removal
+            size_t prospectIndex = i;
+            removeBtn->clicked().connect([this, prospectIndex] {
+                if (prospectIndex < savedProspects_.size()) {
+                    savedProspects_.erase(savedProspects_.begin() + prospectIndex);
+                    showProspectsPage();  // Refresh the page
+                }
+            });
+        }
+
+        // Add search button at bottom
+        auto actionsSection = container->addWidget(std::make_unique<Wt::WContainerWidget>());
+        actionsSection->setStyleClass("prospects-actions");
+
+        auto searchBtn = actionsSection->addWidget(std::make_unique<Wt::WPushButton>("Find More Prospects"));
+        searchBtn->setStyleClass("btn btn-primary");
+        searchBtn->clicked().connect([this] {
+            onMenuItemSelected("ai-search");
+        });
+    }
 }
 
 void FranchiseApp::showDemographicsPage() {

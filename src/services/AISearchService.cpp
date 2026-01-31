@@ -483,36 +483,22 @@ Models::SearchResultItem AISearchService::createDemographicResultItem(
 }
 
 void AISearchService::analyzeResults(Models::SearchResults& results) {
-    // First, score ALL results using local scoring (fast, no API calls)
+    // Score and generate local insights for ALL results (fast, no API calls)
+    // AI analysis is deferred until user adds a prospect to their saved list
     for (auto& item : results.items) {
         scoreResult(item);
+        if (item.business) {
+            generateLocalInsights(item);
+        }
     }
 
-    // Sort by initial score to identify top prospects
+    // Sort by score to show best prospects first
     std::sort(results.items.begin(), results.items.end(),
         [](const Models::SearchResultItem& a, const Models::SearchResultItem& b) {
             return a.overallScore > b.overallScore;
         });
 
-    // Only generate AI insights for top results to avoid API timeout issues
-    // Limit to max 5 AI calls to keep response time reasonable
-    const size_t maxAIAnalysisItems = 5;
-    size_t aiAnalyzedCount = 0;
-
-    for (auto& item : results.items) {
-        if (aiAnalyzedCount >= maxAIAnalysisItems) {
-            // For remaining items, use local fallback analysis (no API call)
-            if (item.business && item.aiSummary.empty()) {
-                generateLocalInsights(item);
-            }
-        } else if (item.business) {
-            // Only call AI for business items (not demographics)
-            generateAIInsights(item);
-            aiAnalyzedCount++;
-        }
-    }
-
-    // Generate overall analysis
+    // Generate overall analysis (uses local analysis, no API calls)
     generateOverallAnalysis(results);
 }
 
