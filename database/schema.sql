@@ -789,9 +789,9 @@ CREATE TABLE store_locations (
     -- Address
     address_line1 VARCHAR(200) NOT NULL,
     address_line2 VARCHAR(100),
-    city VARCHAR(100) NOT NULL,
-    state_province VARCHAR(50) NOT NULL,
-    postal_code VARCHAR(20) NOT NULL,
+    city VARCHAR(100) DEFAULT '',
+    state_province VARCHAR(50) DEFAULT '',
+    postal_code VARCHAR(20) DEFAULT '',
     country_code CHAR(2) DEFAULT 'US',
 
     -- Geolocation (simple lat/lng)
@@ -820,6 +820,15 @@ CREATE INDEX idx_store_locations_active ON store_locations(is_active) WHERE is_a
 
 CREATE TRIGGER update_store_locations_updated_at BEFORE UPDATE ON store_locations
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Migration: Make city/state/postal nullable for existing tables
+-- (These fields may not always be available from geocoding)
+ALTER TABLE store_locations ALTER COLUMN city SET DEFAULT '';
+ALTER TABLE store_locations ALTER COLUMN city DROP NOT NULL;
+ALTER TABLE store_locations ALTER COLUMN state_province SET DEFAULT '';
+ALTER TABLE store_locations ALTER COLUMN state_province DROP NOT NULL;
+ALTER TABLE store_locations ALTER COLUMN postal_code SET DEFAULT '';
+ALTER TABLE store_locations ALTER COLUMN postal_code DROP NOT NULL;
 
 COMMENT ON TABLE store_locations IS 'Physical store locations for franchise operations';
 

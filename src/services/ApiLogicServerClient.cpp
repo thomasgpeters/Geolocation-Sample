@@ -30,15 +30,10 @@ std::string StoreLocationDTO::toJson() const {
     if (!addressLine2.empty()) {
         json << ", \"address_line2\": \"" << addressLine2 << "\"";
     }
-    if (!city.empty()) {
-        json << ", \"city\": \"" << city << "\"";
-    }
-    if (!stateProvince.empty()) {
-        json << ", \"state_province\": \"" << stateProvince << "\"";
-    }
-    if (!postalCode.empty()) {
-        json << ", \"postal_code\": \"" << postalCode << "\"";
-    }
+    // Always include city/state/postal - database may require them
+    json << ", \"city\": \"" << city << "\"";
+    json << ", \"state_province\": \"" << stateProvince << "\"";
+    json << ", \"postal_code\": \"" << postalCode << "\"";
     json << ", \"country_code\": \"" << countryCode << "\"";
 
     if (latitude != 0.0 || longitude != 0.0) {

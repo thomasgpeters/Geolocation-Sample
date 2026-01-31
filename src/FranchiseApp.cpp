@@ -396,6 +396,12 @@ void FranchiseApp::onFranchiseeSetupComplete(const Models::Franchisee& franchise
     // Update the sidebar with franchisee info
     updateHeaderWithFranchisee();
 
+    // Save to ApiLogicServer
+    if (franchisee_.location.hasValidCoordinates()) {
+        std::cout << "  [Setup] Saving store location to ALS..." << std::endl;
+        saveStoreLocationToALS();
+    }
+
     // Navigate to AI Search page
     sidebar_->setActiveItem("ai-search");
     setInternalPath("/search", false);
@@ -1706,47 +1712,7 @@ void FranchiseApp::showSettingsPage() {
     storePanel->setStyleClass("tab-panel active");
     storePanel->setId("tab-store");
 
-    // ===========================================
-    // Store Selector Section
-    // ===========================================
-    auto selectorSection = storePanel->addWidget(std::make_unique<Wt::WContainerWidget>());
-    selectorSection->setStyleClass("settings-section");
-
-    selectorSection->addWidget(std::make_unique<Wt::WText>("Select Store"))->setStyleClass("section-title");
-    selectorSection->addWidget(std::make_unique<Wt::WText>(
-        "Choose an existing store location or create a new one below."
-    ))->setStyleClass("section-description");
-
-    auto selectorGroup = selectorSection->addWidget(std::make_unique<Wt::WContainerWidget>());
-    selectorGroup->setStyleClass("form-group");
-    selectorGroup->addWidget(std::make_unique<Wt::WText>("Current Store"))->setStyleClass("form-label");
-
-    auto storeCombo = selectorGroup->addWidget(std::make_unique<Wt::WComboBox>());
-    storeCombo->setStyleClass("form-control");
-    storeCombo->addItem("-- Create New Store --");
-
-    // Load available stores and populate combo
-    loadAvailableStores();
-    int selectedIndex = 0;
-    for (size_t i = 0; i < availableStores_.size(); ++i) {
-        const auto& store = availableStores_[i];
-        std::string displayName = store.storeName;
-        if (!store.city.empty()) {
-            displayName += " - " + store.city;
-            if (!store.stateProvince.empty()) {
-                displayName += ", " + store.stateProvince;
-            }
-        }
-        storeCombo->addItem(displayName);
-
-        // Select current store
-        if (store.id == currentStoreLocationId_) {
-            selectedIndex = static_cast<int>(i) + 1;  // +1 for "Create New" option
-        }
-    }
-    storeCombo->setCurrentIndex(selectedIndex);
-
-    // Store reference to form inputs for the combo change handler
+    // Store Information Section
     auto storeSection = storePanel->addWidget(std::make_unique<Wt::WContainerWidget>());
     storeSection->setStyleClass("settings-section");
 
@@ -1761,14 +1727,33 @@ void FranchiseApp::showSettingsPage() {
     auto storeFormGrid = storeSection->addWidget(std::make_unique<Wt::WContainerWidget>());
     storeFormGrid->setStyleClass("form-grid");
 
-    // Store Name
+    // Store Name - combo box with existing stores + new store option
     auto nameGroup = storeFormGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
     nameGroup->setStyleClass("form-group");
     nameGroup->addWidget(std::make_unique<Wt::WText>("Store Name"))->setStyleClass("form-label");
+
+    auto storeCombo = nameGroup->addWidget(std::make_unique<Wt::WComboBox>());
+    storeCombo->setStyleClass("form-control");
+    storeCombo->addItem("-- New Store --");
+
+    // Load available stores and populate combo
+    loadAvailableStores();
+    int selectedIndex = 0;
+    for (size_t i = 0; i < availableStores_.size(); ++i) {
+        const auto& store = availableStores_[i];
+        storeCombo->addItem(store.storeName);
+        if (store.id == currentStoreLocationId_) {
+            selectedIndex = static_cast<int>(i) + 1;  // +1 for "New Store" option
+        }
+    }
+    storeCombo->setCurrentIndex(selectedIndex);
+
+    // Text input for new store name (shown only when "New Store" selected)
     auto nameInput = nameGroup->addWidget(std::make_unique<Wt::WLineEdit>());
-    nameInput->setPlaceholderText("e.g., Vocelli Pizza - Downtown");
+    nameInput->setPlaceholderText("Enter new store name...");
     nameInput->setStyleClass("form-control");
-    if (franchisee_.isConfigured) nameInput->setText(franchisee_.storeName);
+    nameInput->setMargin(5, Wt::Side::Top);
+    nameInput->setHidden(selectedIndex != 0);  // Hide if existing store selected
 
     // Store Address
     auto addressGroup = storeFormGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
@@ -1801,19 +1786,20 @@ void FranchiseApp::showSettingsPage() {
     storeCombo->changed().connect([this, storeCombo, nameInput, addressInput, ownerInput, phoneInput] {
         int idx = storeCombo->currentIndex();
         if (idx == 0) {
-            // Create New Store - clear fields
+            // New Store - show name input and clear fields
             currentStoreLocationId_ = "";
+            nameInput->setHidden(false);
             nameInput->setText("");
             addressInput->setText("");
             ownerInput->setText("");
             phoneInput->setText("");
         } else if (idx > 0 && static_cast<size_t>(idx - 1) < availableStores_.size()) {
-            // Load selected store
+            // Existing store - hide name input and load store data
+            nameInput->setHidden(true);
             const auto& store = availableStores_[idx - 1];
             selectStoreById(store.id);
 
             // Update form fields
-            nameInput->setText(store.storeName);
             std::string fullAddress = store.addressLine1;
             if (!store.city.empty()) {
                 fullAddress += ", " + store.city;
@@ -2050,7 +2036,7 @@ void FranchiseApp::showSettingsPage() {
     statusMessage->setHidden(true);
 
     // Connect save button - saves ALL tabs
-    saveBtn->clicked().connect([this, nameInput, addressInput, ownerInput, phoneInput, radiusInput,
+    saveBtn->clicked().connect([this, storeCombo, nameInput, addressInput, ownerInput, phoneInput, radiusInput,
                                 sizeCombo, typeCheckboxes, openaiInput, modelSelect, geminiInput,
                                 googleInput, bbbInput, censusInput, statusMessage, aiStatus]() {
         std::cout << "  [Settings] Save button clicked" << std::endl;
@@ -2058,7 +2044,16 @@ void FranchiseApp::showSettingsPage() {
         bool changed = false;
 
         // === Save Store Setup ===
-        std::string storeName = nameInput->text().toUTF8();
+        // Get store name from combo (existing) or text input (new store)
+        int storeIdx = storeCombo->currentIndex();
+        std::string storeName;
+        if (storeIdx == 0) {
+            // New store - get name from text input
+            storeName = nameInput->text().toUTF8();
+        } else if (storeIdx > 0 && static_cast<size_t>(storeIdx - 1) < availableStores_.size()) {
+            // Existing store - get name from combo
+            storeName = availableStores_[storeIdx - 1].storeName;
+        }
         std::string address = addressInput->text().toUTF8();
         std::cout << "  [Settings] Store name: '" << storeName << "'" << std::endl;
         std::cout << "  [Settings] Address: '" << address << "'" << std::endl;
