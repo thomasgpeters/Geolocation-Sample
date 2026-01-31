@@ -104,7 +104,16 @@ void FranchiseApp::setupUI() {
 
     // Sidebar
     sidebar_ = mainContainer_->addWidget(std::make_unique<Widgets::Sidebar>());
-    sidebar_->setUserInfo("John Smith", "ABC Catering Franchise");
+
+    // Set user info from loaded franchisee (if configured)
+    if (franchisee_.isConfigured) {
+        sidebar_->setUserInfo(
+            franchisee_.ownerName.empty() ? "Franchise Owner" : franchisee_.ownerName,
+            franchisee_.storeName
+        );
+    } else {
+        sidebar_->setUserInfo("Franchise Owner", "No Store Selected");
+    }
 
     // Connect sidebar signals
     sidebar_->itemSelected().connect(this, &FranchiseApp::onMenuItemSelected);
@@ -1697,6 +1706,47 @@ void FranchiseApp::showSettingsPage() {
     storePanel->setStyleClass("tab-panel active");
     storePanel->setId("tab-store");
 
+    // ===========================================
+    // Store Selector Section
+    // ===========================================
+    auto selectorSection = storePanel->addWidget(std::make_unique<Wt::WContainerWidget>());
+    selectorSection->setStyleClass("settings-section");
+
+    selectorSection->addWidget(std::make_unique<Wt::WText>("Select Store"))->setStyleClass("section-title");
+    selectorSection->addWidget(std::make_unique<Wt::WText>(
+        "Choose an existing store location or create a new one below."
+    ))->setStyleClass("section-description");
+
+    auto selectorGroup = selectorSection->addWidget(std::make_unique<Wt::WContainerWidget>());
+    selectorGroup->setStyleClass("form-group");
+    selectorGroup->addWidget(std::make_unique<Wt::WText>("Current Store"))->setStyleClass("form-label");
+
+    auto storeCombo = selectorGroup->addWidget(std::make_unique<Wt::WComboBox>());
+    storeCombo->setStyleClass("form-control");
+    storeCombo->addItem("-- Create New Store --");
+
+    // Load available stores and populate combo
+    loadAvailableStores();
+    int selectedIndex = 0;
+    for (size_t i = 0; i < availableStores_.size(); ++i) {
+        const auto& store = availableStores_[i];
+        std::string displayName = store.storeName;
+        if (!store.city.empty()) {
+            displayName += " - " + store.city;
+            if (!store.stateProvince.empty()) {
+                displayName += ", " + store.stateProvince;
+            }
+        }
+        storeCombo->addItem(displayName);
+
+        // Select current store
+        if (store.id == currentStoreLocationId_) {
+            selectedIndex = static_cast<int>(i) + 1;  // +1 for "Create New" option
+        }
+    }
+    storeCombo->setCurrentIndex(selectedIndex);
+
+    // Store reference to form inputs for the combo change handler
     auto storeSection = storePanel->addWidget(std::make_unique<Wt::WContainerWidget>());
     storeSection->setStyleClass("settings-section");
 
@@ -1746,6 +1796,39 @@ void FranchiseApp::showSettingsPage() {
     phoneInput->setPlaceholderText("e.g., (555) 123-4567");
     phoneInput->setStyleClass("form-control");
     if (franchisee_.isConfigured) phoneInput->setText(franchisee_.phone);
+
+    // Handle store selection change
+    storeCombo->changed().connect([this, storeCombo, nameInput, addressInput, ownerInput, phoneInput] {
+        int idx = storeCombo->currentIndex();
+        if (idx == 0) {
+            // Create New Store - clear fields
+            currentStoreLocationId_ = "";
+            nameInput->setText("");
+            addressInput->setText("");
+            ownerInput->setText("");
+            phoneInput->setText("");
+        } else if (idx > 0 && static_cast<size_t>(idx - 1) < availableStores_.size()) {
+            // Load selected store
+            const auto& store = availableStores_[idx - 1];
+            selectStoreById(store.id);
+
+            // Update form fields
+            nameInput->setText(store.storeName);
+            std::string fullAddress = store.addressLine1;
+            if (!store.city.empty()) {
+                fullAddress += ", " + store.city;
+            }
+            if (!store.stateProvince.empty()) {
+                fullAddress += ", " + store.stateProvince;
+            }
+            if (!store.postalCode.empty()) {
+                fullAddress += " " + store.postalCode;
+            }
+            addressInput->setText(fullAddress);
+            ownerInput->setText(franchisee_.ownerName);
+            phoneInput->setText(store.phone);
+        }
+    });
 
     // Search Preferences
     auto prefsSection = storePanel->addWidget(std::make_unique<Wt::WContainerWidget>());
@@ -2107,41 +2190,37 @@ void FranchiseApp::showSettingsPage() {
 }
 
 void FranchiseApp::loadStoreLocationFromALS() {
-    std::cout << "  [App] Loading store location from ApiLogicServer..." << std::endl;
+    // First, get the saved current_store_id from app_config
+    std::string savedStoreId = alsClient_->getAppConfigValue("current_store_id");
 
-    auto response = alsClient_->getStoreLocations();
+    if (!savedStoreId.empty()) {
+        // Load the specific store by ID
+        auto response = alsClient_->getStoreLocation(savedStoreId);
 
-    if (response.success) {
-        auto locations = Services::ApiLogicServerClient::parseStoreLocations(response);
-
-        if (!locations.empty()) {
-            // Use the first (or primary) store location
-            const auto& loc = locations[0];
-            currentStoreLocationId_ = loc.id;
-
-            franchisee_.storeId = loc.id;
-            franchisee_.storeName = loc.storeName;
-            franchisee_.address = loc.addressLine1;
-            franchisee_.location.city = loc.city;
-            franchisee_.location.state = loc.stateProvince;
-            franchisee_.location.postalCode = loc.postalCode;
-            franchisee_.location.latitude = loc.latitude;
-            franchisee_.location.longitude = loc.longitude;
-            franchisee_.defaultSearchRadiusMiles = loc.defaultSearchRadiusMiles;
-            franchisee_.phone = loc.phone;
-            franchisee_.email = loc.email;
-            franchisee_.isConfigured = true;
-
-            std::cout << "  [App] Loaded store: " << franchisee_.storeName
-                      << " at " << franchisee_.location.city << ", " << franchisee_.location.state
-                      << " (" << franchisee_.location.latitude << ", " << franchisee_.location.longitude << ")"
-                      << std::endl;
-        } else {
-            std::cout << "  [App] No store locations found in database" << std::endl;
+        if (response.success) {
+            auto loc = Services::StoreLocationDTO::fromJson(response.body);
+            if (!loc.id.empty()) {
+                currentStoreLocationId_ = loc.id;
+                franchisee_.storeId = loc.id;
+                franchisee_.storeName = loc.storeName;
+                franchisee_.address = loc.addressLine1;
+                franchisee_.location.city = loc.city;
+                franchisee_.location.state = loc.stateProvince;
+                franchisee_.location.postalCode = loc.postalCode;
+                franchisee_.location.latitude = loc.latitude;
+                franchisee_.location.longitude = loc.longitude;
+                franchisee_.defaultSearchRadiusMiles = loc.defaultSearchRadiusMiles;
+                franchisee_.phone = loc.phone;
+                franchisee_.email = loc.email;
+                franchisee_.isConfigured = true;
+                return;
+            }
         }
-    } else {
-        std::cerr << "  [App] Failed to load from ALS: " << response.errorMessage << std::endl;
     }
+
+    // No saved store - franchisee remains unconfigured
+    // User will need to select a store from the Settings page
+    franchisee_.isConfigured = false;
 }
 
 bool FranchiseApp::saveStoreLocationToALS() {
@@ -2172,15 +2251,76 @@ bool FranchiseApp::saveStoreLocationToALS() {
             if (!created.id.empty()) {
                 currentStoreLocationId_ = created.id;
                 franchisee_.storeId = created.id;
-                std::cout << "  [App] Created new store location with ID: " << created.id << std::endl;
             }
-        } else {
-            std::cout << "  [App] Updated store location: " << currentStoreLocationId_ << std::endl;
         }
+
+        // Save the current store ID to app_config so it loads on next startup
+        if (!currentStoreLocationId_.empty()) {
+            alsClient_->setAppConfigValue("current_store_id", currentStoreLocationId_);
+        }
+
         return true;
     } else {
         std::cerr << "  [App] Failed to save to ALS: " << response.errorMessage << std::endl;
         return false;
+    }
+}
+
+std::vector<Services::StoreLocationDTO> FranchiseApp::loadAvailableStores() {
+    auto response = alsClient_->getStoreLocations();
+
+    if (response.success) {
+        availableStores_ = Services::ApiLogicServerClient::parseStoreLocations(response);
+    }
+
+    return availableStores_;
+}
+
+void FranchiseApp::selectStoreById(const std::string& storeId) {
+    // Find the store in cached list or load it
+    Services::StoreLocationDTO selectedStore;
+    bool found = false;
+
+    for (const auto& store : availableStores_) {
+        if (store.id == storeId) {
+            selectedStore = store;
+            found = true;
+            break;
+        }
+    }
+
+    if (!found) {
+        // Load directly from API
+        auto response = alsClient_->getStoreLocation(storeId);
+        if (response.success) {
+            selectedStore = Services::StoreLocationDTO::fromJson(response.body);
+            found = !selectedStore.id.empty();
+        }
+    }
+
+    if (found) {
+        currentStoreLocationId_ = selectedStore.id;
+        franchisee_.storeId = selectedStore.id;
+        franchisee_.storeName = selectedStore.storeName;
+        franchisee_.address = selectedStore.addressLine1;
+        franchisee_.location.city = selectedStore.city;
+        franchisee_.location.state = selectedStore.stateProvince;
+        franchisee_.location.postalCode = selectedStore.postalCode;
+        franchisee_.location.latitude = selectedStore.latitude;
+        franchisee_.location.longitude = selectedStore.longitude;
+        franchisee_.defaultSearchRadiusMiles = selectedStore.defaultSearchRadiusMiles;
+        franchisee_.phone = selectedStore.phone;
+        franchisee_.email = selectedStore.email;
+        franchisee_.isConfigured = true;
+
+        // Save as current store
+        alsClient_->setAppConfigValue("current_store_id", storeId);
+
+        // Update sidebar
+        sidebar_->setUserInfo(
+            franchisee_.ownerName.empty() ? "Franchise Owner" : franchisee_.ownerName,
+            franchisee_.storeName
+        );
     }
 }
 

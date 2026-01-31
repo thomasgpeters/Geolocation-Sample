@@ -86,6 +86,11 @@ private:
     // ApiLogicServer integration
     void loadStoreLocationFromALS();
     bool saveStoreLocationToALS();
+    void selectStoreById(const std::string& storeId);
+    std::vector<Services::StoreLocationDTO> loadAvailableStores();
+
+    // Cached list of available stores (for selector)
+    std::vector<Services::StoreLocationDTO> availableStores_;
 
     // Services
     std::unique_ptr<Services::AISearchService> searchService_;
