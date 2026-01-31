@@ -341,44 +341,35 @@ private:
      * @brief Extract value from JSON-like format (handles quoted strings and unquoted numbers)
      */
     static std::string extractJsonValue(const std::string& s) {
-        // First try to find a quoted string
-        size_t start = s.find('"');
-        if (start != std::string::npos) {
-            size_t end = s.find('"', start + 1);
-            if (end != std::string::npos) {
-                return s.substr(start + 1, end - start - 1);
-            }
-        }
-
-        // Otherwise, extract unquoted value (number, true, false, null)
+        // Find the colon first - value is always after the colon
         size_t colonPos = s.find(':');
         if (colonPos == std::string::npos) {
-            // No colon, just trim the string
-            std::string trimmed = s;
-            // Remove leading whitespace
-            size_t startPos = trimmed.find_first_not_of(" \t\n\r");
-            if (startPos == std::string::npos) return "";
-            trimmed = trimmed.substr(startPos);
-            // Remove trailing whitespace and punctuation
-            size_t endPos = trimmed.find_last_not_of(" \t\n\r,}]");
-            if (endPos != std::string::npos) {
-                trimmed = trimmed.substr(0, endPos + 1);
-            }
-            return trimmed;
+            return "";
         }
 
-        // Extract value after colon
-        std::string value = s.substr(colonPos + 1);
+        // Get everything after the colon
+        std::string afterColon = s.substr(colonPos + 1);
+
         // Remove leading whitespace
-        size_t startPos = value.find_first_not_of(" \t");
+        size_t startPos = afterColon.find_first_not_of(" \t");
         if (startPos == std::string::npos) return "";
-        value = value.substr(startPos);
-        // Remove trailing whitespace and punctuation
-        size_t endPos = value.find_last_not_of(" \t\n\r,}]");
-        if (endPos != std::string::npos) {
-            value = value.substr(0, endPos + 1);
+        afterColon = afterColon.substr(startPos);
+
+        // Check if it's a quoted string value
+        if (!afterColon.empty() && afterColon[0] == '"') {
+            size_t endQuote = afterColon.find('"', 1);
+            if (endQuote != std::string::npos) {
+                return afterColon.substr(1, endQuote - 1);
+            }
         }
-        return value;
+
+        // Otherwise it's an unquoted value (number, true, false, null)
+        // Remove trailing whitespace and punctuation
+        size_t endPos = afterColon.find_last_not_of(" \t\n\r,}]");
+        if (endPos != std::string::npos) {
+            afterColon = afterColon.substr(0, endPos + 1);
+        }
+        return afterColon;
     }
 
     /**
