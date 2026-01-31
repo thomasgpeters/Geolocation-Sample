@@ -834,6 +834,107 @@ COMMENT ON TABLE store_locations IS 'Physical store locations for franchise oper
 
 
 -- ============================================================================
+-- AUTHENTICATION TABLES
+-- ============================================================================
+
+-- ---------------------------------------------------------------------------
+-- Users: Application users with authentication
+-- ---------------------------------------------------------------------------
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+
+    -- Profile
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
+    phone VARCHAR(30),
+
+    -- Role & Permissions
+    role VARCHAR(50) DEFAULT 'franchisee',  -- 'admin', 'franchisee', 'staff'
+
+    -- Franchise Association
+    franchisee_id UUID REFERENCES franchisees(id),
+
+    -- Account Status
+    is_active BOOLEAN DEFAULT true,
+    is_verified BOOLEAN DEFAULT false,
+    verification_token VARCHAR(255),
+
+    -- Password Reset
+    reset_token VARCHAR(255),
+    reset_token_expires TIMESTAMP WITH TIME ZONE,
+
+    -- Session Management
+    last_login TIMESTAMP WITH TIME ZONE,
+    failed_login_attempts INTEGER DEFAULT 0,
+    locked_until TIMESTAMP WITH TIME ZONE,
+
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_franchisee ON users(franchisee_id);
+
+CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+COMMENT ON TABLE users IS 'Application users with authentication credentials';
+
+-- ---------------------------------------------------------------------------
+-- User Sessions: Active login sessions
+-- ---------------------------------------------------------------------------
+CREATE TABLE user_sessions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+
+    session_token VARCHAR(255) NOT NULL UNIQUE,
+    refresh_token VARCHAR(255),
+
+    -- Session Info
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+
+    -- Expiration
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    refresh_expires_at TIMESTAMP WITH TIME ZONE,
+
+    -- Status
+    is_active BOOLEAN DEFAULT true,
+
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_sessions_token ON user_sessions(session_token);
+CREATE INDEX idx_sessions_user ON user_sessions(user_id);
+
+COMMENT ON TABLE user_sessions IS 'Active user login sessions';
+
+-- ---------------------------------------------------------------------------
+-- Audit Log: Track security-relevant events
+-- ---------------------------------------------------------------------------
+CREATE TABLE audit_log (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id),
+
+    event_type VARCHAR(50) NOT NULL,  -- 'login', 'logout', 'failed_login', 'password_change'
+    event_details JSONB,
+
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_audit_log_user ON audit_log(user_id);
+CREATE INDEX idx_audit_log_event ON audit_log(event_type);
+CREATE INDEX idx_audit_log_created ON audit_log(created_at DESC);
+
+COMMENT ON TABLE audit_log IS 'Security audit log for authentication events';
+
+
+-- ============================================================================
 -- SEED DATA: Application Configuration
 -- ============================================================================
 
@@ -1150,3 +1251,25 @@ END;
 $$ LANGUAGE plpgsql;
 
 COMMENT ON FUNCTION set_app_config IS 'Set application configuration value by key';
+
+
+-- ============================================================================
+-- SEED DATA: Default Users
+-- ============================================================================
+-- NOTE: Password hash is for 'admin123' using SHA-256 (for development only)
+-- In production, use bcrypt or Argon2 with proper salting
+
+INSERT INTO users (id, email, password_hash, first_name, last_name, role, franchisee_id, is_active, is_verified) VALUES
+-- Admin user (password: admin123)
+('u1000000-0000-0000-0000-000000000001'::uuid,
+ 'admin@franchiseai.com',
+ '240be518fabd2724ddb6f04eeb9d5b59',  -- MD5 hash of 'admin123' (dev only)
+ 'System', 'Administrator', 'admin', NULL, true, true),
+
+-- Pittsburgh franchisee user (password: mike123)
+('u1000000-0000-0000-0000-000000000002'::uuid,
+ 'mike@pittsburghcatering.com',
+ 'e99a18c428cb38d5f260853678922e03',  -- MD5 hash of 'mike123' (dev only)
+ 'Mike', 'Owner', 'franchisee',
+ 'c2c5af5a-53a5-4d28-8218-3675c0942ead'::uuid, true, true);
+

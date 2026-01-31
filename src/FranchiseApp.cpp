@@ -1,6 +1,7 @@
 #include "FranchiseApp.h"
 #include "AppConfig.h"
 #include "models/GeoLocation.h"
+#include "widgets/LoginDialog.h"
 #include <Wt/WBootstrap5Theme.h>
 #include <Wt/WCssStyleSheet.h>
 #include <Wt/WText.h>
@@ -13,6 +14,7 @@
 #include <Wt/WSlider.h>
 #include <sstream>
 #include <iomanip>
+#include <iostream>
 
 namespace FranchiseAI {
 
@@ -20,6 +22,9 @@ FranchiseApp::FranchiseApp(const Wt::WEnvironment& env)
     : Wt::WApplication(env)
 {
     setTitle("FranchiseAI - Prospect Search");
+
+    // Initialize authentication service
+    authService_ = std::make_unique<Services::AuthService>();
 
     // Initialize search service with configuration from AppConfig
     Services::AISearchConfig config;
@@ -53,14 +58,49 @@ FranchiseApp::FranchiseApp(const Wt::WEnvironment& env)
 
     searchService_ = std::make_unique<Services::AISearchService>(config);
 
-    // Initialize ApiLogicServer client and load data
+    // Initialize ApiLogicServer client
     alsClient_ = std::make_unique<Services::ApiLogicServerClient>();
+
+    // Load styles first (needed for login dialog)
+    loadStyleSheet();
+
+    // Enable HTML5 history-based URLs (cleaner than ?_= format)
+    setInternalPathDefaultValid(true);
+
+    // Get initial path and check for session token in URL
+    std::string initialPath = internalPath();
+
+    // Check for token in URL parameters (e.g., /dashboard?token=xxx)
+    const std::string* tokenParam = env.getParameter("token");
+    if (tokenParam && !tokenParam->empty()) {
+        std::cout << "[FranchiseApp] Found token in URL, validating session..." << std::endl;
+        Services::SessionInfo session = authService_->validateSession(*tokenParam);
+        if (session.isValid) {
+            isAuthenticated_ = true;
+            sessionToken_ = *tokenParam;
+            currentUser_ = authService_->getUser(session.userId);
+            std::cout << "[FranchiseApp] Session valid for user: " << currentUser_.email << std::endl;
+        }
+    }
+
+    // If at root URL (/) and not authenticated, show login dialog
+    if ((initialPath.empty() || initialPath == "/") && !isAuthenticated_) {
+        std::cout << "[FranchiseApp] User at root URL, showing login dialog" << std::endl;
+        showLoginDialog();
+        return;
+    }
+
+    // If not authenticated and trying to access protected pages, redirect to login
+    if (!isAuthenticated_ && initialPath != "/") {
+        std::cout << "[FranchiseApp] User not authenticated, redirecting to login" << std::endl;
+        redirectToLogin();
+        return;
+    }
+
+    // User is authenticated, load app data and UI
     alsClient_->loadAppConfigs();  // Load all app config into memory cache
     loadFranchiseeFromALS();       // Load current franchisee first (for linking)
     loadStoreLocationFromALS();    // Then load store location
-
-    // Load styles
-    loadStyleSheet();
 
     // Setup UI
     setupUI();
@@ -68,12 +108,7 @@ FranchiseApp::FranchiseApp(const Wt::WEnvironment& env)
     // Setup routing with clean URL paths
     setupRouting();
 
-    // Enable HTML5 history-based URLs (cleaner than ?_= format)
-    setInternalPathDefaultValid(true);
-
-    // Handle initial path from URL or default to appropriate page
-    std::string initialPath = internalPath();
-
+    // Handle initial path from URL or default to Dashboard
     if (!franchisee_.isConfigured) {
         sidebar_->setActiveItem("settings");
         setInternalPath("/settings", false);
@@ -81,9 +116,14 @@ FranchiseApp::FranchiseApp(const Wt::WEnvironment& env)
     } else if (initialPath == "/settings") {
         sidebar_->setActiveItem("settings");
         showSettingsPage();
-    } else if (initialPath == "/dashboard") {
+    } else if (initialPath == "/dashboard" || initialPath == "/" || initialPath.empty()) {
+        // Default to Dashboard for authenticated users
         sidebar_->setActiveItem("dashboard");
+        setInternalPath("/dashboard", false);
         showDashboardPage();
+    } else if (initialPath == "/search") {
+        sidebar_->setActiveItem("ai-search");
+        showAISearchPage();
     } else if (initialPath == "/prospects") {
         sidebar_->setActiveItem("prospects");
         showProspectsPage();
@@ -94,10 +134,10 @@ FranchiseApp::FranchiseApp(const Wt::WEnvironment& env)
         sidebar_->setActiveItem("reports");
         showReportsPage();
     } else {
-        // Default to AI Search
-        sidebar_->setActiveItem("ai-search");
-        setInternalPath("/search", false);
-        showAISearchPage();
+        // Default to Dashboard
+        sidebar_->setActiveItem("dashboard");
+        setInternalPath("/dashboard", false);
+        showDashboardPage();
     }
 }
 
@@ -120,6 +160,123 @@ void FranchiseApp::loadStyleSheet() {
     )CSS";
 
     styleSheet().addRule("*", "margin: 0; padding: 0; box-sizing: border-box;");
+}
+
+void FranchiseApp::showLoginDialog() {
+    std::cout << "[FranchiseApp] Showing login dialog" << std::endl;
+
+    // Create login page container with centered dialog appearance
+    auto* loginContainer = root()->addWidget(std::make_unique<Wt::WContainerWidget>());
+    loginContainer->addStyleClass("login-page");
+
+    // Add login page styles
+    styleSheet().addRule(".login-page", "display: flex; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);");
+
+    // Create and show login dialog
+    loginDialog_ = loginContainer->addWidget(std::make_unique<Widgets::LoginDialog>());
+
+    // Connect login success signal
+    loginDialog_->loginSuccessful().connect(this, &FranchiseApp::onLoginSuccessful);
+
+    // Show the dialog
+    loginDialog_->show();
+    loginDialog_->focusEmail();
+}
+
+void FranchiseApp::onLoginSuccessful(const Services::LoginResult& result) {
+    std::cout << "[FranchiseApp] Login successful for: " << result.email << std::endl;
+
+    // Store authentication state
+    isAuthenticated_ = true;
+    sessionToken_ = result.sessionToken;
+    currentUser_.id = result.userId;
+    currentUser_.email = result.email;
+    currentUser_.firstName = result.firstName;
+    currentUser_.lastName = result.lastName;
+    currentUser_.role = result.role;
+    currentUser_.franchiseeId = result.franchiseeId;
+
+    // Clear the login page
+    root()->clear();
+
+    // Load app configuration and data
+    alsClient_->loadAppConfigs();
+
+    // If user has an associated franchisee, load their data
+    if (!result.franchiseeId.empty()) {
+        // Set the current franchisee ID in AppConfig cache for loading
+        alsClient_->setAppConfig("current_franchisee_id", result.franchiseeId);
+    }
+
+    loadFranchiseeFromALS();
+    loadStoreLocationFromALS();
+
+    // Setup the main UI
+    setupUI();
+    setupRouting();
+
+    // Redirect to Dashboard with token in URL
+    std::string dashboardUrl = "/dashboard?token=" + sessionToken_;
+    setInternalPath("/dashboard", false);
+
+    // Update browser URL to include token
+    std::ostringstream js;
+    js << "window.history.replaceState({}, '', '/dashboard?token=" << sessionToken_ << "');";
+    doJavaScript(js.str());
+
+    // Show dashboard
+    sidebar_->setActiveItem("dashboard");
+    showDashboardPage();
+
+    std::cout << "[FranchiseApp] User redirected to dashboard" << std::endl;
+}
+
+void FranchiseApp::onLogout() {
+    std::cout << "[FranchiseApp] User logging out" << std::endl;
+
+    // Invalidate session
+    if (authService_ && !sessionToken_.empty()) {
+        authService_->logout(sessionToken_);
+    }
+
+    // Clear authentication state
+    isAuthenticated_ = false;
+    sessionToken_.clear();
+    currentUser_ = Services::UserDTO();
+
+    // Redirect to login
+    redirectToLogin();
+}
+
+bool FranchiseApp::checkAuthentication() {
+    if (!isAuthenticated_ || sessionToken_.empty()) {
+        return false;
+    }
+
+    // Validate session is still valid
+    if (authService_) {
+        Services::SessionInfo session = authService_->validateSession(sessionToken_);
+        if (!session.isValid) {
+            isAuthenticated_ = false;
+            sessionToken_.clear();
+            return false;
+        }
+    }
+
+    return true;
+}
+
+void FranchiseApp::redirectToLogin() {
+    std::cout << "[FranchiseApp] Redirecting to login" << std::endl;
+
+    // Clear the current UI
+    root()->clear();
+
+    // Update URL to root
+    setInternalPath("/", true);
+
+    // Show login dialog
+    showLoginDialog();
 }
 
 void FranchiseApp::setupUI() {

@@ -247,6 +247,43 @@ public:
      */
     std::string getEndpoint() const;
 
+    /**
+     * @brief Set app config value in cache (shorthand for setAppConfigValue)
+     */
+    void setAppConfig(const std::string& key, const std::string& value) {
+        setAppConfigValue(key, value);
+    }
+
+    // ========================================================================
+    // Generic Resource Operations (for Auth and other services)
+    // ========================================================================
+
+    /**
+     * @brief Get a resource by type and optional ID
+     * @param resourceType The API resource type (e.g., "User", "UserSession")
+     * @param id Optional resource ID for specific record
+     * @param filter Optional filter query (e.g., "email=test@example.com")
+     * @return JSON response body
+     */
+    std::string getResource(const std::string& resourceType, const std::string& id = "", const std::string& filter = "");
+
+    /**
+     * @brief Create a new resource
+     * @param resourceType The API resource type
+     * @param jsonBody JSON body for the new resource
+     * @return JSON response body
+     */
+    std::string createResource(const std::string& resourceType, const std::string& jsonBody);
+
+    /**
+     * @brief Update an existing resource
+     * @param resourceType The API resource type
+     * @param id Resource ID to update
+     * @param jsonBody JSON body with updates
+     * @return JSON response body
+     */
+    std::string updateResource(const std::string& resourceType, const std::string& id, const std::string& jsonBody);
+
 private:
     /**
      * @brief Make HTTP GET request

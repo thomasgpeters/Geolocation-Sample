@@ -42,6 +42,7 @@ set(SERVICE_SOURCES
     src/services/OpenAIEngine.cpp
     src/services/GeminiEngine.cpp
     src/services/ApiLogicServerClient.cpp
+    src/services/AuthService.cpp
 )
 
 # Source files - Widgets
@@ -51,6 +52,7 @@ set(WIDGET_SOURCES
     src/widgets/SearchPanel.cpp
     src/widgets/ResultCard.cpp
     src/widgets/ResultsDisplay.cpp
+    src/widgets/LoginDialog.cpp
 )
 
 # Main application sources
