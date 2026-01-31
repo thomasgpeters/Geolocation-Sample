@@ -1,6 +1,7 @@
 #include "ApiLogicServerClient.h"
 #include <curl/curl.h>
 #include <iostream>
+#include <iomanip>
 #include <sstream>
 
 namespace FranchiseAI {
@@ -484,7 +485,8 @@ void ApiLogicServerClient::loadAppConfigs() {
         // Add to cache if we got a valid key and id
         if (!entry.configKey.empty() && !entry.id.empty()) {
             appConfigCache_[entry.configKey] = entry;
-            std::cout << "  [ALS] Cached: " << entry.configKey << " = '" << entry.configValue << "' (id: " << entry.id << ")" << std::endl;
+            std::cout << "  [ALS] Cached: " << std::left << std::setw(25) << entry.configKey
+                      << " = '" << entry.configValue << "'\t(id: " << entry.id << ")" << std::endl;
         }
 
         pos = keyPos + 1;
