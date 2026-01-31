@@ -798,5 +798,57 @@ bool ApiLogicServerClient::setAppConfigValue(const std::string& key, const std::
     return response.success;
 }
 
+// ============================================================================
+// Generic Resource Operations
+// ============================================================================
+
+std::string ApiLogicServerClient::getResource(const std::string& resourceType,
+                                               const std::string& id,
+                                               const std::string& filter) {
+    std::string path = "/" + resourceType;
+    if (!id.empty()) {
+        path += "/" + id;
+    }
+    if (!filter.empty()) {
+        path += "?filter[" + filter.substr(0, filter.find('=')) + "]=" +
+                filter.substr(filter.find('=') + 1);
+    }
+
+    std::cout << "[ALS] GET " << path << std::endl;
+    auto response = httpGet(path);
+
+    if (response.success) {
+        return response.body;
+    }
+    return "";
+}
+
+std::string ApiLogicServerClient::createResource(const std::string& resourceType,
+                                                  const std::string& jsonBody) {
+    std::string path = "/" + resourceType;
+
+    std::cout << "[ALS] POST " << path << std::endl;
+    auto response = httpPost(path, jsonBody);
+
+    if (response.success) {
+        return response.body;
+    }
+    return "";
+}
+
+std::string ApiLogicServerClient::updateResource(const std::string& resourceType,
+                                                  const std::string& id,
+                                                  const std::string& jsonBody) {
+    std::string path = "/" + resourceType + "/" + id;
+
+    std::cout << "[ALS] PATCH " << path << std::endl;
+    auto response = httpPatch(path, jsonBody);
+
+    if (response.success) {
+        return response.body;
+    }
+    return "";
+}
+
 } // namespace Services
 } // namespace FranchiseAI

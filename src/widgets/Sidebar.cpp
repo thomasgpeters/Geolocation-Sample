@@ -8,14 +8,17 @@ Sidebar::Sidebar() {
     setStyleClass("sidebar");
 
     // Define menu items (reordered with divider)
+    // Format: {id, label, icon, isActive, isDivider, isAdminOnly}
     menuItems_ = {
-        {"dashboard", "Dashboard", "📊", false, false},
-        {"ai-search", "AI Search", "🔍", true, false},
-        {"openstreetmap", "Open Street Map", "📍", false, false},
-        {"divider-1", "", "", false, true},  // Dividing line
-        {"prospects", "My Prospects", "👥", false, false},
-        {"reports", "Reports", "📈", false, false},
-        {"settings", "Settings", "⚙️", false, false}
+        {"dashboard", "Dashboard", "📊", false, false, false},
+        {"ai-search", "AI Search", "🔍", true, false, false},
+        {"openstreetmap", "Open Street Map", "📍", false, false, false},
+        {"divider-1", "", "", false, true, false},  // Dividing line
+        {"prospects", "My Prospects", "👥", false, false, false},
+        {"reports", "Reports", "📈", false, false, false},
+        {"settings", "Settings", "⚙️", false, false, false},
+        {"divider-2", "", "", false, true, true},  // Admin divider
+        {"audit-trail", "Audit Trail", "📋", false, false, true}  // Admin only
     };
 
     activeItemId_ = "dashboard";
@@ -70,6 +73,12 @@ void Sidebar::createMenu() {
         if (item.isDivider) {
             auto divider = menuContainer_->addWidget(std::make_unique<Wt::WContainerWidget>());
             divider->setStyleClass("menu-divider");
+            divider->setId("menu-" + item.id);
+            divider->setObjectName("menu-" + item.id);
+            // Hide admin-only dividers initially
+            if (item.isAdminOnly && !isAdmin_) {
+                divider->hide();
+            }
             continue;
         }
 
@@ -82,6 +91,11 @@ void Sidebar::createMenu() {
         menuItem->setStyleClass(itemClass);
         menuItem->setId("menu-" + item.id);
         menuItem->setObjectName("menu-" + item.id);
+
+        // Hide admin-only items initially
+        if (item.isAdminOnly && !isAdmin_) {
+            menuItem->hide();
+        }
 
         auto icon = menuItem->addWidget(std::make_unique<Wt::WText>(item.icon));
         icon->setStyleClass("menu-icon");
@@ -99,6 +113,13 @@ void Sidebar::createMenu() {
 void Sidebar::createFooter() {
     footerContainer_ = addWidget(std::make_unique<Wt::WContainerWidget>());
     footerContainer_->setStyleClass("sidebar-footer");
+
+    // Logout button
+    auto logoutBtn = footerContainer_->addWidget(std::make_unique<Wt::WPushButton>("Logout"));
+    logoutBtn->setStyleClass("logout-btn");
+    logoutBtn->clicked().connect([this] {
+        logoutRequested_.emit();
+    });
 
     // Collapse toggle button
     auto collapseBtn = footerContainer_->addWidget(std::make_unique<Wt::WPushButton>("◀"));
@@ -152,6 +173,25 @@ void Sidebar::toggleCollapse() {
 void Sidebar::onMenuItemClicked(const std::string& itemId) {
     setActiveItem(itemId);
     itemSelected_.emit(itemId);
+}
+
+void Sidebar::setUserRole(const std::string& role) {
+    userRole_ = role;
+    isAdmin_ = (role == "admin");
+
+    // Show/hide admin-only menu items
+    for (const auto& item : menuItems_) {
+        if (item.isAdminOnly) {
+            auto menuItem = menuContainer_->find("menu-" + item.id);
+            if (menuItem) {
+                if (isAdmin_) {
+                    menuItem->show();
+                } else {
+                    menuItem->hide();
+                }
+            }
+        }
+    }
 }
 
 } // namespace Widgets

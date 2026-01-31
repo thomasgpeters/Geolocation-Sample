@@ -8,8 +8,12 @@
 #include "widgets/Navigation.h"
 #include "widgets/SearchPanel.h"
 #include "widgets/ResultsDisplay.h"
+#include "widgets/LoginDialog.h"
+#include "widgets/AuditTrailPage.h"
 #include "services/AISearchService.h"
+#include "services/AuditLogger.h"
 #include "services/ApiLogicServerClient.h"
+#include "services/AuthService.h"
 #include "models/Franchisee.h"
 #include "models/GeoLocation.h"
 
@@ -46,7 +50,28 @@ public:
      */
     bool hasActiveSearch() const { return hasActiveSearch_; }
 
+    /**
+     * @brief Check if user is authenticated
+     */
+    bool isAuthenticated() const { return isAuthenticated_; }
+
+    /**
+     * @brief Get current session token
+     */
+    const std::string& getSessionToken() const { return sessionToken_; }
+
+    /**
+     * @brief Get current user info
+     */
+    const Services::UserDTO& getCurrentUser() const { return currentUser_; }
+
 private:
+    // Authentication
+    void showLoginDialog();
+    void onLoginSuccessful(const Services::LoginResult& result);
+    void onLogout();
+    bool checkAuthentication();
+    void redirectToLogin();
     void setupUI();
     void setupRouting();
     void loadStyleSheet();
@@ -78,6 +103,7 @@ private:
     void showOpenStreetMapPage();
     void showReportsPage();
     void showSettingsPage();
+    void showAuditTrailPage();
 
     // Franchisee data
     Models::Franchisee franchisee_;
@@ -105,6 +131,13 @@ private:
     // Services
     std::unique_ptr<Services::AISearchService> searchService_;
     std::unique_ptr<Services::ApiLogicServerClient> alsClient_;
+    std::unique_ptr<Services::AuthService> authService_;
+
+    // Authentication state
+    bool isAuthenticated_ = false;
+    std::string sessionToken_;
+    Services::UserDTO currentUser_;
+    Widgets::LoginDialog* loginDialog_ = nullptr;
 
     // Main layout containers
     Wt::WContainerWidget* mainContainer_ = nullptr;
