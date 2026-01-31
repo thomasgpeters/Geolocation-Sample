@@ -1,4 +1,5 @@
 #include "Sidebar.h"
+#include "../AppConfig.h"
 #include <Wt/WVBoxLayout.h>
 
 namespace FranchiseAI {
@@ -40,9 +41,11 @@ void Sidebar::createHeader() {
     auto logoContainer = headerContainer_->addWidget(std::make_unique<Wt::WContainerWidget>());
     logoContainer->setStyleClass("sidebar-logo");
 
-    auto brandLogo = logoContainer->addWidget(std::make_unique<Wt::WImage>("https://media.licdn.com/dms/image/v2/D4E0BAQFNqqJ59i1lgQ/company-logo_200_200/company-logo_200_200/0/1733939002925/imagery_business_systems_llc_logo?e=1771459200&v=beta&t=uASbYiGNvSAkTxbpF0MxvSBGt74KHdfVxToiG4dmSGw"));
-    brandLogo->setStyleClass("brand-logo");
-    brandLogo->setAlternateText("FranchiseAI Logo");
+    // Load logo from config (uses default if not configured)
+    auto& appConfig = AppConfig::instance();
+    brandLogo_ = logoContainer->addWidget(std::make_unique<Wt::WImage>(appConfig.getBrandLogoPath()));
+    brandLogo_->setStyleClass("brand-logo");
+    brandLogo_->setAlternateText("FranchiseAI Logo");
 
     auto brandText = logoContainer->addWidget(std::make_unique<Wt::WText>("FranchiseAI"));
     brandText->setStyleClass("brand-text");
@@ -233,6 +236,12 @@ void Sidebar::setUserRole(const std::string& role) {
                 }
             }
         }
+    }
+}
+
+void Sidebar::setLogoUrl(const std::string& url) {
+    if (brandLogo_) {
+        brandLogo_->setImageLink(Wt::WLink(url));
     }
 }
 

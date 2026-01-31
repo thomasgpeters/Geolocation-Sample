@@ -85,6 +85,12 @@ public:
      */
     Wt::Signal<>& viewProfileRequested() { return viewProfileRequested_; }
 
+    /**
+     * @brief Set the logo URL
+     * @param url URL or path to the logo image
+     */
+    void setLogoUrl(const std::string& url);
+
 private:
     void setupUI();
     void createHeader();
@@ -111,6 +117,7 @@ private:
     Wt::WText* userNameText_ = nullptr;
     Wt::WText* franchiseNameText_ = nullptr;
     Wt::WContainerWidget* userDropdown_ = nullptr;
+    Wt::WImage* brandLogo_ = nullptr;
 };
 
 } // namespace Widgets
