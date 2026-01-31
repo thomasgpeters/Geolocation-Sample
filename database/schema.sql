@@ -887,48 +887,32 @@ COMMENT ON TABLE store_locations IS 'Physical store locations for franchise oper
 -- ============================================================================
 -- SEED DATA: Application Configuration
 -- ============================================================================
+-- NOTE: Infrastructure configs (ApiLogicServer URL, API keys, service endpoints)
+-- are stored in local config/app_config.json, NOT in the database.
+-- This table stores only business/feature settings managed through the app.
 
--- ApiLogicServer Configuration
-INSERT INTO app_config (config_key, config_value, config_type, category, description, is_sensitive, is_required, default_value) VALUES
-('api_logic_server_url', 'http://localhost:5656', 'string', 'services', 'Base URL for ApiLogicServer REST API', false, true, 'http://localhost:5656'),
-('api_logic_server_api_prefix', '/api', 'string', 'services', 'API prefix path for ApiLogicServer endpoints', false, false, '/api'),
-('api_logic_server_timeout_ms', '30000', 'integer', 'services', 'Request timeout for ApiLogicServer calls in milliseconds', false, false, '30000');
-
--- OpenAI Configuration
-INSERT INTO app_config (config_key, config_value, config_type, category, description, is_sensitive, is_required) VALUES
-('openai_api_key', NULL, 'encrypted', 'api_keys', 'OpenAI API key for AI-powered search and analysis', true, false),
-('openai_model', 'gpt-4o', 'string', 'api_keys', 'OpenAI model to use for AI operations', false, false),
-('openai_max_tokens', '2000', 'integer', 'api_keys', 'Maximum tokens for OpenAI responses', false, false);
-
--- Google/Gemini Configuration
-INSERT INTO app_config (config_key, config_value, config_type, category, description, is_sensitive, is_required) VALUES
-('gemini_api_key', NULL, 'encrypted', 'api_keys', 'Google Gemini API key (alternative to OpenAI)', true, false),
-('google_api_key', NULL, 'encrypted', 'api_keys', 'Google API key for Places and Geocoding APIs', true, false);
-
--- External Data Sources
-INSERT INTO app_config (config_key, config_value, config_type, category, description, is_sensitive, is_required) VALUES
-('bbb_api_key', NULL, 'encrypted', 'api_keys', 'Better Business Bureau API key', true, false),
-('census_api_key', NULL, 'encrypted', 'api_keys', 'US Census Bureau API key for demographics', true, false);
-
--- Geocoding Configuration
-INSERT INTO app_config (config_key, config_value, config_type, category, description, is_sensitive, is_required, default_value) VALUES
-('geocoding_provider', 'nominatim', 'string', 'services', 'Geocoding provider: nominatim, google, mapbox', false, false, 'nominatim'),
-('nominatim_endpoint', 'https://nominatim.openstreetmap.org', 'string', 'services', 'Nominatim API endpoint URL', false, false, 'https://nominatim.openstreetmap.org'),
-('geocoding_cache_minutes', '1440', 'integer', 'services', 'Cache duration for geocoding results (minutes)', false, false, '1440');
-
--- Feature Flags
+-- Feature Flags (managed via ApiLogicServer)
 INSERT INTO app_config (config_key, config_value, config_type, category, description, is_sensitive, is_required, default_value) VALUES
 ('enable_ai_search', 'true', 'boolean', 'features', 'Enable AI-powered prospect search', false, false, 'true'),
 ('enable_demographics', 'true', 'boolean', 'features', 'Enable demographics visualization', false, false, 'true'),
 ('enable_osm_data', 'true', 'boolean', 'features', 'Enable OpenStreetMap data integration', false, false, 'true'),
-('enable_prospect_scoring', 'true', 'boolean', 'features', 'Enable AI-based prospect scoring', false, false, 'true');
+('enable_prospect_scoring', 'true', 'boolean', 'features', 'Enable AI-based prospect scoring', false, false, 'true'),
+('enable_market_analysis', 'true', 'boolean', 'features', 'Enable AI market analysis for prospects', false, false, 'true');
 
--- Display Settings
+-- Display/UI Settings (user preferences stored in database)
 INSERT INTO app_config (config_key, config_value, config_type, category, description, is_sensitive, is_required, default_value) VALUES
 ('default_map_zoom', '12', 'integer', 'display', 'Default zoom level for map views', false, false, '12'),
 ('default_search_radius', '5', 'integer', 'display', 'Default search radius in miles', false, false, '5'),
 ('results_per_page', '25', 'integer', 'display', 'Number of results per page in lists', false, false, '25'),
-('map_tile_provider', 'openstreetmap', 'string', 'display', 'Map tile provider: openstreetmap, mapbox', false, false, 'openstreetmap');
+('map_tile_provider', 'openstreetmap', 'string', 'display', 'Map tile provider: openstreetmap, mapbox', false, false, 'openstreetmap'),
+('theme', 'light', 'string', 'display', 'UI theme: light, dark', false, false, 'light');
+
+-- Business Rules (configurable thresholds)
+INSERT INTO app_config (config_key, config_value, config_type, category, description, is_sensitive, is_required, default_value) VALUES
+('min_prospect_score', '50', 'integer', 'business', 'Minimum score to qualify as a prospect', false, false, '50'),
+('hot_lead_threshold', '80', 'integer', 'business', 'Score threshold for hot lead classification', false, false, '80'),
+('geocoding_cache_minutes', '1440', 'integer', 'business', 'Cache duration for geocoding results (minutes)', false, false, '1440'),
+('max_search_results', '100', 'integer', 'business', 'Maximum results returned from search', false, false, '100');
 
 
 -- ============================================================================

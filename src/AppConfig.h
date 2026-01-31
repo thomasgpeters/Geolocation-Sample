@@ -31,6 +31,14 @@ public:
     void loadFromEnvironment() {
         std::lock_guard<std::mutex> lock(mutex_);
 
+        // Load ApiLogicServer URL (infrastructure config)
+        if (const char* url = std::getenv("API_LOGIC_SERVER_URL")) {
+            apiLogicServerUrl_ = url;
+        }
+        if (const char* prefix = std::getenv("API_LOGIC_SERVER_API_PREFIX")) {
+            apiLogicServerApiPrefix_ = prefix;
+        }
+
         // Load OpenAI API key
         if (const char* key = std::getenv("OPENAI_API_KEY")) {
             openaiApiKey_ = key;
@@ -81,7 +89,16 @@ public:
             std::string value = extractJsonString(line.substr(colonPos + 1));
 
             // Only load from file if not already set (env vars take precedence)
-            if (key == "openai_api_key" && !value.empty() && openaiApiKey_.empty()) {
+            // ApiLogicServer settings
+            if (key == "url" && !value.empty() && apiLogicServerUrl_.empty()) {
+                apiLogicServerUrl_ = value;
+            } else if (key == "api_prefix" && !value.empty() && apiLogicServerApiPrefix_.empty()) {
+                apiLogicServerApiPrefix_ = value;
+            } else if (key == "timeout_ms" && !value.empty()) {
+                try { apiLogicServerTimeoutMs_ = std::stoi(value); } catch (...) {}
+            }
+            // API keys
+            else if (key == "openai_api_key" && !value.empty() && openaiApiKey_.empty()) {
                 openaiApiKey_ = value;
             } else if (key == "google_api_key" && !value.empty() && googleApiKey_.empty()) {
                 googleApiKey_ = value;
@@ -131,7 +148,27 @@ public:
         return true;
     }
 
-    // Getters
+    // Getters - ApiLogicServer
+    std::string getApiLogicServerUrl() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return apiLogicServerUrl_.empty() ? "http://localhost:5656" : apiLogicServerUrl_;
+    }
+
+    std::string getApiLogicServerApiPrefix() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return apiLogicServerApiPrefix_.empty() ? "/api" : apiLogicServerApiPrefix_;
+    }
+
+    int getApiLogicServerTimeoutMs() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return apiLogicServerTimeoutMs_ > 0 ? apiLogicServerTimeoutMs_ : 30000;
+    }
+
+    std::string getApiLogicServerEndpoint() const {
+        return getApiLogicServerUrl() + getApiLogicServerApiPrefix();
+    }
+
+    // Getters - API Keys
     std::string getOpenAIApiKey() const {
         std::lock_guard<std::mutex> lock(mutex_);
         return openaiApiKey_;
@@ -225,6 +262,11 @@ public:
     void printStatus() const {
         std::lock_guard<std::mutex> lock(mutex_);
 
+        std::cout << "Infrastructure Configuration:" << std::endl;
+        std::cout << "  ApiLogicServer:  " << (apiLogicServerUrl_.empty() ? "http://localhost:5656 (default)" : apiLogicServerUrl_) << std::endl;
+        std::cout << "  API Prefix:      " << (apiLogicServerApiPrefix_.empty() ? "/api (default)" : apiLogicServerApiPrefix_) << std::endl;
+        std::cout << std::endl;
+
         std::cout << "API Configuration Status:" << std::endl;
         std::cout << "  OpenAI API Key:  " << (openaiApiKey_.empty() ? "Not configured" : "Configured (" + maskKey(openaiApiKey_) + ")") << std::endl;
         std::cout << "  OpenAI Model:    " << (openaiModel_.empty() ? "gpt-4o (default)" : openaiModel_) << std::endl;
@@ -242,6 +284,12 @@ private:
 
     mutable std::mutex mutex_;
 
+    // ApiLogicServer settings (infrastructure - from local config only)
+    std::string apiLogicServerUrl_;
+    std::string apiLogicServerApiPrefix_;
+    int apiLogicServerTimeoutMs_ = 30000;
+
+    // API keys (from local config or environment)
     std::string openaiApiKey_;
     std::string openaiModel_;
     std::string googleApiKey_;
