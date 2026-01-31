@@ -861,8 +861,10 @@ INSERT INTO app_config (config_key, config_value, config_type, category, descrip
 ('max_search_results', '100', 'integer', 'business', 'Maximum results returned from search', false, false, '100');
 
 -- System Settings (runtime state)
+-- These reference the first Denver franchisee and store for default app state
 INSERT INTO app_config (config_key, config_value, config_type, category, description, is_sensitive, is_required, default_value) VALUES
-('current_store_id', '', 'string', 'system', 'Currently selected store location ID', false, false, '');
+('current_franchisee_id', 'c1000000-0000-0000-0000-000000000001', 'string', 'system', 'Currently selected franchisee ID', false, false, ''),
+('current_store_id', 'd1000000-0000-0000-0000-000000000001', 'string', 'system', 'Currently selected store location ID', false, false, '');
 
 
 -- ============================================================================
