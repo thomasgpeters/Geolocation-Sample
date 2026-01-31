@@ -90,6 +90,35 @@ struct StoreLocationDTO {
 };
 
 /**
+ * @brief Franchisee data for API communication
+ */
+struct FranchiseeDTO {
+    std::string id;              // UUID from database
+    std::string businessName;
+    std::string dbaName;
+    std::string franchiseNumber;
+    std::string ownerFirstName;
+    std::string ownerLastName;
+    std::string email;
+    std::string phone;
+    std::string addressLine1;
+    std::string addressLine2;
+    std::string city;
+    std::string stateProvince;
+    std::string postalCode;
+    std::string countryCode = "US";
+    double latitude = 0.0;
+    double longitude = 0.0;
+    bool isActive = true;
+
+    // Convert to JSON string for API
+    std::string toJson() const;
+
+    // Parse from JSON response
+    static FranchiseeDTO fromJson(const std::string& json);
+};
+
+/**
  * @brief API response wrapper
  */
 struct ApiResponse {
@@ -143,6 +172,48 @@ public:
      * @return Vector of store location DTOs
      */
     static std::vector<StoreLocationDTO> parseStoreLocations(const ApiResponse& response);
+
+    // ========================================================================
+    // Franchisee Operations
+    // ========================================================================
+
+    /**
+     * @brief Save a franchisee (create or update)
+     * @param franchisee Franchisee data
+     * @return API response with created/updated record
+     */
+    ApiResponse saveFranchisee(const FranchiseeDTO& franchisee);
+
+    /**
+     * @brief Get all franchisees
+     * @return API response with list of franchisees
+     */
+    ApiResponse getFranchisees();
+
+    /**
+     * @brief Get a specific franchisee by ID
+     * @param id UUID of the franchisee
+     * @return API response with franchisee data
+     */
+    ApiResponse getFranchisee(const std::string& id);
+
+    /**
+     * @brief Delete a franchisee
+     * @param id UUID of the franchisee
+     * @return API response
+     */
+    ApiResponse deleteFranchisee(const std::string& id);
+
+    /**
+     * @brief Parse franchisees from API response
+     * @param response API response containing JSON array
+     * @return Vector of franchisee DTOs
+     */
+    static std::vector<FranchiseeDTO> parseFranchisees(const ApiResponse& response);
+
+    // ========================================================================
+    // App Config Operations
+    // ========================================================================
 
     /**
      * @brief Load all app configs into memory cache
