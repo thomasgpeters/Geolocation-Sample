@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <server>
     <application-settings location="*">
+        <!-- Enable progressive bootstrap for clean URLs (no ?_= format) -->
+        <progressive-bootstrap>true</progressive-bootstrap>
+
         <!-- Leaflet Map Configuration - Local Resources -->
         <properties>
             <property name="leafletJSURL">scripts/leaflet.js</property>
