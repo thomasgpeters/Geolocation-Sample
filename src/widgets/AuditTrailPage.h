@@ -44,7 +44,7 @@ public:
     /**
      * @brief Refresh the audit log display
      */
-    void refresh();
+    void refresh() override;
 
 private:
     void setupUI();
