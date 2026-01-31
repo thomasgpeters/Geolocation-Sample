@@ -120,6 +120,21 @@ Then open your browser to: http://localhost:8080
 
 ## Application Pages
 
+### Sidebar Navigation
+The sidebar provides the main navigation with the following structure:
+
+| # | Menu Item | Description |
+|---|-----------|-------------|
+| 1 | **Dashboard** | Overview and quick stats |
+| 2 | **AI Search** | Find new prospects |
+| 3 | **Demographics** | Explore area data on map |
+| - | ─────────── | *Divider* |
+| 4 | **My Prospects** | Saved prospects list |
+| 5 | **Reports** | Analytics and reports |
+| 6 | **Settings** | Store setup, API keys, preferences |
+
+The divider visually separates discovery tools (Dashboard, AI Search, Demographics) from management tools (My Prospects, Reports, Settings).
+
 ### Dashboard
 Overview of prospect discovery statistics with quick action buttons.
 
@@ -211,25 +226,60 @@ Displayed in the navigation header as a color-coded badge:
 View analytics and generate reports (placeholder).
 
 ### Settings
-Configure API keys and application preferences.
+Unified configuration hub with a tabbed interface for managing all application settings.
 
-#### AI Configuration
-- **OpenAI API Key**: Enter your OpenAI API key for GPT-powered prospect analysis
+#### Tab Interface
+The Settings page uses a modern tab navigation with three sections:
+
+| Tab | Purpose |
+|-----|---------|
+| **Store Setup** | Configure your franchise location and search preferences |
+| **AI Configuration** | Set up OpenAI or Gemini for prospect analysis |
+| **Data Sources** | Configure API keys for business data providers |
+
+#### Tab 1: Store Setup
+Configure your franchise store details and default search preferences.
+
+**Store Information:**
+- **Store Name**: Your franchise location name (e.g., "Vocelli Pizza - Downtown")
+- **Store Address**: Full address used as the center point for prospect searches
+- **Owner/Manager Name**: Contact person for the franchise
+- **Store Phone**: Business contact number
+
+**Default Search Preferences:**
+- **Search Radius**: Default radius in miles for prospect searches
+- **Target Business Types**: Checkboxes for 12 business categories:
+  - Corporate Offices, Conference Centers, Hotels
+  - Medical Facilities, Educational Institutions, Manufacturing/Industrial
+  - Warehouses/Distribution, Government Offices, Tech Companies
+  - Financial Services, Coworking Spaces, Non-profits
+- **Target Organization Size**: Employee count range filter
+
+#### Tab 2: AI Configuration
+Configure AI providers for intelligent prospect analysis.
+
+- **OpenAI API Key**: Enter your OpenAI API key for GPT-powered analysis
 - **OpenAI Model**: Select from available models:
   - gpt-4o (Recommended) - Best quality analysis
   - gpt-4o-mini - Faster, lower cost
   - gpt-4-turbo, gpt-4, gpt-3.5-turbo
 - **Google Gemini API Key**: Alternative AI provider (used if OpenAI not configured)
-- **Status Indicator**: Shows current AI engine configuration status
+- **Status Indicator**: Shows current AI engine configuration status with color coding
 
-#### Data Source APIs
+#### Tab 3: Data Sources
+Configure API keys for business data providers.
+
 - **Google Places API Key**: For Google My Business integration
-- **BBB API Key**: For Better Business Bureau data
-- **Census API Key**: For demographic data
+- **BBB API Key**: For Better Business Bureau accreditation data
+- **Census/Demographics API Key**: For population and economic data
 
-#### Franchise Profile
-- View and edit your store information
-- Quick link to Store Setup page
+**Note**: OpenStreetMap integration requires no API key and is always available.
+
+#### Saving Settings
+- Click **"Save All Settings"** to save changes across all tabs
+- Success/error messages appear below the save button
+- API key fields are masked after saving for security
+- Store information is immediately reflected in the sidebar
 
 ## API Configuration
 
