@@ -48,7 +48,8 @@ The application helps franchise owners find potential clients interested in cate
 │   │   ├── GoogleMyBusinessAPI.cpp/h   # Google Places API
 │   │   ├── BBBAPI.cpp/h               # BBB API service
 │   │   ├── DemographicsAPI.cpp/h      # Demographics API
-│   │   └── OpenStreetMapAPI.cpp/h     # OpenStreetMap/Overpass API
+│   │   ├── OpenStreetMapAPI.cpp/h     # OpenStreetMap/Overpass API
+│   │   └── ApiLogicServerClient.cpp/h # ALS REST client (Franchisee, StoreLocation, AppConfig)
 │   └── widgets/                # UI components
 │       ├── Sidebar.cpp/h           # Navigation sidebar
 │       ├── Navigation.cpp/h        # Top navigation bar
@@ -373,6 +374,190 @@ struct OSMAPIConfig {
 };
 ```
 
+## ApiLogicServer Integration
+
+The application integrates with [ApiLogicServer](https://apilogicserver.github.io/Docs/) for persistent storage of franchisee data, store locations, and application configuration. This enables data to survive application restarts and be shared across instances.
+
+### Startup Sequence
+
+When the application starts, it performs the following initialization:
+
+```
+1. Load app_config.json (local API keys)
+2. Initialize ApiLogicServer client
+3. Load AppConfig entries from ALS into memory cache
+4. Load current Franchisee from ALS (using current_franchisee_id)
+5. Load current StoreLocation from ALS (using current_store_id)
+6. Initialize UI
+```
+
+**Console Output Example:**
+```
+[ALS] Loading all AppConfig entries...
+[ALS] Cached: current_franchisee_id    = 'abc123-...'  (id: ...)
+[ALS] Cached: current_store_id         = 'def456-...'  (id: ...)
+[ALS] Cached: default_search_radius    = '5'           (id: ...)
+[ALS] Loaded 14 config entries
+[App] Loading franchisee from ALS: abc123-...
+[App] Loaded franchisee: Vocelli Pizza
+[App] Loading store location from ALS: def456-...
+```
+
+### AppConfig Persistence
+
+Application settings are stored in the `app_config` table via ALS. The client maintains an in-memory cache for fast lookups while ensuring persistence across restarts.
+
+**Key AppConfig Entries:**
+
+| Config Key | Description | Example Value |
+|------------|-------------|---------------|
+| `current_franchisee_id` | UUID of the active franchisee | `c1000000-0000-...` |
+| `current_store_id` | UUID of the active store location | `d1000000-0000-...` |
+| `default_search_radius` | Default search radius in miles | `5` |
+| `theme` | UI theme preference | `light` |
+| `enable_ai_search` | Feature flag for AI search | `true` |
+| `enable_demographics` | Feature flag for demographics | `true` |
+
+**Cache Operations:**
+```cpp
+// Read from cache (instant)
+std::string value = alsClient->getAppConfigValue("current_store_id");
+
+// Write to cache and ALS (persisted)
+alsClient->setAppConfigValue("current_store_id", newStoreId);
+```
+
+### Franchisee Management
+
+Franchisees represent the business entity that owns one or more store locations.
+
+**FranchiseeDTO Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | UUID | Unique identifier (auto-generated for new) |
+| `businessName` | string | Legal business name |
+| `dbaName` | string | "Doing Business As" name |
+| `franchiseNumber` | string | Franchise identifier (unique) |
+| `ownerFirstName` | string | Owner's first name |
+| `ownerLastName` | string | Owner's last name |
+| `email` | string | Contact email |
+| `phone` | string | Contact phone |
+| `addressLine1/2` | string | Business address |
+| `city/stateProvince/postalCode` | string | Location details |
+| `latitude/longitude` | double | Geocoded coordinates |
+| `isActive` | bool | Active status |
+
+**API Operations:**
+```cpp
+// Create new franchisee (UUID auto-generated)
+FranchiseeDTO dto;
+dto.businessName = "Vocelli Pizza";
+dto.ownerFirstName = "John";
+auto response = alsClient->saveFranchisee(dto);
+// POST /api/Franchisee with generated UUID
+
+// Update existing franchisee
+dto.id = "existing-uuid";
+alsClient->saveFranchisee(dto);
+// PATCH /api/Franchisee/{id}
+
+// Load all franchisees (for dropdown)
+auto franchisees = loadAvailableFranchisees();
+```
+
+### Store Location Management
+
+Store locations represent physical franchise locations linked to a franchisee.
+
+**StoreLocationDTO Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | UUID | Unique identifier (auto-generated for new) |
+| `franchiseeId` | UUID | Link to parent franchisee |
+| `storeName` | string | Store display name |
+| `storeCode` | string | Store identifier (unique) |
+| `addressLine1/2` | string | Store address |
+| `city/stateProvince/postalCode` | string | Location details |
+| `latitude/longitude` | double | Geocoded coordinates |
+| `geocodeSource` | string | Source of coordinates (nominatim, google, manual) |
+| `defaultSearchRadiusMiles` | double | Default search radius |
+| `phone/email` | string | Store contact info |
+| `isActive/isPrimary` | bool | Status flags |
+
+**API Operations:**
+```cpp
+// Create new store location
+StoreLocationDTO dto;
+dto.storeName = "Downtown Location";
+dto.franchiseeId = currentFranchiseeId;  // Link to franchisee
+auto response = alsClient->saveStoreLocation(dto);
+// POST /api/StoreLocation with generated UUID
+
+// Update existing store
+dto.id = "existing-uuid";
+alsClient->saveStoreLocation(dto);
+// PATCH /api/StoreLocation/{id}
+
+// Load from dropdown selection
+selectStoreById(selectedId);
+// Loads store data and saves to current_store_id AppConfig
+```
+
+### Client-Side UUID Generation
+
+For new records (Franchisee and StoreLocation), UUIDs are generated client-side before POSTing to ALS. This ensures the client knows the ID immediately and avoids issues with PostgreSQL UUID generation.
+
+**UUID v4 Format:**
+```
+xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+         │    │    │
+         │    │    └── Variant bits (8, 9, a, or b)
+         │    └─────── Version 4 (random)
+         └──────────── Random hex digits
+```
+
+**Example:**
+```
+[ALS] Creating new StoreLocation with generated UUID: 9407a827-1fd1-46ce-a5ab-d55f43f3044c
+[ALS] POST http://localhost:5657/api/StoreLocation
+```
+
+### Save All Settings Flow
+
+When the user clicks "Save All Settings" in the Settings page:
+
+```
+1. saveFranchiseeToALS()
+   ├── Build FranchiseeDTO from form data
+   ├── If no ID: generate UUID, POST to /api/Franchisee
+   ├── If has ID: PATCH to /api/Franchisee/{id}
+   └── Save current_franchisee_id to AppConfig
+
+2. saveStoreLocationToALS()
+   ├── Build StoreLocationDTO from form data
+   ├── Set franchiseeId to link to current franchisee
+   ├── If no ID: generate UUID, POST to /api/StoreLocation
+   ├── If has ID: PATCH to /api/StoreLocation/{id}
+   └── Save current_store_id to AppConfig
+```
+
+### ALS Endpoint Configuration
+
+The ApiLogicServer endpoint is configured in `config/app_config.json`:
+
+```json
+{
+  "api_logic_server_endpoint": "http://localhost:5657/api"
+}
+```
+
+Or via environment variable:
+```bash
+export API_LOGIC_SERVER_ENDPOINT="http://localhost:5657/api"
+```
+
 ## Architecture
 
 ### Models Layer
@@ -386,6 +571,7 @@ struct OSMAPIConfig {
 - `BBBAPI`: Interface to Better Business Bureau API
 - `DemographicsAPI`: Interface to Census and economic data APIs
 - `OpenStreetMapAPI`: Interface to OpenStreetMap Overpass API for geolocation and POI data
+- `ApiLogicServerClient`: REST client for ApiLogicServer (Franchisee, StoreLocation, AppConfig CRUD operations)
 
 ### UI Layer (Wt Widgets)
 - `Sidebar`: Main navigation with collapsible menu
