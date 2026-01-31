@@ -21,6 +21,7 @@ struct MenuItem {
     std::string label;
     std::string icon;
     bool isActive = false;
+    bool isDivider = false;  // If true, renders as a dividing line
 };
 
 /**
