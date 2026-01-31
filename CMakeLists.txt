@@ -41,6 +41,7 @@ set(SERVICE_SOURCES
     src/services/AIEngine.cpp
     src/services/OpenAIEngine.cpp
     src/services/GeminiEngine.cpp
+    src/services/ApiLogicServerClient.cpp
 )
 
 # Source files - Widgets
