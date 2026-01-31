@@ -167,18 +167,23 @@ void FranchiseApp::loadStyleSheet() {
 void FranchiseApp::showLoginDialog() {
     std::cout << "[FranchiseApp] Showing login dialog" << std::endl;
 
-    // Create login page container with centered dialog appearance
-    auto* loginContainer = root()->addWidget(std::make_unique<Wt::WContainerWidget>());
-    loginContainer->addStyleClass("login-page");
+    // Create login page background with gradient
+    auto* loginBackground = root()->addWidget(std::make_unique<Wt::WContainerWidget>());
+    loginBackground->addStyleClass("login-page-bg");
 
-    // Add login page styles
-    styleSheet().addRule(".login-page", "display: flex; align-items: center; justify-content: center; min-height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);");
+    // Add background styles
+    styleSheet().addRule(".login-page-bg", "position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); z-index: 0;");
 
-    // Create and show login dialog
-    loginDialog_ = loginContainer->addWidget(std::make_unique<Widgets::LoginDialog>());
+    // Create the login dialog as a separate widget (WDialog manages its own display)
+    // Don't add it to the container - WDialog creates its own overlay
+    auto loginDialogPtr = std::make_unique<Widgets::LoginDialog>();
+    loginDialog_ = loginDialogPtr.get();
 
     // Connect login success signal
     loginDialog_->loginSuccessful().connect(this, &FranchiseApp::onLoginSuccessful);
+
+    // Add to application (WDialog needs to be added to app, not container)
+    addChild(std::move(loginDialogPtr));
 
     // Show the dialog
     loginDialog_->show();
