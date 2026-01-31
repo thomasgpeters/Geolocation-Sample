@@ -25,6 +25,47 @@ The application helps franchise owners find potential clients interested in cate
 - Manufacturing facilities
 - Any business with regular meeting and event catering needs
 
+## ⚠️ Authentication (Temporary Implementation)
+
+> **Note:** The current authentication system is a temporary mock implementation for development and testing purposes. A more robust, enterprise-class authentication system with full database integration will be implemented in a future sprint.
+
+### Current Mock Users
+
+The application currently uses hardcoded credentials for authentication:
+
+| Email | Password | Role |
+|-------|----------|------|
+| `admin@franchiseai.com` | `admin123` | admin |
+| `mike@pittsburghcatering.com` | `mike123` | franchisee |
+| `thomas.g.peters@imagery-business-systems.com` | `password123` | admin |
+
+### Role-Based Access
+
+- **admin**: Full access to all features including the Audit Trail
+- **franchisee**: Access to standard features (search, prospects, settings)
+
+### Planned Enterprise Features (Future Sprint)
+
+The production authentication system will include:
+
+- Secure password hashing (bcrypt/Argon2)
+- JWT or session-based token management
+- Integration with ApiLogicServer for persistent user storage
+- Password reset functionality
+- Account lockout after failed attempts
+- Multi-factor authentication (MFA) support
+- Role-based access control (RBAC) with granular permissions
+- Audit logging for all authentication events
+- Session timeout and refresh token handling
+
+### Technical Notes
+
+- Authentication state is stored in memory only (sessions do not persist across server restarts)
+- No external database calls are made during authentication
+- The `AuthService` class handles all authentication logic in `src/services/AuthService.cpp`
+
+---
+
 ## Project Structure
 
 ```
