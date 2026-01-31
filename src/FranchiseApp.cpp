@@ -2250,6 +2250,7 @@ void FranchiseApp::loadStoreLocationFromALS() {
                 franchisee_.location.postalCode = loc.postalCode;
                 franchisee_.location.latitude = loc.latitude;
                 franchisee_.location.longitude = loc.longitude;
+                franchisee_.location.isValid = true;  // Mark location as valid for hasValidCoordinates()
                 franchisee_.defaultSearchRadiusMiles = loc.defaultSearchRadiusMiles;
                 franchisee_.phone = loc.phone;
                 franchisee_.email = loc.email;
@@ -2403,6 +2404,7 @@ void FranchiseApp::loadFranchiseeFromALS() {
                     franchisee_.location.postalCode = dto.postalCode;
                     franchisee_.location.latitude = dto.latitude;
                     franchisee_.location.longitude = dto.longitude;
+                    franchisee_.location.isValid = true;  // Mark location as valid
                 }
                 std::cout << "  [App] Loaded franchisee: " << dto.businessName << std::endl;
                 return;
