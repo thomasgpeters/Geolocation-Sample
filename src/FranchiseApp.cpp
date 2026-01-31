@@ -299,8 +299,11 @@ void FranchiseApp::redirectToLogin() {
     // Clear the current UI
     root()->clear();
 
-    // Update URL to root
+    // Update URL to root and clean up any query parameters
     setInternalPath("/", true);
+    doJavaScript("if(window.history && window.history.replaceState) {"
+                 "  window.history.replaceState({}, '', '/');"
+                 "}");
 
     // Show login dialog
     showLoginDialog();
@@ -383,30 +386,42 @@ void FranchiseApp::onMenuItemSelected(const std::string& itemId) {
     currentPage_ = itemId;
 
     // Map menu item IDs to clean URL paths
+    std::string path;
     if (itemId == "dashboard") {
-        setInternalPath("/dashboard", true);
+        path = "/dashboard";
         showDashboardPage();
     } else if (itemId == "ai-search") {
-        setInternalPath("/search", true);
+        path = "/search";
         showAISearchPage();
     } else if (itemId == "prospects") {
-        setInternalPath("/prospects", true);
+        path = "/prospects";
         showProspectsPage();
     } else if (itemId == "openstreetmap") {
-        setInternalPath("/openstreetmap", true);
+        path = "/openstreetmap";
         showOpenStreetMapPage();
     } else if (itemId == "reports") {
-        setInternalPath("/reports", true);
+        path = "/reports";
         showReportsPage();
     } else if (itemId == "settings") {
-        setInternalPath("/settings", true);
+        path = "/settings";
         showSettingsPage();
     } else if (itemId == "audit-trail") {
         // Admin only - Audit Trail
         if (currentUser_.role == "admin") {
-            setInternalPath("/audit", true);
+            path = "/audit";
             showAuditTrailPage();
         }
+    }
+
+    // Set internal path and clean up URL (remove ?_= query parameter)
+    if (!path.empty()) {
+        setInternalPath(path, true);
+        // Use HTML5 History API to ensure clean URL without ?_= parameter
+        doJavaScript("if(window.history && window.history.replaceState) {"
+                     "  var url = window.location.pathname;"
+                     "  if(url.indexOf('?') > -1) url = url.split('?')[0];"
+                     "  window.history.replaceState({}, '', '" + path + "');"
+                     "}");
     }
 }
 
