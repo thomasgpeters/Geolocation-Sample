@@ -865,9 +865,10 @@ void FranchiseApp::showProspectsPage() {
                 auto infoContainer = card->addWidget(std::make_unique<Wt::WContainerWidget>());
                 infoContainer->setStyleClass("prospect-info");
 
-                if (!prospect.business->address.empty()) {
+                std::string fullAddress = prospect.business->address.getFullAddress();
+                if (!fullAddress.empty() && !prospect.business->address.street1.empty()) {
                     auto addressText = infoContainer->addWidget(std::make_unique<Wt::WText>(
-                        prospect.business->address
+                        fullAddress
                     ));
                     addressText->setStyleClass("prospect-address");
                 }
