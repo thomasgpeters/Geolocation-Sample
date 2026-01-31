@@ -133,6 +133,21 @@ public:
     static std::vector<StoreLocationDTO> parseStoreLocations(const ApiResponse& response);
 
     /**
+     * @brief Get app config value by key
+     * @param key Config key (e.g., "current_store_id")
+     * @return Config value or empty string if not found
+     */
+    std::string getAppConfigValue(const std::string& key);
+
+    /**
+     * @brief Set app config value
+     * @param key Config key
+     * @param value Config value
+     * @return true if successful
+     */
+    bool setAppConfigValue(const std::string& key, const std::string& value);
+
+    /**
      * @brief Check if API is reachable
      * @return true if API responds successfully
      */

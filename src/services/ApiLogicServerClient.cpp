@@ -414,5 +414,40 @@ bool ApiLogicServerClient::isAvailable() {
     return response.success || response.statusCode == 404;  // 404 is ok, means server is up
 }
 
+std::string ApiLogicServerClient::getAppConfigValue(const std::string& key) {
+    // Query app_config by config_key
+    auto response = httpGet("/AppConfig?filter[config_key]=" + key);
+
+    if (response.success && !response.body.empty()) {
+        // Extract config_value from response
+        std::string configValue = extractJsonString(response.body, "config_value");
+        return configValue;
+    }
+    return "";
+}
+
+bool ApiLogicServerClient::setAppConfigValue(const std::string& key, const std::string& value) {
+    // First check if the config exists
+    auto getResponse = httpGet("/AppConfig?filter[config_key]=" + key);
+
+    if (getResponse.success && !getResponse.body.empty()) {
+        // Try to extract the ID
+        std::string id = extractJsonString(getResponse.body, "id");
+
+        if (!id.empty()) {
+            // Update existing config
+            std::string json = "{\"config_value\": \"" + value + "\"}";
+            auto response = httpPatch("/AppConfig/" + id, json);
+            return response.success;
+        }
+    }
+
+    // Create new config entry
+    std::string json = "{\"config_key\": \"" + key + "\", \"config_value\": \"" + value +
+                       "\", \"config_type\": \"string\", \"category\": \"system\"}";
+    auto response = httpPost("/AppConfig", json);
+    return response.success;
+}
+
 } // namespace Services
 } // namespace FranchiseAI
