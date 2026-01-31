@@ -864,7 +864,7 @@ INSERT INTO app_config (config_key, config_value, config_type, category, descrip
 -- These reference the first Denver franchisee and store for default app state
 INSERT INTO app_config (config_key, config_value, config_type, category, description, is_sensitive, is_required, default_value) VALUES
 ('current_franchisee_id', 'c2c5af5a-53a5-4d28-8218-3675c0942ead', 'string', 'system', 'Currently selected franchisee ID', false, false, ''),
-('current_store_id', 'd1000000-0000-0000-0000-000000000001', 'string', 'system', 'Currently selected store location ID', false, false, '');
+('current_store_id', 'c14a9f57-2ed2-4e30-9834-98614465ddbb', 'string', 'system', 'Currently selected store location ID', false, false, '');
 
 
 -- ============================================================================
