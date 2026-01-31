@@ -3,9 +3,42 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
+#include <random>
 
 namespace FranchiseAI {
 namespace Services {
+
+// ============================================================================
+// UUID Generation Helper
+// ============================================================================
+
+/**
+ * @brief Generate a UUID v4 string
+ * Format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+ * where x is any hex digit and y is one of 8, 9, a, or b
+ */
+static std::string generateUUID() {
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    static std::uniform_int_distribution<> dis(0, 15);
+    static std::uniform_int_distribution<> dis2(8, 11);
+
+    std::stringstream ss;
+    ss << std::hex;
+
+    for (int i = 0; i < 8; i++) ss << dis(gen);
+    ss << "-";
+    for (int i = 0; i < 4; i++) ss << dis(gen);
+    ss << "-4";  // UUID version 4
+    for (int i = 0; i < 3; i++) ss << dis(gen);
+    ss << "-";
+    ss << dis2(gen);  // Variant bits (8, 9, a, or b)
+    for (int i = 0; i < 3; i++) ss << dis(gen);
+    ss << "-";
+    for (int i = 0; i < 12; i++) ss << dis(gen);
+
+    return ss.str();
+}
 
 // ============================================================================
 // StoreLocationDTO implementation
@@ -348,13 +381,18 @@ ApiResponse ApiLogicServerClient::httpDelete(const std::string& path) {
 }
 
 ApiResponse ApiLogicServerClient::saveStoreLocation(const StoreLocationDTO& location) {
-    std::string json = location.toJson();
-
     if (location.id.empty()) {
-        // Create new record
+        // Create new record - generate UUID client-side
+        StoreLocationDTO newLocation = location;
+        newLocation.id = generateUUID();
+        std::string json = newLocation.toJson();
+
+        std::cout << "  [ALS] Creating new StoreLocation with generated UUID: " << newLocation.id << std::endl;
         return httpPost("/StoreLocation", json);
     } else {
-        // Update existing record
+        // Update existing record (from dropdown selection)
+        std::string json = location.toJson();
+        std::cout << "  [ALS] Updating existing StoreLocation: " << location.id << std::endl;
         return httpPatch("/StoreLocation/" + location.id, json);
     }
 }
