@@ -113,31 +113,44 @@ LoginResult AuthService::login(const std::string& email,
     auto extractField = [&userJson](const std::string& field) -> std::string {
         std::string searchKey = "\"" + field + "\":";
         size_t pos = userJson.find(searchKey);
-        if (pos == std::string::npos) return "";
+        if (pos == std::string::npos) {
+            std::cout << "[AuthService] Field not found: " << field << std::endl;
+            return "";
+        }
 
         pos += searchKey.length();
-        while (pos < userJson.length() && (userJson[pos] == ' ' || userJson[pos] == '"')) pos++;
+        // Skip whitespace only (not quotes)
+        while (pos < userJson.length() && (userJson[pos] == ' ' || userJson[pos] == '\t')) pos++;
+
+        if (pos >= userJson.length()) return "";
 
         if (userJson[pos] == '"') {
-            // String value
-            pos++;
+            // String value - find the closing quote
+            pos++;  // Skip opening quote
             size_t endPos = userJson.find('"', pos);
             if (endPos != std::string::npos) {
-                return userJson.substr(pos, endPos - pos);
+                std::string val = userJson.substr(pos, endPos - pos);
+                return val;
             }
+        } else if (userJson.substr(pos, 4) == "null") {
+            // Null value
+            return "";
         } else {
-            // Non-string value
+            // Non-string value (number, boolean, etc.)
             size_t endPos = userJson.find_first_of(",}]", pos);
             if (endPos != std::string::npos) {
                 std::string val = userJson.substr(pos, endPos - pos);
-                // Trim quotes if present
-                if (!val.empty() && val.front() == '"') val = val.substr(1);
-                if (!val.empty() && val.back() == '"') val.pop_back();
+                // Trim any trailing whitespace
+                while (!val.empty() && (val.back() == ' ' || val.back() == '\t')) {
+                    val.pop_back();
+                }
                 return val;
             }
         }
         return "";
     };
+
+    std::cout << "[AuthService] Parsing user JSON response (length: " << userJson.length() << ")" << std::endl;
 
     userId = extractField("id");
     storedHash = extractField("password_hash");
@@ -152,7 +165,12 @@ LoginResult AuthService::login(const std::string& email,
     std::string isVerifiedStr = extractField("is_verified");
     isVerified = (isVerifiedStr == "true" || isVerifiedStr == "1");
 
-    std::cout << "[AuthService] Found user: " << userId << ", role: " << role << std::endl;
+    std::cout << "[AuthService] Extracted fields:" << std::endl;
+    std::cout << "  - userId: '" << userId << "'" << std::endl;
+    std::cout << "  - role: '" << role << "'" << std::endl;
+    std::cout << "  - firstName: '" << firstName << "'" << std::endl;
+    std::cout << "  - isActive: " << (isActive ? "true" : "false") << std::endl;
+    std::cout << "  - storedHash: '" << storedHash << "'" << std::endl;
 
     if (userId.empty()) {
         result.errorMessage = "Invalid email or password";
@@ -478,8 +496,24 @@ void AuthService::recordLoginAttempt(const std::string& userId,
               << "\"attributes\":{"
               << "\"event_type\":\"" << (success ? "login" : "failed_login") << "\"";
 
-    if (!userId.empty()) {
-        auditJson << ",\"user_id\":\"" << userId << "\"";
+    // Only include user_id if it's a valid UUID (not empty, not whitespace)
+    std::string trimmedUserId = userId;
+    // Trim whitespace
+    size_t start = trimmedUserId.find_first_not_of(" \t\n\r");
+    size_t end = trimmedUserId.find_last_not_of(" \t\n\r");
+    if (start != std::string::npos && end != std::string::npos) {
+        trimmedUserId = trimmedUserId.substr(start, end - start + 1);
+    } else {
+        trimmedUserId = "";
+    }
+
+    // Validate UUID format (basic check: 36 chars with hyphens at right positions)
+    bool isValidUuid = trimmedUserId.length() == 36 &&
+                       trimmedUserId[8] == '-' && trimmedUserId[13] == '-' &&
+                       trimmedUserId[18] == '-' && trimmedUserId[23] == '-';
+
+    if (isValidUuid) {
+        auditJson << ",\"user_id\":\"" << trimmedUserId << "\"";
     }
     if (!ipAddress.empty()) {
         auditJson << ",\"ip_address\":\"" << ipAddress << "\"";
