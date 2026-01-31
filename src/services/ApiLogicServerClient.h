@@ -5,11 +5,23 @@
 #include <functional>
 #include <memory>
 #include <vector>
+#include <unordered_map>
 #include "models/Franchisee.h"
 #include "AppConfig.h"
 
 namespace FranchiseAI {
 namespace Services {
+
+/**
+ * @brief App config entry from database
+ */
+struct AppConfigEntry {
+    std::string id;           // UUID for PATCH updates
+    std::string configKey;
+    std::string configValue;
+    std::string configType;
+    std::string category;
+};
 
 /**
  * @brief Store location data for API communication
@@ -133,14 +145,20 @@ public:
     static std::vector<StoreLocationDTO> parseStoreLocations(const ApiResponse& response);
 
     /**
-     * @brief Get app config value by key
+     * @brief Load all app configs into memory cache
+     * Must be called before using getAppConfigValue/setAppConfigValue
+     */
+    void loadAppConfigs();
+
+    /**
+     * @brief Get app config value by key (from cache)
      * @param key Config key (e.g., "current_store_id")
      * @return Config value or empty string if not found
      */
     std::string getAppConfigValue(const std::string& key);
 
     /**
-     * @brief Set app config value
+     * @brief Set app config value (updates cache and server)
      * @param key Config key
      * @param value Config value
      * @return true if successful
@@ -183,6 +201,12 @@ private:
      * @brief CURL write callback
      */
     static size_t writeCallback(void* contents, size_t size, size_t nmemb, std::string* userp);
+
+    /**
+     * @brief In-memory cache of app config entries
+     * Key: config_key, Value: AppConfigEntry (includes ID for updates)
+     */
+    std::unordered_map<std::string, AppConfigEntry> appConfigCache_;
 };
 
 } // namespace Services
