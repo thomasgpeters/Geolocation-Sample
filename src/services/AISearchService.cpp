@@ -483,9 +483,33 @@ Models::SearchResultItem AISearchService::createDemographicResultItem(
 }
 
 void AISearchService::analyzeResults(Models::SearchResults& results) {
-    // Generate insights for each result
+    // First, score ALL results using local scoring (fast, no API calls)
     for (auto& item : results.items) {
-        generateAIInsights(item);
+        scoreResult(item);
+    }
+
+    // Sort by initial score to identify top prospects
+    std::sort(results.items.begin(), results.items.end(),
+        [](const Models::SearchResultItem& a, const Models::SearchResultItem& b) {
+            return a.overallScore > b.overallScore;
+        });
+
+    // Only generate AI insights for top results to avoid API timeout issues
+    // Limit to max 5 AI calls to keep response time reasonable
+    const size_t maxAIAnalysisItems = 5;
+    size_t aiAnalyzedCount = 0;
+
+    for (auto& item : results.items) {
+        if (aiAnalyzedCount >= maxAIAnalysisItems) {
+            // For remaining items, use local fallback analysis (no API call)
+            if (item.business && item.aiSummary.empty()) {
+                generateLocalInsights(item);
+            }
+        } else if (item.business) {
+            // Only call AI for business items (not demographics)
+            generateAIInsights(item);
+            aiAnalyzedCount++;
+        }
     }
 
     // Generate overall analysis
@@ -519,66 +543,75 @@ void AISearchService::scoreResult(Models::SearchResultItem& item) {
     item.aiConfidenceScore = score / 100.0;
 }
 
-void AISearchService::generateAIInsights(Models::SearchResultItem& item) {
-    if (item.business) {
-        auto& biz = *item.business;
+void AISearchService::generateLocalInsights(Models::SearchResultItem& item) {
+    if (!item.business) return;
 
-        // Use AI engine if available
-        if (aiEngine_ && aiEngine_->isConfigured()) {
-            auto analysis = aiEngine_->analyzeBusinessPotentialSync(biz);
-            item.aiSummary = analysis.summary;
-            item.keyHighlights = analysis.keyHighlights;
-            item.recommendedActions = analysis.recommendedActions;
-            item.matchReason = analysis.matchReason;
-            item.aiConfidenceScore = analysis.confidenceScore;
+    auto& biz = *item.business;
 
-            // Update business score from AI analysis if provided
-            if (analysis.cateringPotentialScore > 0) {
-                biz.cateringPotentialScore = analysis.cateringPotentialScore;
-            }
-            return;
+    // Generate local analysis without API calls
+    std::ostringstream insights;
+
+    insights << biz.name << " is a " << biz.getBusinessTypeString()
+             << " with approximately " << biz.employeeCount << " employees. ";
+
+    if (biz.hasConferenceRoom || biz.hasEventSpace) {
+        insights << "This location has ";
+        if (biz.hasConferenceRoom && biz.hasEventSpace) {
+            insights << "conference rooms and dedicated event space, ";
+        } else if (biz.hasConferenceRoom) {
+            insights << "conference rooms, ";
+        } else {
+            insights << "event space, ";
         }
-
-        // Fall back to local analysis
-        std::ostringstream insights;
-
-        insights << biz.name << " is a " << biz.getBusinessTypeString()
-                 << " with approximately " << biz.employeeCount << " employees. ";
-
-        if (biz.hasConferenceRoom || biz.hasEventSpace) {
-            insights << "This location has ";
-            if (biz.hasConferenceRoom && biz.hasEventSpace) {
-                insights << "conference rooms and dedicated event space, ";
-            } else if (biz.hasConferenceRoom) {
-                insights << "conference rooms, ";
-            } else {
-                insights << "event space, ";
-            }
-            insights << "making it ideal for corporate catering. ";
-        }
-
-        if (biz.bbbAccredited) {
-            insights << "BBB accredited with " << biz.getBBBRatingString() << " rating. ";
-        }
-
-        insights << "Catering potential: " << biz.getCateringPotentialDescription() << ".";
-
-        item.aiSummary = insights.str();
-
-        // Key highlights
-        item.keyHighlights.clear();
-        item.keyHighlights.push_back("Employee count: ~" + std::to_string(biz.employeeCount));
-        item.keyHighlights.push_back("Business type: " + biz.getBusinessTypeString());
-        if (biz.googleRating > 0) {
-            std::ostringstream rating;
-            rating.precision(1);
-            rating << std::fixed << biz.googleRating;
-            item.keyHighlights.push_back("Google rating: " + rating.str() + "/5");
-        }
-        if (biz.hasConferenceRoom) {
-            item.keyHighlights.push_back("Has conference facilities");
-        }
+        insights << "making it ideal for corporate catering. ";
     }
+
+    if (biz.bbbAccredited) {
+        insights << "BBB accredited with " << biz.getBBBRatingString() << " rating. ";
+    }
+
+    insights << "Catering potential: " << biz.getCateringPotentialDescription() << ".";
+
+    item.aiSummary = insights.str();
+
+    // Key highlights
+    item.keyHighlights.clear();
+    item.keyHighlights.push_back("Employee count: ~" + std::to_string(biz.employeeCount));
+    item.keyHighlights.push_back("Business type: " + biz.getBusinessTypeString());
+    if (biz.googleRating > 0) {
+        std::ostringstream rating;
+        rating.precision(1);
+        rating << std::fixed << biz.googleRating;
+        item.keyHighlights.push_back("Google rating: " + rating.str() + "/5");
+    }
+    if (biz.hasConferenceRoom) {
+        item.keyHighlights.push_back("Has conference facilities");
+    }
+}
+
+void AISearchService::generateAIInsights(Models::SearchResultItem& item) {
+    if (!item.business) return;
+
+    auto& biz = *item.business;
+
+    // Use AI engine if available
+    if (aiEngine_ && aiEngine_->isConfigured()) {
+        auto analysis = aiEngine_->analyzeBusinessPotentialSync(biz);
+        item.aiSummary = analysis.summary;
+        item.keyHighlights = analysis.keyHighlights;
+        item.recommendedActions = analysis.recommendedActions;
+        item.matchReason = analysis.matchReason;
+        item.aiConfidenceScore = analysis.confidenceScore;
+
+        // Update business score from AI analysis if provided
+        if (analysis.cateringPotentialScore > 0) {
+            biz.cateringPotentialScore = analysis.cateringPotentialScore;
+        }
+        return;
+    }
+
+    // Fall back to local analysis
+    generateLocalInsights(item);
 }
 
 void AISearchService::generateOverallAnalysis(Models::SearchResults& results) {
