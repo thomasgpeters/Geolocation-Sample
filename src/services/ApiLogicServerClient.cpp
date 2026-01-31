@@ -436,28 +436,18 @@ void ApiLogicServerClient::loadAppConfigs() {
     }
 
     // Parse the JSON array of config entries
-    // Look for each object in the data array
+    // JSON:API format has: {"data": [{"attributes": {..., "config_key": "...", ...}, "id": "...", "type": "AppConfig"}, ...]}
+    // Important: In JSON:API, "attributes" comes BEFORE "id" in the JSON string (alphabetical order)
+    // So we need to find config_key first, then find the id that comes AFTER it in the same record
     const std::string& json = response.body;
     size_t pos = 0;
 
     while (pos < json.length()) {
-        // Find next "id" field (indicates start of a record)
-        size_t idPos = json.find("\"id\"", pos);
-        if (idPos == std::string::npos) break;
-
-        // Extract fields for this record
-        // Find the object boundaries (look for config_key which must exist)
-        size_t keyPos = json.find("\"config_key\"", idPos);
+        // Find next "config_key" field (indicates we're in an attributes block)
+        size_t keyPos = json.find("\"config_key\"", pos);
         if (keyPos == std::string::npos) break;
 
         AppConfigEntry entry;
-
-        // Extract ID
-        size_t idStart = json.find("\"", idPos + 4);
-        size_t idEnd = json.find("\"", idStart + 1);
-        if (idStart != std::string::npos && idEnd != std::string::npos) {
-            entry.id = json.substr(idStart + 1, idEnd - idStart - 1);
-        }
 
         // Extract config_key
         size_t ckStart = json.find("\"", keyPos + 12);
@@ -466,7 +456,7 @@ void ApiLogicServerClient::loadAppConfigs() {
             entry.configKey = json.substr(ckStart + 1, ckEnd - ckStart - 1);
         }
 
-        // Extract config_value
+        // Extract config_value (comes after config_key in the same attributes block)
         size_t cvPos = json.find("\"config_value\"", keyPos);
         if (cvPos != std::string::npos && cvPos < keyPos + 500) {
             size_t cvStart = json.find("\"", cvPos + 14);
@@ -476,7 +466,22 @@ void ApiLogicServerClient::loadAppConfigs() {
             }
         }
 
-        // Add to cache if we got a valid key
+        // Find the "id" field that comes AFTER the attributes block (same record)
+        // The "id" is at the same level as "attributes", so it comes after the attributes block closes
+        size_t idPos = json.find("\"id\"", keyPos);
+        if (idPos != std::string::npos) {
+            // Make sure we don't go past the next record's config_key
+            size_t nextKeyPos = json.find("\"config_key\"", keyPos + 1);
+            if (nextKeyPos == std::string::npos || idPos < nextKeyPos) {
+                size_t idStart = json.find("\"", idPos + 4);
+                size_t idEnd = json.find("\"", idStart + 1);
+                if (idStart != std::string::npos && idEnd != std::string::npos) {
+                    entry.id = json.substr(idStart + 1, idEnd - idStart - 1);
+                }
+            }
+        }
+
+        // Add to cache if we got a valid key and id
         if (!entry.configKey.empty() && !entry.id.empty()) {
             appConfigCache_[entry.configKey] = entry;
             std::cout << "  [ALS] Cached: " << entry.configKey << " = '" << entry.configValue << "' (id: " << entry.id << ")" << std::endl;
