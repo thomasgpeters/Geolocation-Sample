@@ -2572,7 +2572,7 @@ void FranchiseApp::showSettingsPage() {
     statusMessage->setHidden(true);
 
     // Connect save button - saves ALL tabs
-    saveBtn->clicked().connect([this, storeCombo, nameInput, addressInput, ownerInput, phoneInput, radiusInput,
+    saveBtn->clicked().connect([this, saveBtn, storeCombo, nameInput, addressInput, ownerInput, phoneInput, radiusInput,
                                 sizeCombo, typeCheckboxes, openaiInput, modelSelect, geminiInput,
                                 googleInput, bbbInput, censusInput, statusMessage, aiStatus]() {
         std::cout << "  [Settings] Save button clicked" << std::endl;
@@ -2713,22 +2713,37 @@ void FranchiseApp::showSettingsPage() {
                 statusMessage->setText("Settings saved, but address could not be geocoded. Check the address and try again.");
                 statusMessage->setStyleClass("settings-status-message status-warning");
             } else {
-                statusMessage->setText("All settings saved successfully!");
+                statusMessage->setText("✓ All settings saved successfully!");
                 statusMessage->setStyleClass("settings-status-message status-success");
             }
             statusMessage->setHidden(false);
 
-            // Auto-hide the status message after 5 seconds
+            // Hide save button, show status message - toggle visibility to prevent layout shift
+            std::string buttonId = saveBtn->id();
             std::string messageId = statusMessage->id();
+
+            // Immediately hide button and show message
+            std::ostringstream hideButtonJs;
+            hideButtonJs << "var btn = document.getElementById('" << buttonId << "');"
+                         << "var msg = document.getElementById('" << messageId << "');"
+                         << "if (btn) { btn.style.display = 'none'; }"
+                         << "if (msg) { msg.style.opacity = '1'; msg.style.display = 'inline-block'; }";
+            doJavaScript(hideButtonJs.str());
+
+            // After 4 seconds, fade out message and show button again
             std::ostringstream fadeJs;
             fadeJs << "setTimeout(function() {"
-                   << "  var el = document.getElementById('" << messageId << "');"
-                   << "  if (el) {"
-                   << "    el.style.transition = 'opacity 0.5s ease-out';"
-                   << "    el.style.opacity = '0';"
-                   << "    setTimeout(function() { el.style.display = 'none'; }, 500);"
+                   << "  var btn = document.getElementById('" << buttonId << "');"
+                   << "  var msg = document.getElementById('" << messageId << "');"
+                   << "  if (msg) {"
+                   << "    msg.style.transition = 'opacity 0.5s ease-out';"
+                   << "    msg.style.opacity = '0';"
+                   << "    setTimeout(function() {"
+                   << "      if (msg) { msg.style.display = 'none'; }"
+                   << "      if (btn) { btn.style.display = 'inline-block'; }"
+                   << "    }, 500);"
                    << "  }"
-                   << "}, 5000);";
+                   << "}, 4000);";
             doJavaScript(fadeJs.str());
 
             // Clear password fields
