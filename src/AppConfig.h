@@ -87,12 +87,12 @@ public:
         // Simple JSON parsing for key-value pairs
         std::string line;
         while (std::getline(file, line)) {
-            // Parse "key": "value" format
+            // Parse "key": value format (handles both quoted strings and numbers)
             auto colonPos = line.find(':');
             if (colonPos == std::string::npos) continue;
 
-            std::string key = extractJsonString(line.substr(0, colonPos));
-            std::string value = extractJsonString(line.substr(colonPos + 1));
+            std::string key = extractJsonKey(line);
+            std::string value = extractJsonValue(line);
 
             // Only load from file if not already set (env vars take precedence)
             // ApiLogicServer settings
@@ -338,9 +338,53 @@ private:
     std::string configFilePath_;
 
     /**
-     * @brief Extract string value from JSON-like format
+     * @brief Extract value from JSON-like format (handles quoted strings and unquoted numbers)
      */
-    static std::string extractJsonString(const std::string& s) {
+    static std::string extractJsonValue(const std::string& s) {
+        // First try to find a quoted string
+        size_t start = s.find('"');
+        if (start != std::string::npos) {
+            size_t end = s.find('"', start + 1);
+            if (end != std::string::npos) {
+                return s.substr(start + 1, end - start - 1);
+            }
+        }
+
+        // Otherwise, extract unquoted value (number, true, false, null)
+        size_t colonPos = s.find(':');
+        if (colonPos == std::string::npos) {
+            // No colon, just trim the string
+            std::string trimmed = s;
+            // Remove leading whitespace
+            size_t startPos = trimmed.find_first_not_of(" \t\n\r");
+            if (startPos == std::string::npos) return "";
+            trimmed = trimmed.substr(startPos);
+            // Remove trailing whitespace and punctuation
+            size_t endPos = trimmed.find_last_not_of(" \t\n\r,}]");
+            if (endPos != std::string::npos) {
+                trimmed = trimmed.substr(0, endPos + 1);
+            }
+            return trimmed;
+        }
+
+        // Extract value after colon
+        std::string value = s.substr(colonPos + 1);
+        // Remove leading whitespace
+        size_t startPos = value.find_first_not_of(" \t");
+        if (startPos == std::string::npos) return "";
+        value = value.substr(startPos);
+        // Remove trailing whitespace and punctuation
+        size_t endPos = value.find_last_not_of(" \t\n\r,}]");
+        if (endPos != std::string::npos) {
+            value = value.substr(0, endPos + 1);
+        }
+        return value;
+    }
+
+    /**
+     * @brief Extract key from JSON-like format
+     */
+    static std::string extractJsonKey(const std::string& s) {
         size_t start = s.find('"');
         if (start == std::string::npos) return "";
         size_t end = s.find('"', start + 1);
