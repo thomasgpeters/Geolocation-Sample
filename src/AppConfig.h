@@ -121,6 +121,10 @@ public:
             } else if (key == "openai_model" && !value.empty() && openaiModel_.empty()) {
                 openaiModel_ = value;
             }
+            // Branding
+            else if (key == "brand_logo_path" && !value.empty() && brandLogoPath_.empty()) {
+                brandLogoPath_ = value;
+            }
         }
 
         configFilePath_ = filepath;
@@ -151,7 +155,8 @@ public:
         file << "  \"google_api_key\": \"" << googleApiKey_ << "\",\n";
         file << "  \"bbb_api_key\": \"" << bbbApiKey_ << "\",\n";
         file << "  \"census_api_key\": \"" << censusApiKey_ << "\",\n";
-        file << "  \"gemini_api_key\": \"" << geminiApiKey_ << "\"\n";
+        file << "  \"gemini_api_key\": \"" << geminiApiKey_ << "\",\n";
+        file << "  \"brand_logo_path\": \"" << brandLogoPath_ << "\"\n";
         file << "}\n";
 
         configFilePath_ = path;
@@ -280,6 +285,22 @@ public:
         return !geminiApiKey_.empty();
     }
 
+    // Branding getters/setters
+    std::string getBrandLogoPath() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return brandLogoPath_.empty() ? DEFAULT_LOGO_URL : brandLogoPath_;
+    }
+
+    void setBrandLogoPath(const std::string& path) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        brandLogoPath_ = path;
+    }
+
+    bool hasCustomLogo() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return !brandLogoPath_.empty();
+    }
+
     /**
      * @brief Print configuration status (for startup logging)
      */
@@ -336,6 +357,10 @@ private:
     std::string censusApiKey_;
     std::string geminiApiKey_;
     std::string configFilePath_;
+
+    // Branding
+    std::string brandLogoPath_;  // Path to custom logo (local file or URL)
+    static constexpr const char* DEFAULT_LOGO_URL = "https://media.licdn.com/dms/image/v2/D4E0BAQFNqqJ59i1lgQ/company-logo_200_200/company-logo_200_200/0/1733939002925/imagery_business_systems_llc_logo?e=1771459200&v=beta&t=uASbYiGNvSAkTxbpF0MxvSBGt74KHdfVxToiG4dmSGw";
 
     /**
      * @brief Extract value from JSON-like format (handles quoted strings and unquoted numbers)

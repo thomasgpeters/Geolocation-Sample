@@ -80,21 +80,35 @@ public:
      */
     Wt::Signal<>& logoutRequested() { return logoutRequested_; }
 
+    /**
+     * @brief Signal emitted when view profile is requested
+     */
+    Wt::Signal<>& viewProfileRequested() { return viewProfileRequested_; }
+
+    /**
+     * @brief Set the logo URL
+     * @param url URL or path to the logo image
+     */
+    void setLogoUrl(const std::string& url);
+
 private:
     void setupUI();
     void createHeader();
     void createMenu();
     void createFooter();
     void onMenuItemClicked(const std::string& itemId);
+    void toggleUserDropdown();
 
     std::vector<MenuItem> menuItems_;
     std::string activeItemId_;
     std::string userRole_ = "franchisee";
     bool isCollapsed_ = false;
     bool isAdmin_ = false;
+    bool isDropdownOpen_ = false;
 
     Wt::Signal<std::string> itemSelected_;
     Wt::Signal<> logoutRequested_;
+    Wt::Signal<> viewProfileRequested_;
 
     // UI components
     Wt::WContainerWidget* headerContainer_ = nullptr;
@@ -102,6 +116,8 @@ private:
     Wt::WContainerWidget* footerContainer_ = nullptr;
     Wt::WText* userNameText_ = nullptr;
     Wt::WText* franchiseNameText_ = nullptr;
+    Wt::WContainerWidget* userDropdown_ = nullptr;
+    Wt::WImage* brandLogo_ = nullptr;
 };
 
 } // namespace Widgets

@@ -105,6 +105,14 @@ html, body {
     margin-bottom: 20px;
 }
 
+.brand-logo {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
 .brand-icon {
     font-size: 28px;
 }
@@ -113,6 +121,10 @@ html, body {
     font-size: 20px;
     font-weight: 700;
     color: white;
+}
+
+.user-section-wrapper {
+    position: relative;
 }
 
 .user-section {
@@ -124,6 +136,15 @@ html, body {
     border-radius: var(--border-radius);
 }
 
+.user-section.clickable {
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.user-section.clickable:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
 .user-avatar {
     width: 40px;
     height: 40px;
@@ -133,11 +154,13 @@ html, body {
     align-items: center;
     justify-content: center;
     font-size: 18px;
+    flex-shrink: 0;
 }
 
 .user-info {
     flex: 1;
     overflow: hidden;
+    min-width: 0;
 }
 
 .user-name {
@@ -145,12 +168,78 @@ html, body {
     font-size: 14px;
     color: white;
     display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .franchise-name {
     font-size: 12px;
     color: var(--text-sidebar-muted);
     display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dropdown-arrow {
+    font-size: 10px;
+    color: var(--text-sidebar-muted);
+    margin-left: auto;
+    transition: transform 0.2s ease;
+}
+
+.user-section.clickable:hover .dropdown-arrow {
+    color: white;
+}
+
+/* User Dropdown Menu */
+.user-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 4px;
+    background: #1e293b;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--border-radius);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    overflow: hidden;
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    color: var(--text-sidebar);
+}
+
+.dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.dropdown-item.logout {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    color: #f87171;
+}
+
+.dropdown-item.logout:hover {
+    background: rgba(248, 113, 113, 0.15);
+}
+
+.dropdown-icon {
+    font-size: 16px;
+    width: 20px;
+    text-align: center;
+}
+
+.dropdown-label {
+    font-size: 14px;
+    font-weight: 500;
 }
 
 .sidebar-menu {
@@ -1343,6 +1432,38 @@ html, body {
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+/* ==================== Logo/Branding Settings ==================== */
+.logo-preview-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    background: var(--bg-hover);
+    border-radius: var(--border-radius);
+    margin-bottom: 20px;
+}
+
+.logo-preview {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    border-radius: var(--border-radius);
+    border: 2px solid var(--border-color);
+    background: white;
+    padding: 8px;
+}
+
+.preview-btn-container {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
 }
 
 /* ==================== Responsive Design ==================== */
@@ -2795,24 +2916,36 @@ html, body {
 
 /* ==================== Hot Prospects Section ==================== */
 .hot-prospects-section {
-    background: var(--bg-card);
-    border-radius: var(--border-radius-lg);
-    padding: 24px;
-    margin-top: 24px;
-    box-shadow: var(--shadow-md);
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-top: 20px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border: 1px solid var(--border-color);
+    max-height: calc(100vh - 480px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .hot-prospects-section .section-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
 }
 
 .hot-prospects-section .section-title {
-    font-size: 1.25rem;
-    font-weight: 600;
+    font-size: 1.2rem;
+    font-weight: 700;
     color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 2px 0;
 }
 
 .hot-prospects-placeholder {
@@ -2820,48 +2953,56 @@ html, body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 40px 20px;
+    padding: 32px 20px;
     text-align: center;
-    background: var(--bg-primary);
-    border-radius: var(--border-radius);
-    border: 2px dashed var(--border-color);
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 2px dashed #e2e8f0;
+    flex: 1;
 }
 
 .placeholder-icon-sm {
     font-size: 2.5rem;
     margin-bottom: 12px;
-    opacity: 0.6;
+    opacity: 0.7;
 }
 
 .placeholder-text-sm {
     color: var(--text-secondary);
     font-size: 0.95rem;
-    max-width: 400px;
+    max-width: 380px;
+    line-height: 1.5;
 }
 
 /* Hot Prospects Table */
 .hot-prospects-table {
     width: 100%;
-    border-radius: var(--border-radius);
+    border-radius: 8px;
     overflow: hidden;
-    border: 1px solid var(--border-color);
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
 }
 
 .prospect-table-header {
     display: flex;
-    background: var(--bg-primary);
-    border-bottom: 2px solid var(--border-color);
+    background: linear-gradient(to bottom, #f8fafc, #f1f5f9);
+    border-bottom: 2px solid #e2e8f0;
     font-weight: 600;
-    color: var(--text-secondary);
-    font-size: 0.85rem;
+    color: #64748b;
+    font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    flex-shrink: 0;
 }
 
 .prospect-table-row {
     display: flex;
-    border-bottom: 1px solid var(--border-color);
-    transition: background var(--transition-fast);
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.15s ease;
+    background: #ffffff;
 }
 
 .prospect-table-row:last-child {
@@ -2869,12 +3010,12 @@ html, body {
 }
 
 .prospect-table-row:hover {
-    background: var(--bg-primary);
+    background: #f8fafc;
 }
 
 .header-cell,
 .table-cell {
-    padding: 14px 16px;
+    padding: 12px 16px;
     display: flex;
     align-items: center;
 }

@@ -2208,6 +2208,9 @@ void FranchiseApp::showSettingsPage() {
     auto tabData = tabNav->addWidget(std::make_unique<Wt::WText>("Data Sources"));
     tabData->setStyleClass("tab-btn");
 
+    auto tabBranding = tabNav->addWidget(std::make_unique<Wt::WText>("Branding"));
+    tabBranding->setStyleClass("tab-btn");
+
     // Tab content container
     auto tabContent = tabContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
     tabContent->setStyleClass("tab-content");
@@ -2508,54 +2511,141 @@ void FranchiseApp::showSettingsPage() {
     censusInput->setAttributeValue("type", "password");
 
     // ===========================================
+    // Tab 5: Branding
+    // ===========================================
+    auto brandingPanel = tabContent->addWidget(std::make_unique<Wt::WContainerWidget>());
+    brandingPanel->setStyleClass("tab-panel");
+    brandingPanel->setId("tab-branding");
+
+    auto brandingSection = brandingPanel->addWidget(std::make_unique<Wt::WContainerWidget>());
+    brandingSection->setStyleClass("settings-section");
+
+    brandingSection->addWidget(std::make_unique<Wt::WText>("Logo Configuration"))->setStyleClass("section-title");
+    brandingSection->addWidget(std::make_unique<Wt::WText>(
+        "Customize your sidebar logo. Paste a URL to an image or upload a logo file."
+    ))->setStyleClass("section-description");
+
+    // Current Logo Preview
+    auto previewContainer = brandingSection->addWidget(std::make_unique<Wt::WContainerWidget>());
+    previewContainer->setStyleClass("logo-preview-container");
+
+    auto previewLabel = previewContainer->addWidget(std::make_unique<Wt::WText>("Current Logo:"));
+    previewLabel->setStyleClass("form-label");
+
+    auto logoPreview = previewContainer->addWidget(std::make_unique<Wt::WImage>(appConfig.getBrandLogoPath()));
+    logoPreview->setStyleClass("logo-preview");
+    logoPreview->setAlternateText("Logo Preview");
+
+    // Logo URL Input
+    auto logoFormGrid = brandingSection->addWidget(std::make_unique<Wt::WContainerWidget>());
+    logoFormGrid->setStyleClass("form-grid");
+
+    auto logoUrlGroup = logoFormGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
+    logoUrlGroup->setStyleClass("form-group full-width");
+    logoUrlGroup->addWidget(std::make_unique<Wt::WText>("Logo URL"))->setStyleClass("form-label");
+    auto logoUrlInput = logoUrlGroup->addWidget(std::make_unique<Wt::WLineEdit>());
+    logoUrlInput->setPlaceholderText("https://example.com/logo.png");
+    logoUrlInput->setStyleClass("form-control");
+    if (appConfig.hasCustomLogo()) {
+        logoUrlInput->setText(appConfig.getBrandLogoPath());
+    }
+    logoUrlGroup->addWidget(std::make_unique<Wt::WText>("Enter a direct URL to your logo image (PNG, JPG, SVG)"))->setStyleClass("form-help");
+
+    // Preview update button
+    auto previewBtnContainer = brandingSection->addWidget(std::make_unique<Wt::WContainerWidget>());
+    previewBtnContainer->setStyleClass("preview-btn-container");
+    auto previewBtn = previewBtnContainer->addWidget(std::make_unique<Wt::WPushButton>("Preview Logo"));
+    previewBtn->setStyleClass("btn btn-secondary");
+
+    // Connect preview button
+    previewBtn->clicked().connect([logoUrlInput, logoPreview] {
+        std::string newUrl = logoUrlInput->text().toUTF8();
+        if (!newUrl.empty()) {
+            logoPreview->setImageLink(Wt::WLink(newUrl));
+        }
+    });
+
+    // Reset to default button
+    auto resetBtn = previewBtnContainer->addWidget(std::make_unique<Wt::WPushButton>("Reset to Default"));
+    resetBtn->setStyleClass("btn btn-outline");
+
+    resetBtn->clicked().connect([this, logoUrlInput, logoPreview] {
+        auto& appConfig = AppConfig::instance();
+        logoUrlInput->setText("");
+        logoPreview->setImageLink(Wt::WLink(AppConfig::DEFAULT_LOGO_URL));
+    });
+
+    // ===========================================
     // Tab Switching Logic
     // ===========================================
-    tabFranchisee->clicked().connect([tabFranchisee, tabMarketing, tabAI, tabData,
-                                       franchiseePanel, marketingPanel, aiPanel, dataPanel] {
+    tabFranchisee->clicked().connect([tabFranchisee, tabMarketing, tabAI, tabData, tabBranding,
+                                       franchiseePanel, marketingPanel, aiPanel, dataPanel, brandingPanel] {
         tabFranchisee->setStyleClass("tab-btn active");
         tabMarketing->setStyleClass("tab-btn");
         tabAI->setStyleClass("tab-btn");
         tabData->setStyleClass("tab-btn");
+        tabBranding->setStyleClass("tab-btn");
         franchiseePanel->setStyleClass("tab-panel active");
         marketingPanel->setStyleClass("tab-panel");
         aiPanel->setStyleClass("tab-panel");
         dataPanel->setStyleClass("tab-panel");
+        brandingPanel->setStyleClass("tab-panel");
     });
 
-    tabMarketing->clicked().connect([tabFranchisee, tabMarketing, tabAI, tabData,
-                                      franchiseePanel, marketingPanel, aiPanel, dataPanel] {
+    tabMarketing->clicked().connect([tabFranchisee, tabMarketing, tabAI, tabData, tabBranding,
+                                      franchiseePanel, marketingPanel, aiPanel, dataPanel, brandingPanel] {
         tabFranchisee->setStyleClass("tab-btn");
         tabMarketing->setStyleClass("tab-btn active");
         tabAI->setStyleClass("tab-btn");
         tabData->setStyleClass("tab-btn");
+        tabBranding->setStyleClass("tab-btn");
         franchiseePanel->setStyleClass("tab-panel");
         marketingPanel->setStyleClass("tab-panel active");
         aiPanel->setStyleClass("tab-panel");
         dataPanel->setStyleClass("tab-panel");
+        brandingPanel->setStyleClass("tab-panel");
     });
 
-    tabAI->clicked().connect([tabFranchisee, tabMarketing, tabAI, tabData,
-                               franchiseePanel, marketingPanel, aiPanel, dataPanel] {
+    tabAI->clicked().connect([tabFranchisee, tabMarketing, tabAI, tabData, tabBranding,
+                               franchiseePanel, marketingPanel, aiPanel, dataPanel, brandingPanel] {
         tabFranchisee->setStyleClass("tab-btn");
         tabMarketing->setStyleClass("tab-btn");
         tabAI->setStyleClass("tab-btn active");
         tabData->setStyleClass("tab-btn");
+        tabBranding->setStyleClass("tab-btn");
         franchiseePanel->setStyleClass("tab-panel");
         marketingPanel->setStyleClass("tab-panel");
         aiPanel->setStyleClass("tab-panel active");
         dataPanel->setStyleClass("tab-panel");
+        brandingPanel->setStyleClass("tab-panel");
     });
 
-    tabData->clicked().connect([tabFranchisee, tabMarketing, tabAI, tabData,
-                                 franchiseePanel, marketingPanel, aiPanel, dataPanel] {
+    tabData->clicked().connect([tabFranchisee, tabMarketing, tabAI, tabData, tabBranding,
+                                 franchiseePanel, marketingPanel, aiPanel, dataPanel, brandingPanel] {
         tabFranchisee->setStyleClass("tab-btn");
         tabMarketing->setStyleClass("tab-btn");
         tabAI->setStyleClass("tab-btn");
         tabData->setStyleClass("tab-btn active");
+        tabBranding->setStyleClass("tab-btn");
         franchiseePanel->setStyleClass("tab-panel");
         marketingPanel->setStyleClass("tab-panel");
         aiPanel->setStyleClass("tab-panel");
         dataPanel->setStyleClass("tab-panel active");
+        brandingPanel->setStyleClass("tab-panel");
+    });
+
+    tabBranding->clicked().connect([tabFranchisee, tabMarketing, tabAI, tabData, tabBranding,
+                                     franchiseePanel, marketingPanel, aiPanel, dataPanel, brandingPanel] {
+        tabFranchisee->setStyleClass("tab-btn");
+        tabMarketing->setStyleClass("tab-btn");
+        tabAI->setStyleClass("tab-btn");
+        tabData->setStyleClass("tab-btn");
+        tabBranding->setStyleClass("tab-btn active");
+        franchiseePanel->setStyleClass("tab-panel");
+        marketingPanel->setStyleClass("tab-panel");
+        aiPanel->setStyleClass("tab-panel");
+        dataPanel->setStyleClass("tab-panel");
+        brandingPanel->setStyleClass("tab-panel active");
     });
 
     // ===========================================
@@ -2572,9 +2662,9 @@ void FranchiseApp::showSettingsPage() {
     statusMessage->setHidden(true);
 
     // Connect save button - saves ALL tabs
-    saveBtn->clicked().connect([this, storeCombo, nameInput, addressInput, ownerInput, phoneInput, radiusInput,
+    saveBtn->clicked().connect([this, saveBtn, storeCombo, nameInput, addressInput, ownerInput, phoneInput, radiusInput,
                                 sizeCombo, typeCheckboxes, openaiInput, modelSelect, geminiInput,
-                                googleInput, bbbInput, censusInput, statusMessage, aiStatus]() {
+                                googleInput, bbbInput, censusInput, logoUrlInput, statusMessage, aiStatus]() {
         std::cout << "  [Settings] Save button clicked" << std::endl;
         auto& appConfig = AppConfig::instance();
         bool changed = false;
@@ -2696,6 +2786,18 @@ void FranchiseApp::showSettingsPage() {
             changed = true;
         }
 
+        // === Save Branding ===
+        std::string logoUrl = logoUrlInput->text().toUTF8();
+        std::string currentLogoPath = appConfig.hasCustomLogo() ? appConfig.getBrandLogoPath() : "";
+        if (logoUrl != currentLogoPath) {
+            appConfig.setBrandLogoPath(logoUrl);
+            // Update the sidebar logo
+            if (sidebar_) {
+                sidebar_->setLogoUrl(logoUrl.empty() ? AppConfig::DEFAULT_LOGO_URL : logoUrl);
+            }
+            changed = true;
+        }
+
         if (changed) {
             appConfig.saveToFile("config/app_config.json");
 
@@ -2713,22 +2815,37 @@ void FranchiseApp::showSettingsPage() {
                 statusMessage->setText("Settings saved, but address could not be geocoded. Check the address and try again.");
                 statusMessage->setStyleClass("settings-status-message status-warning");
             } else {
-                statusMessage->setText("All settings saved successfully!");
+                statusMessage->setText("✓ All settings saved successfully!");
                 statusMessage->setStyleClass("settings-status-message status-success");
             }
             statusMessage->setHidden(false);
 
-            // Auto-hide the status message after 5 seconds
+            // Hide save button, show status message - toggle visibility to prevent layout shift
+            std::string buttonId = saveBtn->id();
             std::string messageId = statusMessage->id();
+
+            // Immediately hide button and show message
+            std::ostringstream hideButtonJs;
+            hideButtonJs << "var btn = document.getElementById('" << buttonId << "');"
+                         << "var msg = document.getElementById('" << messageId << "');"
+                         << "if (btn) { btn.style.display = 'none'; }"
+                         << "if (msg) { msg.style.opacity = '1'; msg.style.display = 'inline-block'; }";
+            doJavaScript(hideButtonJs.str());
+
+            // After 4 seconds, fade out message and show button again
             std::ostringstream fadeJs;
             fadeJs << "setTimeout(function() {"
-                   << "  var el = document.getElementById('" << messageId << "');"
-                   << "  if (el) {"
-                   << "    el.style.transition = 'opacity 0.5s ease-out';"
-                   << "    el.style.opacity = '0';"
-                   << "    setTimeout(function() { el.style.display = 'none'; }, 500);"
+                   << "  var btn = document.getElementById('" << buttonId << "');"
+                   << "  var msg = document.getElementById('" << messageId << "');"
+                   << "  if (msg) {"
+                   << "    msg.style.transition = 'opacity 0.5s ease-out';"
+                   << "    msg.style.opacity = '0';"
+                   << "    setTimeout(function() {"
+                   << "      if (msg) { msg.style.display = 'none'; }"
+                   << "      if (btn) { btn.style.display = 'inline-block'; }"
+                   << "    }, 500);"
                    << "  }"
-                   << "}, 5000);";
+                   << "}, 4000);";
             doJavaScript(fadeJs.str());
 
             // Clear password fields

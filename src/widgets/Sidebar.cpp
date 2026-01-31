@@ -1,4 +1,5 @@
 #include "Sidebar.h"
+#include "../AppConfig.h"
 #include <Wt/WVBoxLayout.h>
 
 namespace FranchiseAI {
@@ -40,15 +41,21 @@ void Sidebar::createHeader() {
     auto logoContainer = headerContainer_->addWidget(std::make_unique<Wt::WContainerWidget>());
     logoContainer->setStyleClass("sidebar-logo");
 
-    auto brandIcon = logoContainer->addWidget(std::make_unique<Wt::WText>("🍽️"));
-    brandIcon->setStyleClass("brand-icon");
+    // Load logo from config (uses default if not configured)
+    auto& appConfig = AppConfig::instance();
+    brandLogo_ = logoContainer->addWidget(std::make_unique<Wt::WImage>(appConfig.getBrandLogoPath()));
+    brandLogo_->setStyleClass("brand-logo");
+    brandLogo_->setAlternateText("FranchiseAI Logo");
 
     auto brandText = logoContainer->addWidget(std::make_unique<Wt::WText>("FranchiseAI"));
     brandText->setStyleClass("brand-text");
 
-    // User info section
-    auto userSection = headerContainer_->addWidget(std::make_unique<Wt::WContainerWidget>());
-    userSection->setStyleClass("user-section");
+    // User info section with dropdown
+    auto userSectionWrapper = headerContainer_->addWidget(std::make_unique<Wt::WContainerWidget>());
+    userSectionWrapper->setStyleClass("user-section-wrapper");
+
+    auto userSection = userSectionWrapper->addWidget(std::make_unique<Wt::WContainerWidget>());
+    userSection->setStyleClass("user-section clickable");
 
     auto avatarContainer = userSection->addWidget(std::make_unique<Wt::WContainerWidget>());
     avatarContainer->setStyleClass("user-avatar");
@@ -62,6 +69,42 @@ void Sidebar::createHeader() {
 
     franchiseNameText_ = userInfo->addWidget(std::make_unique<Wt::WText>("Catering Solutions"));
     franchiseNameText_->setStyleClass("franchise-name");
+
+    // Dropdown arrow
+    auto dropdownArrow = userSection->addWidget(std::make_unique<Wt::WText>("▼"));
+    dropdownArrow->setStyleClass("dropdown-arrow");
+
+    // Click handler for user section
+    userSection->clicked().connect([this] {
+        toggleUserDropdown();
+    });
+
+    // Dropdown menu (hidden by default)
+    userDropdown_ = userSectionWrapper->addWidget(std::make_unique<Wt::WContainerWidget>());
+    userDropdown_->setStyleClass("user-dropdown");
+    userDropdown_->hide();
+
+    // View Profile option
+    auto profileOption = userDropdown_->addWidget(std::make_unique<Wt::WContainerWidget>());
+    profileOption->setStyleClass("dropdown-item");
+    profileOption->addWidget(std::make_unique<Wt::WText>("👤"))->setStyleClass("dropdown-icon");
+    profileOption->addWidget(std::make_unique<Wt::WText>("View My Profile"))->setStyleClass("dropdown-label");
+    profileOption->clicked().connect([this] {
+        userDropdown_->hide();
+        isDropdownOpen_ = false;
+        viewProfileRequested_.emit();
+    });
+
+    // Logout option
+    auto logoutOption = userDropdown_->addWidget(std::make_unique<Wt::WContainerWidget>());
+    logoutOption->setStyleClass("dropdown-item logout");
+    logoutOption->addWidget(std::make_unique<Wt::WText>("🚪"))->setStyleClass("dropdown-icon");
+    logoutOption->addWidget(std::make_unique<Wt::WText>("Logout"))->setStyleClass("dropdown-label");
+    logoutOption->clicked().connect([this] {
+        userDropdown_->hide();
+        isDropdownOpen_ = false;
+        logoutRequested_.emit();
+    });
 }
 
 void Sidebar::createMenu() {
@@ -114,13 +157,6 @@ void Sidebar::createFooter() {
     footerContainer_ = addWidget(std::make_unique<Wt::WContainerWidget>());
     footerContainer_->setStyleClass("sidebar-footer");
 
-    // Logout button
-    auto logoutBtn = footerContainer_->addWidget(std::make_unique<Wt::WPushButton>("Logout"));
-    logoutBtn->setStyleClass("logout-btn");
-    logoutBtn->clicked().connect([this] {
-        logoutRequested_.emit();
-    });
-
     // Collapse toggle button
     auto collapseBtn = footerContainer_->addWidget(std::make_unique<Wt::WPushButton>("◀"));
     collapseBtn->setStyleClass("collapse-btn");
@@ -131,6 +167,15 @@ void Sidebar::createFooter() {
     // Version info
     auto versionText = footerContainer_->addWidget(std::make_unique<Wt::WText>("v1.0.0"));
     versionText->setStyleClass("version-text");
+}
+
+void Sidebar::toggleUserDropdown() {
+    isDropdownOpen_ = !isDropdownOpen_;
+    if (isDropdownOpen_) {
+        userDropdown_->show();
+    } else {
+        userDropdown_->hide();
+    }
 }
 
 void Sidebar::setActiveItem(const std::string& itemId) {
@@ -191,6 +236,12 @@ void Sidebar::setUserRole(const std::string& role) {
                 }
             }
         }
+    }
+}
+
+void Sidebar::setLogoUrl(const std::string& url) {
+    if (brandLogo_) {
+        brandLogo_->setImageLink(Wt::WLink(url));
     }
 }
 
