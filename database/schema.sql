@@ -863,8 +863,8 @@ INSERT INTO app_config (config_key, config_value, config_type, category, descrip
 -- System Settings (runtime state)
 -- These reference the first Denver franchisee and store for default app state
 INSERT INTO app_config (config_key, config_value, config_type, category, description, is_sensitive, is_required, default_value) VALUES
-('current_franchisee_id', 'c1000000-0000-0000-0000-000000000001', 'string', 'system', 'Currently selected franchisee ID', false, false, ''),
-('current_store_id', 'd1000000-0000-0000-0000-000000000001', 'string', 'system', 'Currently selected store location ID', false, false, '');
+('current_franchisee_id', 'c2c5af5a-53a5-4d28-8218-3675c0942ead', 'string', 'system', 'Currently selected franchisee ID', false, false, ''),
+('current_store_id', 'c14a9f57-2ed2-4e30-9834-98614465ddbb', 'string', 'system', 'Currently selected store location ID', false, false, '');
 
 
 -- ============================================================================
@@ -977,7 +977,14 @@ INSERT INTO franchisees (id, business_name, dba_name, franchise_number, owner_fi
  'Windy City Eats LLC', 'Chicago Corporate Catering', 'FRA-003',
  'Michael', 'Davis', 'mdavis@windycityeats.com', '(312) 555-0303',
  '233 S Wacker Dr', 'Chicago', 'IL', '60606',
- 41.8789, -87.6359, '2020-09-01', true);
+ 41.8789, -87.6359, '2020-09-01', true),
+
+-- Default franchisee referenced by current_franchisee_id in app_config
+('c2c5af5a-53a5-4d28-8218-3675c0942ead'::uuid,
+ 'Pittsburgh Catering Co', '', 'FRA-004',
+ 'Mike', '', '', '',
+ '1687 Washington Road', 'Pittsburgh', 'PA', '15228',
+ 40.3732, -80.0432, CURRENT_DATE, true);
 
 
 -- ============================================================================
@@ -1007,7 +1014,12 @@ INSERT INTO store_locations (id, franchisee_id, store_name, store_code, address_
 
 ('d1000000-0000-0000-0000-000000000003'::uuid, 'c1000000-0000-0000-0000-000000000003'::uuid,
  'Willis Tower Store', 'CHI-001', '233 S Wacker Dr', 'Chicago', 'IL', '60606',
- 41.8789, -87.6359, 'nominatim', CURRENT_TIMESTAMP, 12.0, '(312) 555-0303', true, true);
+ 41.8789, -87.6359, 'nominatim', CURRENT_TIMESTAMP, 12.0, '(312) 555-0303', true, true),
+
+-- Default store location referenced by current_store_id in app_config
+('c14a9f57-2ed2-4e30-9834-98614465ddbb'::uuid, 'c2c5af5a-53a5-4d28-8218-3675c0942ead'::uuid,
+ 'Pittsburgh Store', 'PIT-001', '1687 Washington Road', 'Pittsburgh', 'PA', '15228',
+ 40.3732, -80.0432, 'nominatim', CURRENT_TIMESTAMP, 25.0, '', true, true);
 
 
 -- ============================================================================
