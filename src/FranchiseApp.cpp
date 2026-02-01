@@ -1775,84 +1775,66 @@ void FranchiseApp::showOpenStreetMapPage() {
             scoreLabel = "Low";
         }
 
-        // Build popup HTML
-        popup << "<div class=\"poi-popup\" style=\"min-width: 280px; max-width: 320px; font-family: -apple-system, BlinkMacSystemFont, sans-serif;\">";
+        // Build popup HTML - simplified clean design with padding
+        popup << "<div class=\"poi-popup\" style=\"min-width: 260px; max-width: 300px; padding: 12px; font-family: -apple-system, BlinkMacSystemFont, sans-serif;\">";
 
         // Header with name and category badge
-        popup << "<div style=\"border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;\">";
-        popup << "<div style=\"display: flex; justify-content: space-between; align-items: flex-start;\">";
-        popup << "<h4 style=\"margin: 0 0 4px 0; font-size: 15px; color: #333; font-weight: 600;\">" << safeName << "</h4>";
-        popup << "<span style=\"background: " << markerColor << "; color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 500; white-space: nowrap;\">" << categoryName << "</span>";
+        popup << "<div style=\"display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;\">";
+        popup << "<h4 style=\"margin: 0; font-size: 15px; color: #333; font-weight: 600;\">" << safeName << "</h4>";
+        popup << "<span style=\"background: " << markerColor << "; color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 500; white-space: nowrap; margin-left: 8px;\">" << categoryName << "</span>";
         popup << "</div>";
 
         // Address
         if (!safeAddress.empty() || !safeCity.empty()) {
-            popup << "<div style=\"color: #666; font-size: 12px;\">";
+            popup << "<div style=\"color: #666; font-size: 12px; margin-bottom: 10px;\">";
             if (!safeAddress.empty()) popup << safeAddress;
             if (!safeAddress.empty() && !safeCity.empty()) popup << ", ";
             if (!safeCity.empty()) popup << safeCity;
             if (!safeState.empty()) popup << ", " << safeState;
             popup << "</div>";
         }
+
+        // Scoring section - simplified inline
+        popup << "<div style=\"display: flex; align-items: center; gap: 10px; margin-bottom: 10px;\">";
+        popup << "<span style=\"font-size: 11px; color: #666;\">Potential:</span>";
+        popup << "<div style=\"flex: 1; background: #e9ecef; border-radius: 4px; height: 6px; overflow: hidden;\">";
+        popup << "<div style=\"background: " << scoreColor << "; width: " << score << "%; height: 100%;\"></div>";
+        popup << "</div>";
+        popup << "<span style=\"background: " << scoreColor << "; color: #fff; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;\">" << score << "</span>";
         popup << "</div>";
 
-        // Scoring section with visual gauge
-        popup << "<div style=\"background: #f8f9fa; border-radius: 8px; padding: 10px; margin-bottom: 10px;\">";
-        popup << "<div style=\"display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;\">";
-        popup << "<span style=\"font-size: 11px; color: #666; font-weight: 500;\">CATERING POTENTIAL</span>";
-        popup << "<span style=\"background: " << scoreColor << "; color: #fff; padding: 2px 10px; border-radius: 10px; font-size: 12px; font-weight: 600;\">" << score << "/100</span>";
-        popup << "</div>";
-
-        // Score bar
-        popup << "<div style=\"background: #e9ecef; border-radius: 4px; height: 8px; overflow: hidden;\">";
-        popup << "<div style=\"background: " << scoreColor << "; width: " << score << "%; height: 100%; border-radius: 4px; transition: width 0.3s;\"></div>";
-        popup << "</div>";
-        popup << "<div style=\"text-align: right; font-size: 10px; color: " << scoreColor << "; margin-top: 2px; font-weight: 500;\">" << scoreLabel << " Potential</div>";
-        popup << "</div>";
-
-        // Business details grid
-        popup << "<div style=\"display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;\">";
-
-        // Business Type
-        popup << "<div style=\"background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 8px;\">";
-        popup << "<div style=\"font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: 0.5px;\">Type</div>";
-        popup << "<div style=\"font-size: 12px; color: #333; font-weight: 500;\">" << bizInfo.getBusinessTypeString() << "</div>";
-        popup << "</div>";
-
-        // Estimated Size
-        popup << "<div style=\"background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 8px;\">";
-        popup << "<div style=\"font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: 0.5px;\">Est. Size</div>";
-        popup << "<div style=\"font-size: 12px; color: #333; font-weight: 500;\">";
+        // Business details - simple inline
+        popup << "<div style=\"font-size: 12px; color: #555; margin-bottom: 8px;\">";
+        popup << "<strong>Type:</strong> " << bizInfo.getBusinessTypeString();
         if (bizInfo.employeeCount > 0) {
-            popup << bizInfo.employeeCount << " employees";
+            popup << " &nbsp;•&nbsp; <strong>Size:</strong> " << bizInfo.employeeCount << " employees";
         } else if (bizInfo.estimatedEmployeesOnSite > 0) {
-            popup << "~" << bizInfo.estimatedEmployeesOnSite << " on-site";
-        } else {
-            popup << "Unknown";
-        }
-        popup << "</div></div>";
-        popup << "</div>";
-
-        // Features/Amenities row
-        popup << "<div style=\"display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px;\">";
-        if (bizInfo.hasConferenceRoom) {
-            popup << "<span style=\"background: #e3f2fd; color: #1565c0; padding: 3px 8px; border-radius: 4px; font-size: 10px;\">📊 Conference Room</span>";
-        }
-        if (bizInfo.hasEventSpace) {
-            popup << "<span style=\"background: #fce4ec; color: #c2185b; padding: 3px 8px; border-radius: 4px; font-size: 10px;\">🎉 Event Space</span>";
-        }
-        if (bizInfo.regularMeetings) {
-            popup << "<span style=\"background: #e8f5e9; color: #2e7d32; padding: 3px 8px; border-radius: 4px; font-size: 10px;\">📅 Regular Meetings</span>";
-        }
-        if (bizInfo.isVerified) {
-            popup << "<span style=\"background: #fff3e0; color: #e65100; padding: 3px 8px; border-radius: 4px; font-size: 10px;\">✓ Verified</span>";
+            popup << " &nbsp;•&nbsp; <strong>Size:</strong> ~" << bizInfo.estimatedEmployeesOnSite << " on-site";
         }
         popup << "</div>";
 
-        // Marketing insights
-        popup << "<div style=\"background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 10px; color: #fff;\">";
-        popup << "<div style=\"font-size: 10px; opacity: 0.9; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;\">💡 Marketing Insight</div>";
-        popup << "<div style=\"font-size: 12px; line-height: 1.4;\">";
+        // Features/Amenities row - simplified tags
+        bool hasFeatures = bizInfo.hasConferenceRoom || bizInfo.hasEventSpace || bizInfo.regularMeetings || bizInfo.isVerified;
+        if (hasFeatures) {
+            popup << "<div style=\"display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px;\">";
+            if (bizInfo.hasConferenceRoom) {
+                popup << "<span style=\"background: #e3f2fd; color: #1565c0; padding: 2px 6px; border-radius: 3px; font-size: 10px;\">Conference Room</span>";
+            }
+            if (bizInfo.hasEventSpace) {
+                popup << "<span style=\"background: #fce4ec; color: #c2185b; padding: 2px 6px; border-radius: 3px; font-size: 10px;\">Event Space</span>";
+            }
+            if (bizInfo.regularMeetings) {
+                popup << "<span style=\"background: #e8f5e9; color: #2e7d32; padding: 2px 6px; border-radius: 3px; font-size: 10px;\">Regular Meetings</span>";
+            }
+            if (bizInfo.isVerified) {
+                popup << "<span style=\"background: #fff3e0; color: #e65100; padding: 2px 6px; border-radius: 3px; font-size: 10px;\">Verified</span>";
+            }
+            popup << "</div>";
+        }
+
+        // Marketing insight - simplified
+        popup << "<div style=\"font-size: 11px; color: #666; font-style: italic; border-top: 1px solid #eee; padding-top: 8px;\">";
+        popup << "💡 ";
 
         // Generate contextual insight based on business type
         switch (bizInfo.type) {
@@ -1884,22 +1866,27 @@ void FranchiseApp::showOpenStreetMapPage() {
                 popup << "Potential catering client. Contact for needs assessment.";
                 break;
         }
-        popup << "</div></div>";
+        popup << "</div>";
 
-        // Contact info footer (if available)
+        // Contact info footer (if available) - simplified inline
         if (!poi.phone.empty() || !poi.website.empty() || !poi.email.empty()) {
-            popup << "<div style=\"border-top: 1px solid #eee; margin-top: 10px; padding-top: 8px; display: flex; gap: 12px; flex-wrap: wrap;\">";
+            popup << "<div style=\"margin-top: 8px; font-size: 11px;\">";
+            bool first = true;
             if (!poi.phone.empty()) {
                 std::string safePhone = sanitize(poi.phone);
-                popup << "<a href=\"tel:" << safePhone << "\" style=\"color: #1976d2; font-size: 11px; text-decoration: none;\">📞 " << safePhone << "</a>";
+                popup << "<a href=\"tel:" << safePhone << "\" style=\"color: #1976d2; text-decoration: none;\">📞 " << safePhone << "</a>";
+                first = false;
             }
             if (!poi.website.empty()) {
                 std::string safeWebsite = sanitize(poi.website);
-                popup << "<a href=\"" << safeWebsite << "\" target=\"_blank\" style=\"color: #1976d2; font-size: 11px; text-decoration: none;\">🌐 Website</a>";
+                if (!first) popup << " &nbsp;•&nbsp; ";
+                popup << "<a href=\"" << safeWebsite << "\" target=\"_blank\" style=\"color: #1976d2; text-decoration: none;\">🌐 Website</a>";
+                first = false;
             }
             if (!poi.email.empty()) {
                 std::string safeEmail = sanitize(poi.email);
-                popup << "<a href=\"mailto:" << safeEmail << "\" style=\"color: #1976d2; font-size: 11px; text-decoration: none;\">✉️ Email</a>";
+                if (!first) popup << " &nbsp;•&nbsp; ";
+                popup << "<a href=\"mailto:" << safeEmail << "\" style=\"color: #1976d2; text-decoration: none;\">✉️ Email</a>";
             }
             popup << "</div>";
         }
@@ -1907,7 +1894,7 @@ void FranchiseApp::showOpenStreetMapPage() {
         // Opening hours (if available)
         if (!poi.openingHours.empty()) {
             std::string safeHours = sanitize(poi.openingHours);
-            popup << "<div style=\"border-top: 1px solid #eee; margin-top: 8px; padding-top: 8px; font-size: 11px; color: #666;\">🕐 " << safeHours << "</div>";
+            popup << "<div style=\"margin-top: 6px; font-size: 10px; color: #888;\">🕐 " << safeHours << "</div>";
         }
 
         popup << "</div>";
