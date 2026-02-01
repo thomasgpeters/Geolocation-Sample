@@ -3583,13 +3583,13 @@ html, body {
     flex-shrink: 0;
 }
 
-/* Scrollable table body - fills available space without exceeding viewport */
+/* Scrollable table body - limited to 4 rows */
 .prospect-table-body {
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
     min-height: 0;
-    /* No fixed max-height - let flexbox and parent constraints handle it */
+    max-height: 240px;  /* Approximately 4 rows */
 }
 
 /* Custom scrollbar for table body */
