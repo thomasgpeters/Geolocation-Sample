@@ -334,7 +334,7 @@ void AISearchService::executeSearch(
         }
 
         // Use Google Places API if configured (faster, more reliable)
-        // Fall back to OpenStreetMap if Google is not configured
+        // Fall back to OpenStreetMap if Google is not configured or returns no results
         if (config_.preferGoogleAPIs && isGoogleAPIAvailable()) {
             progress.currentStep = "Searching Google Places...";
             progress.percentComplete = 50;
@@ -345,6 +345,13 @@ void AISearchService::executeSearch(
             osmResults = googlePlacesResults;  // Use same variable for downstream processing
             progress.googleComplete = true;
             progress.googleResultCount = static_cast<int>(googlePlacesResults.size());
+
+            // Fall back to OpenStreetMap if Google returned no results
+            if (googlePlacesResults.empty()) {
+                progress.currentStep = "Searching OpenStreetMap (fallback)...";
+                if (progressCallback) progressCallback(progress);
+                osmResults = osmAPI_.searchBusinessesSync(searchArea);
+            }
         } else {
             progress.currentStep = "Searching OpenStreetMap...";
             progress.percentComplete = 50;

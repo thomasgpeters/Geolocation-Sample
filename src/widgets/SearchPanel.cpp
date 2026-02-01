@@ -42,23 +42,23 @@ void SearchPanel::createLocationSection() {
     auto sectionTitle = section->addWidget(std::make_unique<Wt::WText>("📍 Location"));
     sectionTitle->setStyleClass("section-title");
 
-    // Location input row
-    auto locationRow = section->addWidget(std::make_unique<Wt::WContainerWidget>());
-    locationRow->setStyleClass("form-row");
-
-    auto locationGroup = locationRow->addWidget(std::make_unique<Wt::WContainerWidget>());
-    locationGroup->setStyleClass("form-group flex-2");
+    // Location input - full width row
+    auto locationGroup = section->addWidget(std::make_unique<Wt::WContainerWidget>());
+    locationGroup->setStyleClass("form-group location-input-group");
 
     auto locationLabel = locationGroup->addWidget(std::make_unique<Wt::WText>("Search Location"));
     locationLabel->setStyleClass("form-label");
 
     locationInput_ = locationGroup->addWidget(std::make_unique<Wt::WLineEdit>());
-    locationInput_->setStyleClass("form-input");
+    locationInput_->setStyleClass("form-input location-input");
     locationInput_->setPlaceholderText("Enter city, state or address...");
 
-    // Radius slider
-    auto radiusGroup = locationRow->addWidget(std::make_unique<Wt::WContainerWidget>());
-    radiusGroup->setStyleClass("form-group flex-1");
+    // Radius slider - separate row
+    auto radiusRow = section->addWidget(std::make_unique<Wt::WContainerWidget>());
+    radiusRow->setStyleClass("form-row");
+
+    auto radiusGroup = radiusRow->addWidget(std::make_unique<Wt::WContainerWidget>());
+    radiusGroup->setStyleClass("form-group");
 
     auto radiusLabelContainer = radiusGroup->addWidget(std::make_unique<Wt::WContainerWidget>());
     radiusLabelContainer->setStyleClass("label-with-value");
