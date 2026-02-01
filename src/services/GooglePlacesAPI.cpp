@@ -709,7 +709,7 @@ Models::BusinessInfo GooglePlacesAPI::placeToBusinessInfo(const GooglePlace& pla
 
     business.id = "gp_" + place.placeId;
     business.name = place.name;
-    business.source = Models::DataSource::GOOGLE;
+    business.source = Models::DataSource::GOOGLE_MY_BUSINESS;
     business.type = place.inferBusinessType();
 
     // Address
@@ -722,8 +722,8 @@ Models::BusinessInfo GooglePlacesAPI::placeToBusinessInfo(const GooglePlace& pla
     business.contact.website = place.website;
 
     // Rating
-    business.rating = place.rating;
-    business.reviewCount = place.userRatingsTotal;
+    business.googleRating = place.rating;
+    business.googleReviewCount = place.userRatingsTotal;
 
     // Set catering-relevant flags based on type
     switch (business.type) {
