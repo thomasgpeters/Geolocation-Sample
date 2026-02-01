@@ -1303,6 +1303,37 @@ html, body {
     margin-left: auto;
 }
 
+/* Optimizing indicator - spinner shown during score optimization */
+.optimizing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    background: #fef3c7;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #92400e;
+    animation: pulse-bg 1.5s ease-in-out infinite;
+}
+
+.optimizing-indicator.hidden {
+    display: none;
+}
+
+.optimizing-spinner {
+    font-size: 14px;
+    animation: spin 1s linear infinite;
+}
+
+.optimizing-text {
+    font-weight: 500;
+}
+
+@keyframes pulse-bg {
+    0%, 100% { background: #fef3c7; }
+    50% { background: #fde68a; }
+}
+
 .stat-count {
     font-size: 14px;
     font-weight: 700;

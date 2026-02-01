@@ -511,33 +511,47 @@ void FranchiseApp::onSearchProgress(const Services::SearchProgress& progress) {
 void FranchiseApp::onSearchComplete(const Models::SearchResults& results) {
     lastResults_ = results;
 
-    // Apply scoring adjustments from ScoringEngine
-    if (scoringEngine_ && scoringEngine_->hasEnabledRules()) {
-        for (auto& item : lastResults_.items) {
-            if (item.business) {
-                int baseScore = item.business->cateringPotentialScore;
-                int adjustedScore = scoringEngine_->calculateFinalScore(*item.business, baseScore);
-                item.overallScore = adjustedScore;
-                item.business->cateringPotentialScore = adjustedScore;
-                item.aiConfidenceScore = adjustedScore / 100.0;
-            }
-        }
-
-        // Re-sort by adjusted score
-        std::sort(lastResults_.items.begin(), lastResults_.items.end(),
-            [](const Models::SearchResultItem& a, const Models::SearchResultItem& b) {
-                return a.overallScore > b.overallScore;
-            });
-    }
-
     if (searchPanel_) {
         searchPanel_->setSearchEnabled(true);
         searchPanel_->showProgress(false);
     }
 
+    // STEP 1: Display results IMMEDIATELY (before scoring optimization)
+    // This gives the user instant feedback with raw OSM results
     if (resultsDisplay_) {
         if (results.errorMessage.empty()) {
             resultsDisplay_->showResults(lastResults_);
+
+            // STEP 2: Show optimizing indicator if scoring is enabled
+            if (scoringEngine_ && scoringEngine_->hasEnabledRules()) {
+                resultsDisplay_->showOptimizing();
+
+                // Force UI update to show results before scoring
+                processEvents();
+
+                // STEP 3: Apply scoring adjustments from ScoringEngine
+                for (auto& item : lastResults_.items) {
+                    if (item.business) {
+                        int baseScore = item.business->cateringPotentialScore;
+                        int adjustedScore = scoringEngine_->calculateFinalScore(*item.business, baseScore);
+                        item.overallScore = adjustedScore;
+                        item.business->cateringPotentialScore = adjustedScore;
+                        item.aiConfidenceScore = adjustedScore / 100.0;
+                    }
+                }
+
+                // Re-sort by adjusted score
+                std::sort(lastResults_.items.begin(), lastResults_.items.end(),
+                    [](const Models::SearchResultItem& a, const Models::SearchResultItem& b) {
+                        return a.overallScore > b.overallScore;
+                    });
+
+                // STEP 4: Update display with optimized scores
+                resultsDisplay_->updateResults(lastResults_);
+
+                // STEP 5: Hide optimizing indicator - scoring complete
+                resultsDisplay_->hideOptimizing();
+            }
         } else {
             resultsDisplay_->showError(results.errorMessage);
         }
