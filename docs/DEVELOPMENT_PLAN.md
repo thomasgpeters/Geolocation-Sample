@@ -1,35 +1,599 @@
 # FranchiseAI Development Plan
 
-This document tracks pending features and their implementation status for the FranchiseAI Prospect Search Application.
+This document outlines the development roadmap for each interface in the FranchiseAI application. Each section details the current state, planned enhancements, and implementation priorities.
 
 ---
 
 ## Table of Contents
 
-1. [Overview](#overview)
-2. [Priority Legend](#priority-legend)
-3. [Critical - Unimplemented Methods](#critical---unimplemented-methods)
-4. [High Priority - API Integrations](#high-priority---api-integrations)
-5. [High Priority - UI Pages](#high-priority---ui-pages)
-6. [Medium Priority - Event Handlers](#medium-priority---event-handlers)
-7. [Medium Priority - Cache Management](#medium-priority---cache-management)
-8. [Low Priority - UI Components](#low-priority---ui-components)
-9. [Completed Features](#completed-features)
+1. [Store Setup Page](#1-store-setup-page)
+2. [Dashboard Page](#2-dashboard-page)
+3. [AI Search Page](#3-ai-search-page)
+4. [My Prospects Page](#4-my-prospects-page)
+5. [Demographics Page](#5-demographics-page)
+6. [Reports Page](#6-reports-page)
+7. [Settings Page](#7-settings-page)
+8. [Cross-Cutting Concerns](#8-cross-cutting-concerns)
+9. [Authentication Sprint](#9-authentication-sprint)
 
 ---
 
-## Overview
+## 1. Store Setup Page
 
-| Priority | Category | Count | Status |
-|----------|----------|-------|--------|
-| CRITICAL | Unimplemented methods | 2 | Pending |
-| HIGH | Demo data APIs | 16 | Pending |
-| HIGH | Placeholder UI pages | 4 | Pending |
-| MEDIUM | Stub event handlers | 3 | Pending |
-| MEDIUM | Empty cache methods | 5 | Pending |
-| LOW | Incomplete UI components | 1 | Pending |
+### Current State
+- Basic form for entering store name, address, and search preferences
+- Geocoding integration to convert address to coordinates
+- Stores franchisee configuration in memory
 
-**Total Pending Features: 31**
+### Planned Enhancements
+
+#### Phase 1: Data Persistence (Priority: High)
+- [ ] Persist franchisee configuration to local storage or config file
+- [ ] Auto-load configuration on app startup
+- [ ] Add "Reset to Defaults" button
+
+#### Phase 2: Enhanced Location Input (Priority: Medium)
+- [ ] Add address autocomplete using Nominatim suggestions
+- [ ] Display mini-map preview of selected location
+- [ ] Support for multiple store locations (multi-franchise)
+
+#### Phase 3: Business Profile (Priority: Medium)
+- [ ] Add fields for business hours
+- [ ] Catering menu categories/specialties
+- [ ] Delivery radius configuration
+- [ ] Contact information for outreach
+
+#### Phase 4: Onboarding Wizard (Priority: Low)
+- [ ] Convert to multi-step wizard with progress indicator
+- [ ] Add guided tour for first-time users
+- [ ] Import from existing CRM systems
+
+---
+
+## 2. Dashboard Page
+
+### Current State
+- Static stat cards with placeholder data (Total Prospects, Hot Leads, Contact Rate, Projected Revenue)
+- Quick action buttons to navigate to other pages
+- Welcome message
+
+### Planned Enhancements
+
+#### Phase 1: Live Statistics (Priority: High)
+- [ ] Connect stats to actual saved prospects data
+- [ ] Calculate real contact rate from prospect status tracking
+- [ ] Derive projected revenue from prospect scores and conversion rates
+- [ ] Add "Last 7 Days" / "Last 30 Days" / "All Time" filter
+
+#### Phase 2: Activity Feed (Priority: Medium)
+- [ ] Show recent prospect additions
+- [ ] Display recent searches performed
+- [ ] Log contact attempts and outcomes
+- [ ] Timeline view of all activity
+
+#### Phase 3: Charts & Visualizations (Priority: Medium)
+- [ ] Prospect score distribution chart (pie/donut)
+- [ ] Weekly prospect discovery trend (line chart)
+- [ ] Geographic distribution map thumbnail
+- [ ] Business type breakdown (bar chart)
+
+#### Phase 4: Goal Tracking (Priority: Low)
+- [ ] Set weekly/monthly prospect discovery goals
+- [ ] Progress bars toward goals
+- [ ] Achievement badges for milestones
+- [ ] Email/notification when goals are met
+
+#### Phase 5: Widgets System (Priority: Low)
+- [ ] Customizable dashboard layout
+- [ ] Drag-and-drop widget placement
+- [ ] Widget library (clock, weather, calendar integration)
+- [ ] Save dashboard configurations per user
+
+---
+
+## 3. AI Search Page
+
+### Current State
+- Two-column layout (search panel + results display)
+- Location input with radius slider
+- Business type filters and data source selection
+- Results display with "Add to Prospects" action
+- Local scoring for fast results
+
+### Planned Enhancements
+
+#### Phase 1: Search History (Priority: High)
+- [ ] Save recent searches with one-click re-run
+- [ ] Favorite/bookmark searches
+- [ ] Search templates for common queries
+- [ ] Clear search history option
+
+#### Phase 2: Advanced Filters (Priority: High)
+- [ ] Employee count range slider (min/max)
+- [ ] Google rating minimum filter
+- [ ] BBB accreditation toggle
+- [ ] Conference room / event space requirement
+- [ ] Year established filter
+- [ ] Save filter presets
+
+#### Phase 3: Results Enhancements (Priority: Medium)
+- [ ] Infinite scroll / pagination for large result sets
+- [ ] Sort options (score, distance, employee count, name)
+- [ ] List view vs. card view toggle
+- [ ] Bulk select for adding multiple prospects
+- [ ] Export to CSV/Excel directly from results
+
+#### Phase 4: Map Integration (Priority: Medium)
+- [ ] Split view with map showing result locations
+- [ ] Clickable markers that highlight corresponding cards
+- [ ] Cluster markers for dense areas
+- [ ] Draw-to-search polygon selection
+
+#### Phase 5: Smart Suggestions (Priority: Low)
+- [ ] "Similar businesses" recommendations
+- [ ] AI-suggested search refinements
+- [ ] Trending business types in area
+- [ ] Competitor proximity warnings
+
+---
+
+## 4. My Prospects Page
+
+### Current State
+- Card-based display of saved prospects
+- Color-coded stat badges (employees, rating, features)
+- Score badges with high/medium/low indicators
+- AI analysis summary display
+- Remove prospect functionality
+
+### Planned Enhancements
+
+#### Phase 1: Data Persistence (Priority: Critical)
+- [ ] Persist saved prospects to database/file
+- [ ] Load prospects on app startup
+- [ ] Auto-save on prospect add/remove
+- [ ] Export/import prospects (JSON, CSV)
+
+#### Phase 2: Prospect Status Tracking (Priority: High)
+- [ ] Status workflow: New -> Contacted -> Meeting Scheduled -> Proposal Sent -> Won/Lost
+- [ ] Status badges with color coding
+- [ ] Filter by status
+- [ ] Kanban board view option
+
+#### Phase 3: Contact Management (Priority: High)
+- [ ] Add contact name, email, phone fields
+- [ ] Log contact attempts with notes
+- [ ] Schedule follow-up reminders
+- [ ] Email template integration
+- [ ] Click-to-call / click-to-email links
+
+#### Phase 4: Notes & Attachments (Priority: Medium)
+- [ ] Rich text notes per prospect
+- [ ] File attachments (proposals, menus, contracts)
+- [ ] Activity timeline per prospect
+- [ ] Tags/labels for organization
+
+#### Phase 5: Analytics (Priority: Medium)
+- [ ] Conversion funnel visualization
+- [ ] Time-to-close metrics
+- [ ] Revenue by source analysis
+- [ ] Prospect quality scoring over time
+
+#### Phase 6: Collaboration (Priority: Low)
+- [ ] Assign prospects to team members
+- [ ] Shared notes and updates
+- [ ] Team activity feed
+- [ ] Permission levels (view/edit/admin)
+
+---
+
+## 5. Demographics Page
+
+### Current State
+- Interactive Leaflet map with location input
+- Category pill tray for POI selection
+- POI limit sliders per category
+- Color-coded markers on map
+- Area statistics footer
+- Market potential score in header
+
+### Planned Enhancements
+
+#### Phase 1: Heatmap Visualization (Priority: High)
+- [ ] Business density heatmap layer toggle
+- [ ] Income level heatmap overlay
+- [ ] Population density visualization
+- [ ] Competitor concentration overlay
+
+#### Phase 2: Enhanced POI Details (Priority: Medium)
+- [ ] Click marker to view POI details popup
+- [ ] "Add to Prospects" directly from map marker
+- [ ] Marker clustering for zoom levels
+- [ ] Custom marker icons per category
+
+#### Phase 3: Comparison Mode (Priority: Medium)
+- [ ] Compare two areas side-by-side
+- [ ] Score differential highlighting
+- [ ] Best area recommendations
+- [ ] Overlay comparison metrics
+
+#### Phase 4: Territory Planning (Priority: Medium)
+- [ ] Draw custom territories on map
+- [ ] Save named territories
+- [ ] Territory assignment to salespeople
+- [ ] Non-overlapping territory validation
+
+#### Phase 5: Real Demographics Data (Priority: High)
+- [ ] Integrate Census API for real population data
+- [ ] Income level data by ZIP code
+- [ ] Age distribution statistics
+- [ ] Business establishment trends
+
+#### Phase 6: Route Planning (Priority: Low)
+- [ ] Multi-stop route optimization
+- [ ] Drive time calculations
+- [ ] Daily visit scheduling
+- [ ] Route export to Google Maps/Waze
+
+---
+
+## 6. Reports Page
+
+### Current State
+- Placeholder page with icon and description
+- No functional reports implemented
+
+### Planned Enhancements
+
+#### Phase 1: Basic Reports (Priority: High)
+- [ ] Prospect Summary Report
+  - Total prospects by status
+  - Score distribution breakdown
+  - Source attribution (Google, OSM, BBB)
+- [ ] Search Activity Report
+  - Searches per day/week/month
+  - Most searched locations
+  - Filter usage statistics
+
+#### Phase 2: Export Functionality (Priority: High)
+- [ ] Export to PDF with formatting
+- [ ] Export to Excel/CSV
+- [ ] Print-optimized layouts
+- [ ] Schedule automated reports
+
+#### Phase 3: Visual Reports (Priority: Medium)
+- [ ] Interactive charts (Chart.js integration)
+- [ ] Geographic distribution map report
+- [ ] Trend analysis over time
+- [ ] Comparison period selection
+
+#### Phase 4: Custom Reports (Priority: Medium)
+- [ ] Report builder interface
+- [ ] Drag-and-drop field selection
+- [ ] Custom filters and grouping
+- [ ] Save report templates
+
+#### Phase 5: Advanced Analytics (Priority: Low)
+- [ ] Predictive scoring models
+- [ ] Churn risk identification
+- [ ] Market penetration analysis
+- [ ] ROI calculations per prospect source
+
+---
+
+## 7. Settings Page
+
+### Current State
+- AI Configuration section (OpenAI/Gemini API keys, model selection)
+- Data Sources API section (Google, BBB, Census keys)
+- Franchise Profile quick link
+- Status indicators for configured APIs
+- Save functionality
+
+### Planned Enhancements
+
+#### Phase 1: Validation & Testing (Priority: High)
+- [ ] "Test Connection" button for each API key
+- [ ] Visual feedback on validation (checkmark/error)
+- [ ] Show API quota/usage if available
+- [ ] Auto-validate on save
+
+#### Phase 2: User Preferences (Priority: Medium)
+- [ ] Theme selection (light/dark/system)
+- [ ] Default search radius preference
+- [ ] Default business types selection
+- [ ] Language/locale settings
+- [ ] Date/time format preferences
+
+#### Phase 3: Notification Settings (Priority: Medium)
+- [ ] Email notification preferences
+- [ ] Browser notification permissions
+- [ ] Daily/weekly digest options
+- [ ] Alert thresholds configuration
+
+#### Phase 4: Data Management (Priority: Medium)
+- [ ] Clear all saved data option
+- [ ] Backup/restore configuration
+- [ ] Import/export all settings
+- [ ] Data retention policies
+
+#### Phase 5: Advanced Settings (Priority: Low)
+- [ ] AI model temperature/parameters tuning
+- [ ] API rate limiting configuration
+- [ ] Cache duration settings
+- [ ] Debug mode toggle
+- [ ] Performance profiling options
+
+---
+
+## 8. Cross-Cutting Concerns
+
+### Authentication & Authorization
+- [ ] User login/registration system
+- [ ] OAuth integration (Google, Microsoft)
+- [ ] Role-based access control
+- [ ] Session management
+- [ ] Password reset flow
+
+### Database Integration
+- [ ] SQLite for local storage
+- [ ] PostgreSQL for multi-user deployment
+- [ ] Data migration tools
+- [ ] Backup automation
+
+### Performance Optimization
+- [ ] Implement response caching
+- [ ] Lazy loading for large lists
+- [ ] Image optimization
+- [ ] Bundle size reduction
+
+### Mobile Responsiveness
+- [ ] Responsive sidebar (hamburger menu on mobile)
+- [ ] Touch-friendly controls
+- [ ] Mobile-optimized map interactions
+- [ ] Progressive Web App (PWA) support
+
+### Accessibility
+- [ ] ARIA labels throughout
+- [ ] Keyboard navigation support
+- [ ] Screen reader compatibility
+- [ ] High contrast mode
+
+### Internationalization
+- [ ] String externalization
+- [ ] Multi-language support
+- [ ] RTL language support
+- [ ] Currency/number formatting
+
+### Testing
+- [ ] Unit tests for services
+- [ ] Integration tests for APIs
+- [ ] UI component tests
+- [ ] End-to-end testing with Selenium
+
+### Documentation
+- [ ] API documentation (Doxygen)
+- [ ] User manual with screenshots
+- [ ] Video tutorials
+- [ ] FAQ section
+
+---
+
+## 9. Authentication Sprint
+
+### Sprint Overview
+**Goal:** Implement secure user authentication and session management for multi-user support with role-based access control.
+
+**Prerequisites Completed:**
+- ✅ Franchisee/store location loading from ALS
+- ✅ AppConfig caching system
+- ✅ Clean URL routing
+
+### Phase 1: Database Schema & API Setup (Week 1)
+
+#### Users Table
+```sql
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
+    role VARCHAR(50) DEFAULT 'franchisee',  -- 'admin', 'franchisee', 'staff'
+    franchisee_id UUID REFERENCES franchisees(id),
+    is_active BOOLEAN DEFAULT true,
+    last_login TIMESTAMP WITH TIME ZONE,
+    failed_login_attempts INTEGER DEFAULT 0,
+    locked_until TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+#### Sessions Table
+```sql
+CREATE TABLE user_sessions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    session_token VARCHAR(255) NOT NULL UNIQUE,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+#### Tasks
+- [ ] Add users table to schema.sql
+- [ ] Add user_sessions table to schema.sql
+- [ ] Create default admin user in seed data
+- [ ] Update ApiLogicServer model
+- [ ] Test CRUD operations via ALS API
+
+### Phase 2: Authentication Service (Week 1)
+
+#### AuthService Class Design
+```cpp
+class AuthService {
+public:
+    struct LoginResult {
+        bool success;
+        std::string userId;
+        std::string sessionToken;
+        std::string role;
+        std::string franchiseeId;
+        std::string errorMessage;
+    };
+
+    LoginResult login(const std::string& email, const std::string& password);
+    bool logout(const std::string& sessionToken);
+    bool validateSession(const std::string& sessionToken);
+    bool changePassword(const std::string& userId,
+                       const std::string& oldPassword,
+                       const std::string& newPassword);
+};
+```
+
+#### Tasks
+- [ ] Create AuthService.h header file
+- [ ] Implement AuthService.cpp
+- [ ] Add password hashing (bcrypt)
+- [ ] Add secure session token generation
+- [ ] Add unit tests for AuthService
+
+### Phase 3: Login UI (Week 1)
+
+#### Components
+- Email input field
+- Password input field
+- "Remember me" checkbox
+- Login button
+- Error message display
+
+#### Tasks
+- [ ] Create showLoginPage() in FranchiseApp
+- [ ] Design login page CSS
+- [ ] Implement form validation
+- [ ] Handle login success/failure
+- [ ] Store session token in app state
+
+### Phase 4: Session Management (Week 2)
+
+#### Features
+- Session token storage in memory
+- Validate session on route changes
+- Auto-refresh before expiration
+- Handle session timeout gracefully
+
+#### Tasks
+- [ ] Add session token member to FranchiseApp
+- [ ] Add currentUser_ member (UserDTO)
+- [ ] Implement session validation on navigation
+- [ ] Add logout button to sidebar
+- [ ] Handle session expiration notification
+
+### Phase 5: Route Protection (Week 2)
+
+#### Protected Routes
+| Route | Roles Allowed |
+|-------|---------------|
+| /dashboard | all authenticated |
+| /search | all authenticated |
+| /prospects | all authenticated |
+| /settings | all authenticated |
+| /admin/* | admin only |
+
+#### Tasks
+- [ ] Add requireAuth() check to route handler
+- [ ] Add requireRole() check for admin routes
+- [ ] Redirect unauthenticated users to login
+- [ ] Show "Access Denied" for unauthorized access
+- [ ] Add admin menu items (conditional)
+
+### Phase 6: User Profile (Week 3)
+
+#### Features
+- View/edit name
+- Change password
+- View associated franchisee
+- Last login timestamp
+
+#### Tasks
+- [ ] Add Profile tab to Settings page
+- [ ] Implement profile update form
+- [ ] Implement change password form
+- [ ] Show user info in sidebar header
+
+### Phase 7: Admin User Management (Week 3)
+
+#### Features
+- List all users with filters
+- Create/edit/deactivate users
+- Assign users to franchisees
+- Change user roles
+
+#### Tasks
+- [ ] Create showAdminUsersPage()
+- [ ] Implement user list table
+- [ ] Implement user create/edit modal
+- [ ] Add role/franchisee dropdowns
+
+### Phase 8: Security Hardening (Week 4)
+
+#### Measures
+- [ ] Password requirements (min 8 chars, mixed case, numbers)
+- [ ] Rate limiting on login attempts
+- [ ] Account lockout after 5 failures
+- [ ] Secure session tokens (256-bit random)
+- [ ] SQL injection prevention
+- [ ] XSS prevention
+
+#### Audit Logging
+```sql
+CREATE TABLE audit_log (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id),
+    action VARCHAR(100) NOT NULL,
+    entity_type VARCHAR(50),
+    entity_id UUID,
+    ip_address VARCHAR(45),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### Phase 9: Testing (Week 4)
+
+#### Test Cases
+- [ ] Login with valid/invalid credentials
+- [ ] Login with locked account
+- [ ] Session validation and expiration
+- [ ] Password change flow
+- [ ] Role-based access control
+- [ ] Admin user management CRUD
+
+### Definition of Done
+
+- [ ] Users can login and logout
+- [ ] Sessions persist across page refreshes
+- [ ] Sessions expire after timeout
+- [ ] Protected routes redirect to login
+- [ ] Role-based access control works
+- [ ] Users can change passwords
+- [ ] Admins can manage users
+- [ ] All auth test cases pass
+- [ ] Security review completed
+
+### Dependencies
+
+- **bcrypt library** - password hashing (add to CMakeLists.txt)
+- **ApiLogicServer** - users/sessions endpoints
+- **Secure random generator** - session tokens
+
+### Future Considerations
+
+- OAuth2/OIDC integration (Google, Microsoft login)
+- Two-factor authentication (2FA)
+- Email verification
+- Password reset via email
 
 ---
 
@@ -37,370 +601,53 @@ This document tracks pending features and their implementation status for the Fr
 
 | Priority | Description |
 |----------|-------------|
-| CRITICAL | Blocks core functionality; must be implemented for production |
-| HIGH | Essential for full feature set; needed before release |
-| MEDIUM | Improves user experience; can be deferred |
-| LOW | Nice to have; minimal impact if delayed |
+| **Critical** | Must have for basic functionality |
+| **High** | Important for user experience |
+| **Medium** | Enhances productivity |
+| **Low** | Nice to have, future consideration |
 
 ---
 
-## Critical - Unimplemented Methods
+## Version Roadmap
 
-These methods are declared in headers but have **no implementation** in the source files.
+### v1.0 - Foundation (Current)
+- Basic search and prospect discovery
+- OpenAI integration for AI analysis
+- Stat badges and scoring
+- Demographics map visualization (renamed to Open Street Map)
 
-### GoogleMyBusinessAPI JSON Parsing
+### v1.1 - Persistence ✅
+- ✅ Data persistence via ApiLogicServer
+- ✅ AppConfig caching system
+- ✅ Franchisee and StoreLocation CRUD
+- ✅ Clean URL routing
+- Search history
+- Export functionality
 
-| Method | File | Line | Status | Description |
-|--------|------|------|--------|-------------|
-| `parseBusinessFromJson()` | `src/services/GoogleMyBusinessAPI.h` | 118 | **NOT IMPLEMENTED** | Parse single business from Google Places API JSON response |
-| `parseSearchResults()` | `src/services/GoogleMyBusinessAPI.h` | 119 | **NOT IMPLEMENTED** | Parse search results array from Google Places API response |
+### v1.2 - Enhanced Search
+- Advanced filters
+- Map integration in search
+- Bulk operations
 
-#### Implementation Notes
-```cpp
-// Expected signature (from header):
-Models::BusinessInfo parseBusinessFromJson(const std::string& json);
-std::vector<Models::BusinessInfo> parseSearchResults(const std::string& json);
-```
+### v1.3 - CRM Features
+- Prospect status tracking
+- Contact management
+- Activity logging
 
-**Dependencies**: Required for real Google Places API integration.
+### v1.4 - Authentication (Next Sprint)
+- User login/logout system
+- Session management
+- Role-based access control (admin, franchisee, staff)
+- User profile management
+- Admin user management
 
----
-
-## High Priority - API Integrations
-
-All API services currently return demo/mock data instead of making real API calls.
-
-### GoogleMyBusinessAPI
-
-**File**: `src/services/GoogleMyBusinessAPI.cpp`
-
-| Method | Lines | Current State | Required Implementation |
-|--------|-------|---------------|------------------------|
-| `searchBusinesses()` | 25-38 | Returns fake business data | Integrate with Google Places Nearby Search API |
-| `getPlaceDetails()` | 56-71 | Minimal placeholder object | Integrate with Google Places Details API |
-| `getAutocomplete()` | 87-102 | Hardcoded suggestions | Integrate with Google Places Autocomplete API |
-
-#### API Endpoints Needed
-- Nearby Search: `https://maps.googleapis.com/maps/api/place/nearbysearch/json`
-- Place Details: `https://maps.googleapis.com/maps/api/place/details/json`
-- Autocomplete: `https://maps.googleapis.com/maps/api/place/autocomplete/json`
-
-#### Required API Key
-- Google Cloud Platform API key with Places API enabled
+### v2.0 - Enterprise
+- Multi-user collaboration
+- Team features
+- Advanced reporting
+- Territory management
+- OAuth2/OIDC integration
 
 ---
 
-### BBBAPI (Better Business Bureau)
-
-**File**: `src/services/BBBAPI.cpp`
-
-| Method | Lines | Current State | Required Implementation |
-|--------|-------|---------------|------------------------|
-| `searchBusinesses()` | 23-31 | Generates fake BBB results | Integrate with BBB API |
-| `searchByName()` | 33-45 | Routes to demo generation | Implement name-based search |
-| `searchAccreditedBusinesses()` | 47-57 | Fake accredited businesses | Filter by accreditation status |
-| `getBusinessProfile()` | 59-72 | Minimal placeholder | Fetch complete business profile |
-| `getComplaintHistory()` | 74-82 | Fake complaint data | Retrieve actual complaint records |
-| `checkAccreditation()` | 84-91 | Always returns `true` | Verify actual BBB accreditation |
-
-#### API Endpoints Needed
-- BBB API: `https://api.bbb.org/api` (requires partnership/license)
-
-#### Notes
-- BBB API access may require business partnership agreement
-- Consider fallback to web scraping if API unavailable
-
----
-
-### DemographicsAPI
-
-**File**: `src/services/DemographicsAPI.cpp`
-
-| Method | Lines | Current State | Required Implementation |
-|--------|-------|---------------|------------------------|
-| `getByZipCode()` | 24-32 | Demo data generation | Integrate with Census Bureau API |
-| `getByCity()` | 34-67 | Random generated data | Integrate with Census Bureau API |
-| `getMultipleZipCodes()` | 69-83 | Uses `generateDemoData` | Batch Census API requests |
-| `getZipCodesInRadius()` | 85-97 | Demo area data | Geographic radius calculation + Census data |
-| `findHighPotentialAreas()` | 99-125 | Filters demo data only | Algorithm using real demographic data |
-| `getBusinessDensity()` | 127-135 | Returns demo data | Integrate with Census Business Patterns |
-| `getEmploymentBySector()` | 137-146 | Random employment data | Integrate with BLS API |
-
-#### API Endpoints Needed
-- Census Bureau: `https://api.census.gov/data`
-- Bureau of Labor Statistics: `https://api.bls.gov/publicAPI/v2/timeseries/data`
-- ZIP Code Database: Consider ZIPCodeAPI or similar service
-
-#### Required API Keys
-- Census Bureau API key (free)
-- BLS API key (free, optional but recommended)
-
----
-
-## High Priority - UI Pages
-
-These pages show placeholder content instead of functional interfaces.
-
-### My Prospects Page
-
-**File**: `src/FranchiseApp.cpp`
-**Method**: `showProspectsPage()` (Lines 358-388)
-
-| Current State | Required Implementation |
-|---------------|------------------------|
-| Shows empty state message only | Full prospect management system |
-
-#### Features Needed
-- [ ] Prospect list display with sorting/filtering
-- [ ] Prospect detail view
-- [ ] Add/remove prospect functionality
-- [ ] Prospect status tracking (New, Contacted, Follow-up, Converted)
-- [ ] Notes and activity log per prospect
-- [ ] Persistent storage (database or file-based)
-- [ ] Search within saved prospects
-
----
-
-### Demographics Page
-
-**File**: `src/FranchiseApp.cpp`
-**Method**: `showDemographicsPage()` (Lines 390-419)
-
-| Current State | Required Implementation |
-|---------------|------------------------|
-| Shows "Coming Soon" message | Demographics visualization dashboard |
-
-#### Features Needed
-- [ ] Interactive map visualization
-- [ ] Demographic data overlays (income, population, business density)
-- [ ] Area comparison tool
-- [ ] Market potential scoring visualization
-- [ ] Export demographic reports
-- [ ] Filter by demographic criteria
-
-#### Technical Considerations
-- Consider integrating Leaflet.js or Google Maps for mapping
-- Wt has WGoogleMap widget available
-
----
-
-### Reports Page
-
-**File**: `src/FranchiseApp.cpp`
-**Method**: `showReportsPage()` (Lines 421-445)
-
-| Current State | Required Implementation |
-|---------------|------------------------|
-| Shows empty placeholder | Analytics and reporting dashboard |
-
-#### Features Needed
-- [ ] Search activity analytics
-- [ ] Prospect conversion metrics
-- [ ] Geographic coverage reports
-- [ ] Time-based activity charts
-- [ ] CSV/PDF export functionality
-- [ ] Scheduled report generation
-
----
-
-### Settings Page
-
-**File**: `src/FranchiseApp.cpp`
-**Method**: `showSettingsPage()` (Lines 447-494)
-
-| Current State | Required Implementation |
-|---------------|------------------------|
-| Shows section titles only, no inputs | Functional settings management |
-
-#### Features Needed
-- [ ] API key input fields (Google, BBB, Census, OpenAI, Gemini)
-- [ ] API key validation/testing
-- [ ] Search preference settings (default radius, result limits)
-- [ ] Franchise profile configuration
-- [ ] AI provider selection (OpenAI vs Gemini)
-- [ ] Notification preferences
-- [ ] Data export/import settings
-- [ ] Settings persistence (config file or database)
-
----
-
-## Medium Priority - Event Handlers
-
-These handlers show message boxes instead of performing actual operations.
-
-### View Details Handler
-
-**File**: `src/FranchiseApp.cpp`
-**Method**: `onViewDetails()` (Lines 208-223)
-
-| Current State | Required Implementation |
-|---------------|------------------------|
-| Shows message box with basic info | Full business detail modal/panel |
-
-#### Features Needed
-- [ ] Modal dialog with complete business information
-- [ ] Contact information display
-- [ ] Google Maps embed for location
-- [ ] BBB rating details
-- [ ] AI analysis breakdown
-- [ ] Quick actions (add to prospects, export, share)
-
----
-
-### Add to Prospects Handler
-
-**File**: `src/FranchiseApp.cpp`
-**Method**: `onAddToProspects()` (Lines 225-240)
-
-| Current State | Required Implementation |
-|---------------|------------------------|
-| Shows confirmation dialog only | Actual prospect storage |
-
-#### Features Needed
-- [ ] Save prospect to persistent storage
-- [ ] Duplicate detection
-- [ ] Add notes on save
-- [ ] Categorization/tagging
-- [ ] Success/error feedback
-- [ ] Undo capability
-
----
-
-### Export Results Handler
-
-**File**: `src/FranchiseApp.cpp`
-**Method**: `onExportResults()` (Lines 242-251)
-
-| Current State | Required Implementation |
-|---------------|------------------------|
-| Shows message about export | Actual file generation and download |
-
-#### Features Needed
-- [ ] CSV export with all business fields
-- [ ] PDF report generation
-- [ ] Excel format support
-- [ ] Custom field selection
-- [ ] File download trigger
-- [ ] Export history tracking
-
----
-
-## Medium Priority - Cache Management
-
-All cache methods are empty stubs that don't perform actual caching operations.
-
-### Cache Methods Status
-
-| Service | Method | File | Lines | Status |
-|---------|--------|------|-------|--------|
-| GoogleMyBusinessAPI | `clearCache()` | GoogleMyBusinessAPI.cpp | 116-118 | Empty body |
-| GoogleMyBusinessAPI | `getCacheSize()` | GoogleMyBusinessAPI.cpp | 120-122 | Returns hardcoded 0 |
-| BBBAPI | `clearCache()` | BBBAPI.cpp | 103-105 | Empty body |
-| DemographicsAPI | `clearCache()` | DemographicsAPI.cpp | 159-161 | Empty body |
-| DemographicsAPI | `getCacheSize()` | DemographicsAPI.cpp | 163-165 | Returns hardcoded 0 |
-
-#### Implementation Notes
-- Consider using `std::unordered_map` with timestamp for TTL-based caching
-- Cache configuration already defined in API config structs
-- AI engines already have caching implemented - can use as reference
-
----
-
-## Low Priority - UI Components
-
-### ResultCard Update Method
-
-**File**: `src/widgets/ResultCard.cpp`
-**Method**: `updateData()` (Line 326)
-
-| Current State | Required Implementation |
-|---------------|------------------------|
-| Updates data member only | Full UI rebuild on data change |
-
-```cpp
-// Current implementation:
-void ResultCard::updateData(const Models::SearchResultItem& item) {
-    item_ = item;
-    // Would need to rebuild UI - simplified for now
-}
-```
-
-#### Features Needed
-- [ ] Rebuild all UI elements with new data
-- [ ] Animate transitions if data changes
-- [ ] Handle null/empty data gracefully
-
----
-
-## Completed Features
-
-### AI Engine Integration (Completed)
-
-| Feature | Status | Date |
-|---------|--------|------|
-| AIEngine abstract interface | Done | 2024-01 |
-| OpenAI GPT integration | Done | 2024-01 |
-| Google Gemini integration | Done | 2024-01 |
-| AI-powered business analysis | Done | 2024-01 |
-| AI-powered market analysis | Done | 2024-01 |
-| Response caching for AI engines | Done | 2024-01 |
-| Fallback to local analysis | Done | 2024-01 |
-
-### Core Application (Completed)
-
-| Feature | Status |
-|---------|--------|
-| Wt web framework integration | Done |
-| Sidebar navigation | Done |
-| Search panel with filters | Done |
-| Results display grid | Done |
-| Result cards with scoring | Done |
-| Multi-source data aggregation | Done |
-| Business scoring algorithm | Done |
-
----
-
-## Development Notes
-
-### Environment Setup
-
-Required dependencies:
-- CMake 3.16+
-- C++17 compiler
-- Wt 4.x library
-- libcurl (for HTTP requests)
-
-### API Keys Required for Full Functionality
-
-| Service | Environment Variable | Required For |
-|---------|---------------------|--------------|
-| Google Places | `GOOGLE_API_KEY` | Business search, autocomplete |
-| BBB | `BBB_API_KEY` | Accreditation data |
-| Census Bureau | `CENSUS_API_KEY` | Demographics |
-| OpenAI | `OPENAI_API_KEY` | AI analysis (GPT models) |
-| Google Gemini | `GEMINI_API_KEY` | AI analysis (Gemini models) |
-
-### Build Instructions
-
-```bash
-mkdir build && cd build
-cmake ..
-make -j$(nproc)
-./franchise_ai_search --docroot ./resources --http-address 0.0.0.0 --http-port 8080
-```
-
----
-
-## Contributing
-
-When implementing pending features:
-
-1. Update this document to mark features as "In Progress"
-2. Follow existing code patterns and naming conventions
-3. Add appropriate error handling
-4. Update tests if applicable
-5. Mark as "Done" with completion date when finished
-
----
-
-*Last Updated: January 2025*
+*Last Updated: January 2026*
