@@ -346,9 +346,9 @@ html, body {
 /* Franchise Popup */
 .franchise-popup {
     position: absolute;
-    top: calc(100% + 8px);
-    left: 0;
-    right: 0;
+    top: 0;
+    left: calc(100% + 12px);
+    width: 340px;
     background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 20px;
@@ -366,11 +366,11 @@ html, body {
 @keyframes franchisePopupSlide {
     from {
         opacity: 0;
-        transform: translateY(-10px) scale(0.95);
+        transform: translateX(-10px) scale(0.95);
     }
     to {
         opacity: 1;
-        transform: translateY(0) scale(1);
+        transform: translateX(0) scale(1);
     }
 }
 
