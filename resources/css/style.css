@@ -242,6 +242,312 @@ html, body {
     font-weight: 500;
 }
 
+/* ============================================
+   Franchise Info Popup Styles
+   ============================================ */
+
+.franchise-section-wrapper {
+    position: relative;
+}
+
+.franchise-section {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.2s ease;
+}
+
+.franchise-section.clickable {
+    cursor: pointer;
+}
+
+.franchise-section.clickable:hover {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.06) 100%);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+.owner-avatar-container {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color) 0%, #4f46e5 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+    position: relative;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.owner-avatar-image {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.owner-avatar-image.hidden {
+    display: none;
+}
+
+.owner-avatar-fallback {
+    font-size: 20px;
+}
+
+.franchise-info {
+    flex: 1;
+    overflow: hidden;
+    min-width: 0;
+}
+
+.owner-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: white;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.franchise-name-text {
+    font-size: 12px;
+    color: var(--text-sidebar-muted);
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.franchise-info-icon {
+    font-size: 14px;
+    color: var(--text-sidebar-muted);
+    margin-left: auto;
+    transition: all 0.2s ease;
+    opacity: 0.7;
+}
+
+.franchise-section.clickable:hover .franchise-info-icon {
+    color: white;
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+/* Franchise Popup */
+.franchise-popup {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4),
+                0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+    z-index: 1000;
+    overflow: hidden;
+    animation: franchisePopupSlide 0.25s ease-out;
+}
+
+.franchise-popup.hidden {
+    display: none;
+}
+
+@keyframes franchisePopupSlide {
+    from {
+        opacity: 0;
+        transform: translateY(-10px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.franchise-popup-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 20px;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.1) 100%);
+    position: relative;
+}
+
+.franchise-popup-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color) 0%, #4f46e5 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    flex-shrink: 0;
+    position: relative;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.3);
+}
+
+.popup-avatar-image {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.popup-avatar-image.hidden {
+    display: none;
+}
+
+.popup-avatar-fallback {
+    font-size: 28px;
+}
+
+.franchise-popup-header-info {
+    flex: 1;
+    overflow: hidden;
+    min-width: 0;
+}
+
+.popup-owner-name {
+    font-weight: 700;
+    font-size: 16px;
+    color: white;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+}
+
+.popup-franchise-name {
+    font-size: 14px;
+    color: var(--primary-color);
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
+}
+
+.popup-store-id {
+    font-size: 11px;
+    color: var(--text-sidebar-muted);
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 3px 8px;
+    border-radius: 20px;
+    margin-top: 6px;
+}
+
+.franchise-edit-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.franchise-edit-btn:hover {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    transform: scale(1.05);
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+}
+
+.franchise-popup-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.1) 50%, transparent 100%);
+}
+
+.franchise-popup-details {
+    padding: 16px 20px;
+}
+
+.popup-detail-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 8px 0;
+    color: var(--text-sidebar);
+}
+
+.popup-detail-icon {
+    font-size: 14px;
+    width: 20px;
+    text-align: center;
+    color: var(--text-sidebar-muted);
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.popup-detail-text {
+    font-size: 13px;
+    color: var(--text-sidebar);
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+.franchise-popup-actions {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 8px;
+}
+
+.popup-action-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    color: var(--text-sidebar);
+}
+
+.popup-action-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.popup-action-item.logout-action {
+    color: #f87171;
+}
+
+.popup-action-item.logout-action:hover {
+    background: rgba(248, 113, 113, 0.12);
+}
+
+.popup-action-icon {
+    font-size: 16px;
+    width: 20px;
+    text-align: center;
+}
+
+.popup-action-label {
+    font-size: 14px;
+    font-weight: 500;
+}
+
 .sidebar-menu {
     flex: 1;
     padding: 16px 12px;
@@ -3238,5 +3544,327 @@ html, body {
     .actions-col {
         justify-content: flex-start;
         margin-top: 12px;
+    }
+}
+
+/* ==================== Rich POI Popup Styles ==================== */
+
+/* Override Leaflet popup defaults for rich popups */
+.leaflet-popup.rich-popup .leaflet-popup-content-wrapper {
+    padding: 0;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.leaflet-popup.rich-popup .leaflet-popup-content {
+    margin: 0;
+    min-width: 280px;
+    max-width: 350px;
+}
+
+.leaflet-popup.rich-popup .leaflet-popup-tip {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* POI Popup container */
+.poi-popup {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    color: #333;
+    line-height: 1.4;
+}
+
+/* Score gauge animation */
+.poi-popup [style*="background:"][style*="width:"][style*="height: 100%"] {
+    animation: scoreGrow 0.5s ease-out forwards;
+}
+
+@keyframes scoreGrow {
+    from {
+        width: 0%;
+    }
+}
+
+/* Feature tags hover effect */
+.poi-popup span[style*="border-radius: 4px"] {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    cursor: default;
+}
+
+.poi-popup span[style*="border-radius: 4px"]:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Marketing insight card shimmer effect */
+.poi-popup [style*="linear-gradient(135deg, #667eea"] {
+    position: relative;
+    overflow: hidden;
+}
+
+.poi-popup [style*="linear-gradient(135deg, #667eea"]::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        left: -100%;
+    }
+    50%, 100% {
+        left: 100%;
+    }
+}
+
+/* Contact links hover */
+.poi-popup a {
+    transition: color 0.15s ease, transform 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+}
+
+.poi-popup a:hover {
+    color: #0d47a1 !important;
+    transform: translateX(2px);
+}
+
+/* Close button styling */
+.leaflet-popup.rich-popup .leaflet-popup-close-button {
+    width: 28px;
+    height: 28px;
+    font-size: 20px;
+    color: #666;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+    top: 8px;
+    right: 8px;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.leaflet-popup.rich-popup .leaflet-popup-close-button:hover {
+    color: #c41e3a;
+    background: #fff;
+    transform: scale(1.1);
+}
+
+/* Mobile responsive popup */
+@media (max-width: 480px) {
+    .leaflet-popup.rich-popup .leaflet-popup-content {
+        min-width: 260px;
+        max-width: 300px;
+    }
+
+    .poi-popup h4 {
+        font-size: 14px !important;
+    }
+
+    .poi-popup [style*="display: grid"] {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* ==================== User Dropdown Menu Styles ==================== */
+
+/* User menu container - positioned relative for dropdown */
+.user-menu-container {
+    position: relative;
+    display: inline-block;
+}
+
+/* User dropdown panel */
+.user-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 280px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15), 0 2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    overflow: hidden;
+    animation: dropdownSlide 0.2s ease-out;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.user-dropdown.hidden {
+    display: none;
+}
+
+@keyframes dropdownSlide {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Dropdown arrow/pointer */
+.user-dropdown::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    right: 16px;
+    width: 16px;
+    height: 16px;
+    background: #fff;
+    transform: rotate(45deg);
+    border-left: 1px solid rgba(0, 0, 0, 0.08);
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* User info header section */
+.user-dropdown-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+}
+
+.user-dropdown-avatar {
+    font-size: 32px;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+}
+
+.user-dropdown-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.user-dropdown-name {
+    display: block;
+    font-size: 16px;
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.user-dropdown-email {
+    display: block;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.8);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+}
+
+/* Divider line */
+.user-dropdown-divider {
+    height: 1px;
+    background: #eee;
+    margin: 0;
+}
+
+/* Menu items container */
+.user-dropdown-menu {
+    padding: 8px 0;
+}
+
+/* Individual menu item */
+.user-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.user-dropdown-item:hover {
+    background-color: #f5f7fa;
+}
+
+.user-dropdown-item:active {
+    background-color: #eef1f5;
+}
+
+/* Menu item icon */
+.dropdown-item-icon {
+    font-size: 18px;
+    width: 24px;
+    text-align: center;
+    opacity: 0.8;
+}
+
+/* Menu item text */
+.dropdown-item-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+}
+
+/* Logout item special styling */
+.user-dropdown-item.logout-item {
+    margin-top: 4px;
+    padding-top: 12px;
+    padding-bottom: 16px;
+}
+
+.user-dropdown-item.logout-item:hover {
+    background-color: #fff5f5;
+}
+
+.user-dropdown-item.logout-item .dropdown-item-text {
+    color: #dc3545;
+}
+
+.user-dropdown-item.logout-item .dropdown-item-icon {
+    opacity: 1;
+}
+
+/* Active state for user button when menu is open */
+.user-btn:focus,
+.user-menu-container:focus-within .user-btn {
+    background-color: rgba(0, 0, 0, 0.1);
+    outline: none;
+}
+
+/* Mobile responsive */
+@media (max-width: 480px) {
+    .user-dropdown {
+        position: fixed;
+        top: auto;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        min-width: 100%;
+        border-radius: 16px 16px 0 0;
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+
+    .user-dropdown::before {
+        display: none;
+    }
+
+    .user-dropdown-header {
+        padding: 20px;
+    }
+
+    .user-dropdown-item {
+        padding: 16px 20px;
     }
 }

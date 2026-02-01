@@ -61,16 +61,41 @@ public:
      */
     Wt::Signal<>& notificationsClicked() { return notificationsClicked_; }
 
+    /**
+     * @brief Signal emitted when user profile is clicked
+     */
+    Wt::Signal<>& userProfileClicked() { return userProfileClicked_; }
+
+    /**
+     * @brief Signal emitted when logout is clicked
+     */
+    Wt::Signal<>& logoutClicked() { return logoutClicked_; }
+
+    /**
+     * @brief Set the user display name shown in dropdown
+     * @param name User's display name
+     */
+    void setUserName(const std::string& name);
+
+    /**
+     * @brief Set the user email shown in dropdown
+     * @param email User's email
+     */
+    void setUserEmail(const std::string& email);
+
 private:
     void setupUI();
     void createLeftSection();
     void createCenterSection();
     void createRightSection();
     void onQuickSearch();
+    void toggleUserMenu();
 
     Wt::Signal<std::string> quickSearchSubmitted_;
     Wt::Signal<> helpClicked_;
     Wt::Signal<> notificationsClicked_;
+    Wt::Signal<> userProfileClicked_;
+    Wt::Signal<> logoutClicked_;
 
     // UI components
     Wt::WText* pageTitleText_ = nullptr;
@@ -80,6 +105,15 @@ private:
     Wt::WContainerWidget* marketScoreContainer_ = nullptr;
     Wt::WText* marketScoreText_ = nullptr;
     int notificationCount_ = 0;
+
+    // User menu components
+    Wt::WContainerWidget* userMenuContainer_ = nullptr;
+    Wt::WContainerWidget* userDropdown_ = nullptr;
+    Wt::WText* userNameText_ = nullptr;
+    Wt::WText* userEmailText_ = nullptr;
+    std::string userName_ = "User";
+    std::string userEmail_ = "";
+    bool userMenuOpen_ = false;
 };
 
 } // namespace Widgets
