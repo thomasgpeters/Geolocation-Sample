@@ -721,6 +721,7 @@ html, body {
     display: flex;
     align-items: center;
     gap: 8px;
+    margin-right: 8px;
 }
 
 .nav-icon-btn {
@@ -3983,7 +3984,7 @@ html, body {
 .user-dropdown {
     position: absolute;
     top: calc(100% + 8px);
-    right: 0;
+    right: 8px;
     min-width: 280px;
     background: #fff;
     border-radius: 12px;
