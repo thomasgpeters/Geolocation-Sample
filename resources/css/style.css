@@ -3532,6 +3532,50 @@ html, body {
     padding: 0;
 }
 
+/* Score Legend */
+.score-legend {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-left: auto;
+    margin-right: 16px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.legend-dot.score-excellent {
+    background: #22c55e;
+}
+
+.legend-dot.score-good {
+    background: #3b82f6;
+}
+
+.legend-dot.score-fair {
+    background: #f59e0b;
+}
+
+.legend-dot.score-low {
+    background: #94a3b8;
+}
+
+.legend-label {
+    font-size: 11px;
+    color: #6b7280;
+    font-weight: 500;
+}
+
 .hot-prospects-placeholder {
     display: flex;
     flex-direction: column;

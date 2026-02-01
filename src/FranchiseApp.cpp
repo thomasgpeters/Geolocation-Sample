@@ -996,6 +996,38 @@ void FranchiseApp::showDashboardPage() {
     auto hotProspectsTitle = hotProspectsHeader->addWidget(std::make_unique<Wt::WText>("🔥 Hot Prospects"));
     hotProspectsTitle->setStyleClass("section-title");
 
+    // Score legend
+    auto scoreLegend = hotProspectsHeader->addWidget(std::make_unique<Wt::WContainerWidget>());
+    scoreLegend->setStyleClass("score-legend");
+
+    auto legendExcellent = scoreLegend->addWidget(std::make_unique<Wt::WContainerWidget>());
+    legendExcellent->setStyleClass("legend-item");
+    auto excellentDot = legendExcellent->addWidget(std::make_unique<Wt::WText>(""));
+    excellentDot->setStyleClass("legend-dot score-excellent");
+    auto excellentLabel = legendExcellent->addWidget(std::make_unique<Wt::WText>("80+"));
+    excellentLabel->setStyleClass("legend-label");
+
+    auto legendGood = scoreLegend->addWidget(std::make_unique<Wt::WContainerWidget>());
+    legendGood->setStyleClass("legend-item");
+    auto goodDot = legendGood->addWidget(std::make_unique<Wt::WText>(""));
+    goodDot->setStyleClass("legend-dot score-good");
+    auto goodLabel = legendGood->addWidget(std::make_unique<Wt::WText>("60-79"));
+    goodLabel->setStyleClass("legend-label");
+
+    auto legendFair = scoreLegend->addWidget(std::make_unique<Wt::WContainerWidget>());
+    legendFair->setStyleClass("legend-item");
+    auto fairDot = legendFair->addWidget(std::make_unique<Wt::WText>(""));
+    fairDot->setStyleClass("legend-dot score-fair");
+    auto fairLabel = legendFair->addWidget(std::make_unique<Wt::WText>("40-59"));
+    fairLabel->setStyleClass("legend-label");
+
+    auto legendLow = scoreLegend->addWidget(std::make_unique<Wt::WContainerWidget>());
+    legendLow->setStyleClass("legend-item");
+    auto lowDot = legendLow->addWidget(std::make_unique<Wt::WText>(""));
+    lowDot->setStyleClass("legend-dot score-low");
+    auto lowLabel = legendLow->addWidget(std::make_unique<Wt::WText>("<40"));
+    lowLabel->setStyleClass("legend-label");
+
     auto viewAllBtn = hotProspectsHeader->addWidget(std::make_unique<Wt::WPushButton>("View All"));
     viewAllBtn->setStyleClass("btn btn-outline btn-sm");
     viewAllBtn->clicked().connect([this] {
