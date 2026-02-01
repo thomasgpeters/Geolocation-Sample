@@ -249,12 +249,6 @@ void Sidebar::setUserInfo(const std::string& userName, const std::string& franch
     if (franchiseNameText_) {
         franchiseNameText_->setText(franchiseName);
     }
-    if (popupOwnerNameText_) {
-        popupOwnerNameText_->setText(userName);
-    }
-    if (popupFranchiseNameText_) {
-        popupFranchiseNameText_->setText(franchiseName);
-    }
 }
 
 void Sidebar::toggleCollapse() {
@@ -304,19 +298,12 @@ void Sidebar::setOwnerAvatarUrl(const std::string& url) {
         // Show image avatar, hide fallback
         if (ownerAvatar_) {
             ownerAvatar_->setImageLink(Wt::WLink(url));
-            ownerAvatar_->setStyleClass("owner-avatar-image");
-        }
-        if (popupOwnerAvatar_) {
-            popupOwnerAvatar_->setImageLink(Wt::WLink(url));
-            popupOwnerAvatar_->setStyleClass("popup-avatar-image");
+            ownerAvatar_->setStyleClass("user-avatar-image");
         }
     } else {
         // Hide image avatar, show fallback
         if (ownerAvatar_) {
-            ownerAvatar_->setStyleClass("owner-avatar-image hidden");
-        }
-        if (popupOwnerAvatar_) {
-            popupOwnerAvatar_->setStyleClass("popup-avatar-image hidden");
+            ownerAvatar_->setStyleClass("user-avatar-image hidden");
         }
     }
 }
@@ -344,16 +331,7 @@ void Sidebar::setFranchiseDetails(
         franchiseNameText_->setText(franchiseName);
     }
 
-    // Update popup display
-    if (popupOwnerNameText_) {
-        popupOwnerNameText_->setText(ownerName);
-    }
-    if (popupFranchiseNameText_) {
-        popupFranchiseNameText_->setText(franchiseName);
-    }
-    if (popupStoreIdText_) {
-        popupStoreIdText_->setText(storeId);
-    }
+    // Update popup contact details
     if (popupAddressText_) {
         popupAddressText_->setText(address.empty() ? "No address set" : address);
     }
