@@ -295,7 +295,7 @@ std::string ScoringRuleDTO::toJson() const {
         json << ", \"franchisee_id\": \"" << franchiseeId << "\"";
     }
 
-    json << "}, \"type\": \"ScoringRule\"";
+    json << "}, \"type\": \"scoring_rules\"";
     if (!id.empty()) {
         json << ", \"id\": \"" << id << "\"";
     }
@@ -749,25 +749,25 @@ ApiResponse ApiLogicServerClient::saveScoringRule(const ScoringRuleDTO& rule) {
         std::string json = newRule.toJson();
 
         std::cout << "  [ALS] Creating new ScoringRule with generated UUID: " << newRule.id << std::endl;
-        return httpPost("/ScoringRule", json);
+        return httpPost("/scoring_rules", json);
     } else {
         // Update existing record
         std::string json = rule.toJson();
         std::cout << "  [ALS] Updating existing ScoringRule: " << rule.id << std::endl;
-        return httpPatch("/ScoringRule/" + rule.id, json);
+        return httpPatch("/scoring_rules/" + rule.id, json);
     }
 }
 
 ApiResponse ApiLogicServerClient::getScoringRules() {
-    return httpGet("/ScoringRule");
+    return httpGet("/scoring_rules");
 }
 
 ApiResponse ApiLogicServerClient::getScoringRulesForFranchisee(const std::string& franchiseeId) {
     if (franchiseeId.empty()) {
         // Get global rules (no franchisee filter)
-        return httpGet("/ScoringRule?filter[franchisee_id]=null");
+        return httpGet("/scoring_rules?filter[franchisee_id]=null");
     }
-    return httpGet("/ScoringRule?filter[franchisee_id]=" + franchiseeId);
+    return httpGet("/scoring_rules?filter[franchisee_id]=" + franchiseeId);
 }
 
 ApiResponse ApiLogicServerClient::getScoringRule(const std::string& id) {
@@ -778,7 +778,7 @@ ApiResponse ApiLogicServerClient::getScoringRule(const std::string& id) {
         response.errorMessage = "Scoring rule ID cannot be empty";
         return response;
     }
-    return httpGet("/ScoringRule/" + id);
+    return httpGet("/scoring_rules/" + id);
 }
 
 ApiResponse ApiLogicServerClient::deleteScoringRule(const std::string& id) {
@@ -789,7 +789,7 @@ ApiResponse ApiLogicServerClient::deleteScoringRule(const std::string& id) {
         response.errorMessage = "Scoring rule ID cannot be empty";
         return response;
     }
-    return httpDelete("/ScoringRule/" + id);
+    return httpDelete("/scoring_rules/" + id);
 }
 
 std::vector<ScoringRuleDTO> ApiLogicServerClient::parseScoringRules(const ApiResponse& response) {
