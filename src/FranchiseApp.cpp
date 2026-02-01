@@ -2913,10 +2913,10 @@ void FranchiseApp::showSettingsPage() {
     });
 
     // Reset to default button
-    auto resetBtn = previewBtnContainer->addWidget(std::make_unique<Wt::WPushButton>("Reset to Default"));
-    resetBtn->setStyleClass("btn btn-outline");
+    auto logoResetBtn = previewBtnContainer->addWidget(std::make_unique<Wt::WPushButton>("Reset to Default"));
+    logoResetBtn->setStyleClass("btn btn-outline");
 
-    resetBtn->clicked().connect([this, logoUrlInput, logoPreview] {
+    logoResetBtn->clicked().connect([this, logoUrlInput, logoPreview] {
         auto& appConfig = AppConfig::instance();
         logoUrlInput->setText("");
         logoPreview->setImageLink(Wt::WLink(AppConfig::getDefaultLogoUrl()));
