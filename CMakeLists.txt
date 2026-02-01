@@ -93,13 +93,18 @@ target_link_libraries(franchise_ai_search
 # Copy resources to build directory
 file(COPY ${CMAKE_SOURCE_DIR}/resources DESTINATION ${CMAKE_BINARY_DIR})
 
+# Copy Wt configuration file to build directory (enables clean URLs via progressive-bootstrap: false)
+file(COPY ${CMAKE_SOURCE_DIR}/wt_config.xml DESTINATION ${CMAKE_BINARY_DIR})
+
 # Install targets
 install(TARGETS franchise_ai_search RUNTIME DESTINATION bin)
 install(DIRECTORY resources/ DESTINATION share/franchise_ai_search/resources)
+install(FILES wt_config.xml DESTINATION share/franchise_ai_search)
 
 # Custom target to run the application
+# Note: -c wt_config.xml loads the Wt configuration which enables clean URLs (no ?_= parameters)
 add_custom_target(run
-    COMMAND franchise_ai_search --docroot "${CMAKE_BINARY_DIR}/resources" --http-address 0.0.0.0 --http-port 8080
+    COMMAND franchise_ai_search --docroot "${CMAKE_BINARY_DIR}/resources" --http-address 0.0.0.0 --http-port 8080 -c "${CMAKE_BINARY_DIR}/wt_config.xml"
     DEPENDS franchise_ai_search
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     COMMENT "Running Franchise AI Search Application on http://localhost:8080"

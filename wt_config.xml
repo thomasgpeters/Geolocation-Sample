@@ -1,8 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <server>
     <application-settings location="*">
-        <!-- Disable progressive bootstrap for clean HTML5 history URLs (no ?_= format) -->
+        <!--
+        Clean URL Configuration
+        =======================
+        These settings work together to eliminate ?_= query parameters from URLs:
+
+        1. progressive-bootstrap: false - Prevents Wt from using hash-based URLs
+        2. session-id-cookie: true - Uses cookies for session tracking instead of URL parameters
+
+        With these settings, URLs will appear as:
+          /dashboard, /search, /prospects (clean)
+        Instead of:
+          /?_=/dashboard, /search?_=abc123 (Wt default)
+        -->
+
+        <!-- Disable progressive bootstrap - required for HTML5 history-based URLs -->
         <progressive-bootstrap>false</progressive-bootstrap>
+
+        <!-- Use cookies for session ID instead of URL parameter (removes wtd= from URLs) -->
+        <session-id-cookie>true</session-id-cookie>
+
+        <!-- Session timeout in seconds (30 minutes) -->
+        <session-timeout>1800</session-timeout>
+
+        <!-- Idle timeout - disconnect idle sessions after 10 minutes -->
+        <idle-timeout>600</idle-timeout>
 
         <!-- Leaflet Map Configuration - Local Resources -->
         <properties>
