@@ -828,12 +828,9 @@ html, body {
     margin: 0 auto;
 }
 
-/* Dashboard page - flex layout to fill viewport height */
+/* Dashboard page - standard layout without forced height */
 .page-container.dashboard-page {
-    display: flex;
-    flex-direction: column;
-    height: calc(100vh - 40px);  /* Account for any top padding/margin */
-    overflow: hidden;
+    /* Let content determine height naturally */
 }
 
 .page-header {
@@ -3505,11 +3502,8 @@ html, body {
     margin-bottom: 16px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     border: 1px solid var(--border-color);
-    flex: 1;
-    min-height: 0;  /* Critical for flex children to shrink */
+    flex-shrink: 0;
     overflow: hidden;
-    display: flex;
-    flex-direction: column;
 }
 
 .hot-prospects-section .section-header {
@@ -3609,10 +3603,6 @@ html, body {
     overflow: hidden;
     border: 1px solid #e2e8f0;
     background: #ffffff;
-    flex: 1;
-    min-height: 0;  /* Critical for nested flex scroll containers */
-    display: flex;
-    flex-direction: column;
 }
 
 .prospect-table-header {
@@ -3629,10 +3619,8 @@ html, body {
 
 /* Scrollable table body - limited to 4 rows */
 .prospect-table-body {
-    flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
-    min-height: 0;
     max-height: 240px;  /* Approximately 4 rows */
 }
 
