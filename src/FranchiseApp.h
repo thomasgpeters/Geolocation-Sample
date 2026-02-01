@@ -123,6 +123,10 @@ private:
     void selectFranchiseeById(const std::string& franchiseeId);
     std::vector<Services::FranchiseeDTO> loadAvailableFranchisees();
 
+    // ApiLogicServer integration - Scoring Rules
+    void loadScoringRulesFromALS();
+    bool saveScoringRulesToALS();
+
     // Cached list of available stores (for selector)
     std::vector<Services::StoreLocationDTO> availableStores_;
 

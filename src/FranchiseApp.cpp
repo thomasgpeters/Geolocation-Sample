@@ -107,6 +107,7 @@ FranchiseApp::FranchiseApp(const Wt::WEnvironment& env)
     alsClient_->loadAppConfigs();  // Load all app config into memory cache
     loadFranchiseeFromALS();       // Load current franchisee first (for linking)
     loadStoreLocationFromALS();    // Then load store location
+    loadScoringRulesFromALS();     // Load scoring rules for score optimization
 
     // Setup UI
     setupUI();
@@ -3113,6 +3114,8 @@ void FranchiseApp::showSettingsPage() {
         for (const auto& [ruleId, checkbox] : bonusChecks) {
             scoringEngine_->setRuleEnabled(ruleId, checkbox->isChecked());
         }
+        // Persist scoring rules to ApiLogicServer
+        saveScoringRulesToALS();
 
         // === Save Data Sources ===
         std::string googleKey = googleInput->text().toUTF8();
@@ -3551,6 +3554,72 @@ void FranchiseApp::selectFranchiseeById(const std::string& franchiseeId) {
             franchisee_.storeName
         );
     }
+}
+
+// ============================================================================
+// Scoring Rules ALS Integration
+// ============================================================================
+
+void FranchiseApp::loadScoringRulesFromALS() {
+    std::cout << "  [App] Loading scoring rules from ALS..." << std::endl;
+
+    auto response = alsClient_->getScoringRules();
+    if (!response.success) {
+        std::cout << "  [App] No scoring rules found in ALS, using defaults" << std::endl;
+        return;
+    }
+
+    auto rules = Services::ApiLogicServerClient::parseScoringRules(response);
+    if (rules.empty()) {
+        std::cout << "  [App] No scoring rules returned, using defaults" << std::endl;
+        return;
+    }
+
+    std::cout << "  [App] Loaded " << rules.size() << " scoring rules from ALS" << std::endl;
+
+    // Update the scoring engine with loaded rules
+    for (const auto& dto : rules) {
+        if (dto.ruleId.empty()) continue;
+
+        // Update existing rule in scoring engine
+        scoringEngine_->setRuleEnabled(dto.ruleId, dto.enabled);
+        scoringEngine_->setRulePoints(dto.ruleId, dto.currentPoints);
+
+        std::cout << "  [App] Updated rule: " << dto.ruleId
+                  << " enabled=" << (dto.enabled ? "true" : "false")
+                  << " points=" << dto.currentPoints << std::endl;
+    }
+}
+
+bool FranchiseApp::saveScoringRulesToALS() {
+    std::cout << "  [App] Saving scoring rules to ApiLogicServer..." << std::endl;
+
+    const auto& rules = scoringEngine_->getRules();
+    bool allSuccess = true;
+
+    for (const auto& rule : rules) {
+        Services::ScoringRuleDTO dto;
+        dto.ruleId = rule.id;
+        dto.name = rule.name;
+        dto.description = rule.description;
+        dto.isPenalty = rule.isPenalty;
+        dto.enabled = rule.enabled;
+        dto.defaultPoints = rule.defaultPoints;
+        dto.currentPoints = rule.currentPoints;
+        dto.minPoints = rule.minPoints;
+        dto.maxPoints = rule.maxPoints;
+
+        auto response = alsClient_->saveScoringRule(dto);
+        if (!response.success) {
+            std::cerr << "  [App] Failed to save scoring rule: " << rule.id
+                      << " - " << response.errorMessage << std::endl;
+            allSuccess = false;
+        } else {
+            std::cout << "  [App] Saved scoring rule: " << rule.id << std::endl;
+        }
+    }
+
+    return allSuccess;
 }
 
 std::unique_ptr<Wt::WApplication> createFranchiseApp(const Wt::WEnvironment& env) {
