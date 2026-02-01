@@ -53,40 +53,9 @@ void SearchPanel::createLocationSection() {
     locationInput_->setStyleClass("form-input location-input");
     locationInput_->setPlaceholderText("Enter city, state or address...");
 
-    // Radius slider
-    auto radiusGroup = section->addWidget(std::make_unique<Wt::WContainerWidget>());
-    radiusGroup->setStyleClass("slider-group");
-
-    auto radiusLabelContainer = radiusGroup->addWidget(std::make_unique<Wt::WContainerWidget>());
-    radiusLabelContainer->setStyleClass("label-with-value");
-
-    auto radiusLabelText = radiusLabelContainer->addWidget(std::make_unique<Wt::WText>("Search Radius"));
-    radiusLabelText->setStyleClass("form-label");
-
-    radiusLabel_ = radiusLabelContainer->addWidget(std::make_unique<Wt::WText>("25 miles"));
-    radiusLabel_->setStyleClass("form-value");
-
-    radiusSlider_ = radiusGroup->addWidget(std::make_unique<Wt::WSlider>());
-    radiusSlider_->setStyleClass("form-slider");
-    radiusSlider_->setRange(5, 100);
-    radiusSlider_->setValue(25);
-    radiusSlider_->valueChanged().connect([this] {
-        radiusLabel_->setText(std::to_string(radiusSlider_->value()) + " miles");
-    });
-
-    // ZIP code and city/state row
+    // City, State, ZIP row (in that order)
     auto addressRow = section->addWidget(std::make_unique<Wt::WContainerWidget>());
     addressRow->setStyleClass("form-row");
-
-    auto zipGroup = addressRow->addWidget(std::make_unique<Wt::WContainerWidget>());
-    zipGroup->setStyleClass("form-group");
-
-    auto zipLabel = zipGroup->addWidget(std::make_unique<Wt::WText>("ZIP Code"));
-    zipLabel->setStyleClass("form-label");
-
-    zipCodeInput_ = zipGroup->addWidget(std::make_unique<Wt::WLineEdit>());
-    zipCodeInput_->setStyleClass("form-input");
-    zipCodeInput_->setPlaceholderText("e.g., 62701");
 
     auto cityGroup = addressRow->addWidget(std::make_unique<Wt::WContainerWidget>());
     cityGroup->setStyleClass("form-group");
@@ -124,6 +93,37 @@ void SearchPanel::createLocationSection() {
     stateCombo_->addItem("TX"); stateCombo_->addItem("UT"); stateCombo_->addItem("VT");
     stateCombo_->addItem("VA"); stateCombo_->addItem("WA"); stateCombo_->addItem("WV");
     stateCombo_->addItem("WI"); stateCombo_->addItem("WY");
+
+    auto zipGroup = addressRow->addWidget(std::make_unique<Wt::WContainerWidget>());
+    zipGroup->setStyleClass("form-group");
+
+    auto zipLabel = zipGroup->addWidget(std::make_unique<Wt::WText>("ZIP Code"));
+    zipLabel->setStyleClass("form-label");
+
+    zipCodeInput_ = zipGroup->addWidget(std::make_unique<Wt::WLineEdit>());
+    zipCodeInput_->setStyleClass("form-input");
+    zipCodeInput_->setPlaceholderText("e.g., 62701");
+
+    // Radius slider
+    auto radiusGroup = section->addWidget(std::make_unique<Wt::WContainerWidget>());
+    radiusGroup->setStyleClass("slider-group");
+
+    auto radiusLabelContainer = radiusGroup->addWidget(std::make_unique<Wt::WContainerWidget>());
+    radiusLabelContainer->setStyleClass("label-with-value");
+
+    auto radiusLabelText = radiusLabelContainer->addWidget(std::make_unique<Wt::WText>("Search Radius"));
+    radiusLabelText->setStyleClass("form-label");
+
+    radiusLabel_ = radiusLabelContainer->addWidget(std::make_unique<Wt::WText>("25 miles"));
+    radiusLabel_->setStyleClass("form-value");
+
+    radiusSlider_ = radiusGroup->addWidget(std::make_unique<Wt::WSlider>());
+    radiusSlider_->setStyleClass("form-slider");
+    radiusSlider_->setRange(5, 100);
+    radiusSlider_->setValue(25);
+    radiusSlider_->valueChanged().connect([this] {
+        radiusLabel_->setText(std::to_string(radiusSlider_->value()) + " miles");
+    });
 }
 
 void SearchPanel::createFiltersSection() {
