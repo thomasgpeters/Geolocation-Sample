@@ -834,6 +834,67 @@ COMMENT ON TABLE store_locations IS 'Physical store locations for franchise oper
 
 
 -- ============================================================================
+-- SCORING RULES TABLE
+-- ============================================================================
+
+-- ---------------------------------------------------------------------------
+-- Scoring Rules: Configurable rules for prospect score adjustments
+-- ---------------------------------------------------------------------------
+CREATE TABLE scoring_rules (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+
+    -- Rule identification
+    rule_id VARCHAR(50) NOT NULL UNIQUE,       -- e.g., 'no_address', 'bbb_accredited'
+    name VARCHAR(100) NOT NULL,                 -- Display name: 'Missing Address'
+    description VARCHAR(500),                   -- Explanation of rule
+
+    -- Rule configuration
+    is_penalty BOOLEAN DEFAULT false,           -- True for penalties, False for bonuses
+    enabled BOOLEAN DEFAULT true,               -- Whether rule is active
+    default_points INTEGER NOT NULL,            -- Default point adjustment
+    current_points INTEGER NOT NULL,            -- Current configured adjustment
+    min_points INTEGER DEFAULT -50,             -- Minimum allowed value
+    max_points INTEGER DEFAULT 50,              -- Maximum allowed value
+
+    -- Ownership (for multi-tenant support)
+    franchisee_id UUID REFERENCES franchisees(id) ON DELETE CASCADE,
+
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+
+    -- Constraint to ensure points stay in valid range
+    CONSTRAINT chk_scoring_rule_points_range CHECK (current_points >= min_points AND current_points <= max_points)
+);
+
+CREATE INDEX idx_scoring_rules_rule_id ON scoring_rules(rule_id);
+CREATE INDEX idx_scoring_rules_franchisee ON scoring_rules(franchisee_id);
+CREATE INDEX idx_scoring_rules_enabled ON scoring_rules(enabled) WHERE enabled = true;
+
+CREATE TRIGGER update_scoring_rules_updated_at BEFORE UPDATE ON scoring_rules
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+COMMENT ON TABLE scoring_rules IS 'Configurable scoring rules for prospect evaluation with adjustable penalties and bonuses';
+
+-- ---------------------------------------------------------------------------
+-- View: Active scoring rules for easy querying
+-- ---------------------------------------------------------------------------
+CREATE VIEW v_active_scoring_rules AS
+SELECT
+    rule_id,
+    name,
+    description,
+    is_penalty,
+    current_points,
+    min_points,
+    max_points
+FROM scoring_rules
+WHERE enabled = true
+ORDER BY is_penalty DESC, ABS(current_points) DESC;
+
+COMMENT ON VIEW v_active_scoring_rules IS 'Active scoring rules ordered by type and impact';
+
+
+-- ============================================================================
 -- AUTHENTICATION TABLES
 -- ============================================================================
 
@@ -1273,4 +1334,24 @@ INSERT INTO users (id, email, password_hash, first_name, last_name, role, franch
  'e99a18c428cb38d5f260853678922e03',  -- MD5 hash of 'mike123' (dev only)
  'Mike', 'Owner', 'franchisee',
  'c2c5af5a-53a5-4d28-8218-3675c0942ead'::uuid, true, true);
+
+
+-- ============================================================================
+-- SEED DATA: Default Scoring Rules
+-- ============================================================================
+
+-- Penalty rules (negative adjustments for missing/incomplete data)
+INSERT INTO scoring_rules (rule_id, name, description, is_penalty, enabled, default_points, current_points, min_points, max_points) VALUES
+('no_address', 'Missing Address', 'Prospects without addresses are harder to contact and verify', true, true, -10, -10, -25, 0),
+('no_employees', 'Missing Employee Count', 'Unknown employee count makes catering potential harder to estimate', true, true, -3, -3, -15, 0),
+('no_contact', 'Missing Contact Info', 'No phone or email makes outreach difficult', true, true, -5, -5, -20, 0);
+
+-- Bonus rules (positive adjustments for quality indicators)
+INSERT INTO scoring_rules (rule_id, name, description, is_penalty, enabled, default_points, current_points, min_points, max_points) VALUES
+('verified', 'Verified Business', 'Business has been verified through data sources', false, true, 5, 5, 0, 15),
+('bbb_accredited', 'BBB Accredited', 'Business is accredited by the Better Business Bureau', false, true, 10, 10, 0, 20),
+('high_rating', 'High Google Rating', 'Business has 4.5+ star Google rating', false, true, 5, 5, 0, 15),
+('conference_room', 'Has Conference Room', 'Business has conference facilities - good for catering', false, true, 5, 5, 0, 15),
+('event_space', 'Has Event Space', 'Business has dedicated event space', false, true, 7, 7, 0, 20),
+('large_company', 'Large Company (100+ employees)', 'Larger companies have more catering opportunities', false, true, 8, 8, 0, 20);
 
