@@ -590,8 +590,25 @@ void AISearchService::scoreResult(Models::SearchResultItem& item) {
     int score = 0;
 
     if (item.business) {
-        // Business scoring
+        // Business scoring - start with base score
         score = item.business->cateringPotentialScore;
+
+        // === Score Optimizations (penalties for missing data) ===
+
+        // Penalty for missing address (-10 points)
+        // Prospects without addresses are harder to contact/verify
+        if (item.business->address.getFullAddress().empty() ||
+            (item.business->address.street1.empty() && item.business->address.city.empty())) {
+            score -= 10;
+        }
+
+        // Penalty for missing employee count (-3 points)
+        // Employee count helps estimate catering potential
+        if (item.business->employeeCount <= 0 && item.business->estimatedEmployeesOnSite <= 0) {
+            score -= 3;
+        }
+
+        // === Score Boosts ===
 
         // Boost for multiple data sources
         score += static_cast<int>(item.sources.size()) * 5;
@@ -609,8 +626,9 @@ void AISearchService::scoreResult(Models::SearchResultItem& item) {
         score = item.demographic->marketPotentialScore;
     }
 
-    item.overallScore = std::min(score, 100);
-    item.aiConfidenceScore = score / 100.0;
+    // Clamp score to valid range
+    item.overallScore = std::max(0, std::min(score, 100));
+    item.aiConfidenceScore = item.overallScore / 100.0;
 }
 
 void AISearchService::generateLocalInsights(Models::SearchResultItem& item) {

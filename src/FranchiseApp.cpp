@@ -17,6 +17,7 @@
 #include <sstream>
 #include <iomanip>
 #include <iostream>
+#include <algorithm>
 
 namespace FranchiseAI {
 
@@ -59,6 +60,9 @@ FranchiseApp::FranchiseApp(const Wt::WEnvironment& env)
     }
 
     searchService_ = std::make_unique<Services::AISearchService>(config);
+
+    // Initialize Scoring Engine with default rules
+    scoringEngine_ = std::make_unique<Services::ScoringEngine>();
 
     // Initialize ApiLogicServer client
     alsClient_ = std::make_unique<Services::ApiLogicServerClient>();
@@ -103,6 +107,7 @@ FranchiseApp::FranchiseApp(const Wt::WEnvironment& env)
     alsClient_->loadAppConfigs();  // Load all app config into memory cache
     loadFranchiseeFromALS();       // Load current franchisee first (for linking)
     loadStoreLocationFromALS();    // Then load store location
+    loadScoringRulesFromALS();     // Load scoring rules for score optimization
 
     // Setup UI
     setupUI();
@@ -526,9 +531,42 @@ void FranchiseApp::onSearchComplete(const Models::SearchResults& results) {
         searchPanel_->showProgress(false);
     }
 
+    // STEP 1: Display results IMMEDIATELY (before scoring optimization)
+    // This gives the user instant feedback with raw OSM results
     if (resultsDisplay_) {
         if (results.errorMessage.empty()) {
-            resultsDisplay_->showResults(results);
+            resultsDisplay_->showResults(lastResults_);
+
+            // STEP 2: Show optimizing indicator if scoring is enabled
+            if (scoringEngine_ && scoringEngine_->hasEnabledRules()) {
+                resultsDisplay_->showOptimizing();
+
+                // Force UI update to show results before scoring
+                processEvents();
+
+                // STEP 3: Apply scoring adjustments from ScoringEngine
+                for (auto& item : lastResults_.items) {
+                    if (item.business) {
+                        int baseScore = item.business->cateringPotentialScore;
+                        int adjustedScore = scoringEngine_->calculateFinalScore(*item.business, baseScore);
+                        item.overallScore = adjustedScore;
+                        item.business->cateringPotentialScore = adjustedScore;
+                        item.aiConfidenceScore = adjustedScore / 100.0;
+                    }
+                }
+
+                // Re-sort by adjusted score
+                std::sort(lastResults_.items.begin(), lastResults_.items.end(),
+                    [](const Models::SearchResultItem& a, const Models::SearchResultItem& b) {
+                        return a.overallScore > b.overallScore;
+                    });
+
+                // STEP 4: Update display with optimized scores
+                resultsDisplay_->updateResults(lastResults_);
+
+                // STEP 5: Hide optimizing indicator - scoring complete
+                resultsDisplay_->hideOptimizing();
+            }
         } else {
             resultsDisplay_->showError(results.errorMessage);
         }
@@ -2677,6 +2715,118 @@ void FranchiseApp::showSettingsPage() {
     geminiInput->setAttributeValue("type", "password");
     geminiGroup->addWidget(std::make_unique<Wt::WText>("Used if OpenAI is not configured"))->setStyleClass("form-help");
 
+    // --- Scoring Optimization Section ---
+    auto scoringSection = aiPanel->addWidget(std::make_unique<Wt::WContainerWidget>());
+    scoringSection->setStyleClass("settings-section");
+    scoringSection->setAttributeValue("style", "margin-top: 24px; border-top: 1px solid #e5e7eb; padding-top: 20px;");
+
+    scoringSection->addWidget(std::make_unique<Wt::WText>("Scoring Optimization"))->setStyleClass("section-title");
+    scoringSection->addWidget(std::make_unique<Wt::WText>(
+        "Adjust how prospects are scored. Enable/disable rules and customize point values."
+    ))->setStyleClass("section-description");
+
+    // Penalties section
+    auto penaltiesLabel = scoringSection->addWidget(std::make_unique<Wt::WText>("Penalties (reduce score)"));
+    penaltiesLabel->setStyleClass("form-label");
+    penaltiesLabel->setAttributeValue("style", "margin-top: 16px; font-weight: 600; color: #dc2626;");
+
+    auto penaltiesGrid = scoringSection->addWidget(std::make_unique<Wt::WContainerWidget>());
+    penaltiesGrid->setStyleClass("scoring-rules-grid");
+
+    // Store slider pointers for save handler
+    std::vector<std::pair<std::string, Wt::WSlider*>> penaltySliders;
+    std::vector<std::pair<std::string, Wt::WCheckBox*>> penaltyChecks;
+
+    for (const auto* rule : scoringEngine_->getPenaltyRules()) {
+        auto ruleRow = penaltiesGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
+        ruleRow->setStyleClass("scoring-rule-row");
+
+        // Enable checkbox
+        auto enableCheck = ruleRow->addWidget(std::make_unique<Wt::WCheckBox>());
+        enableCheck->setChecked(rule->enabled);
+        penaltyChecks.push_back({rule->id, enableCheck});
+
+        // Rule name
+        auto nameLabel = ruleRow->addWidget(std::make_unique<Wt::WText>(rule->name));
+        nameLabel->setStyleClass("rule-name");
+
+        // Points slider
+        auto sliderContainer = ruleRow->addWidget(std::make_unique<Wt::WContainerWidget>());
+        sliderContainer->setStyleClass("slider-container");
+
+        auto slider = sliderContainer->addWidget(std::make_unique<Wt::WSlider>());
+        slider->setMinimum(rule->minPoints);
+        slider->setMaximum(rule->maxPoints);
+        slider->setValue(rule->currentPoints);
+        slider->setStyleClass("scoring-slider");
+        penaltySliders.push_back({rule->id, slider});
+
+        // Points display
+        auto pointsLabel = sliderContainer->addWidget(std::make_unique<Wt::WText>(std::to_string(rule->currentPoints) + " pts"));
+        pointsLabel->setStyleClass("points-value penalty");
+
+        // Update display when slider changes
+        slider->valueChanged().connect([pointsLabel](int value) {
+            pointsLabel->setText(std::to_string(value) + " pts");
+        });
+    }
+
+    // Bonuses section
+    auto bonusesLabel = scoringSection->addWidget(std::make_unique<Wt::WText>("Bonuses (increase score)"));
+    bonusesLabel->setStyleClass("form-label");
+    bonusesLabel->setAttributeValue("style", "margin-top: 20px; font-weight: 600; color: #059669;");
+
+    auto bonusesGrid = scoringSection->addWidget(std::make_unique<Wt::WContainerWidget>());
+    bonusesGrid->setStyleClass("scoring-rules-grid");
+
+    std::vector<std::pair<std::string, Wt::WSlider*>> bonusSliders;
+    std::vector<std::pair<std::string, Wt::WCheckBox*>> bonusChecks;
+
+    for (const auto* rule : scoringEngine_->getBonusRules()) {
+        auto ruleRow = bonusesGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
+        ruleRow->setStyleClass("scoring-rule-row");
+
+        // Enable checkbox
+        auto enableCheck = ruleRow->addWidget(std::make_unique<Wt::WCheckBox>());
+        enableCheck->setChecked(rule->enabled);
+        bonusChecks.push_back({rule->id, enableCheck});
+
+        // Rule name
+        auto nameLabel = ruleRow->addWidget(std::make_unique<Wt::WText>(rule->name));
+        nameLabel->setStyleClass("rule-name");
+
+        // Points slider
+        auto sliderContainer = ruleRow->addWidget(std::make_unique<Wt::WContainerWidget>());
+        sliderContainer->setStyleClass("slider-container");
+
+        auto slider = sliderContainer->addWidget(std::make_unique<Wt::WSlider>());
+        slider->setMinimum(rule->minPoints);
+        slider->setMaximum(rule->maxPoints);
+        slider->setValue(rule->currentPoints);
+        slider->setStyleClass("scoring-slider");
+        bonusSliders.push_back({rule->id, slider});
+
+        // Points display
+        auto pointsLabel = sliderContainer->addWidget(std::make_unique<Wt::WText>("+" + std::to_string(rule->currentPoints) + " pts"));
+        pointsLabel->setStyleClass("points-value bonus");
+
+        // Update display when slider changes
+        slider->valueChanged().connect([pointsLabel](int value) {
+            pointsLabel->setText("+" + std::to_string(value) + " pts");
+        });
+    }
+
+    // Reset to defaults button
+    auto resetBtn = scoringSection->addWidget(std::make_unique<Wt::WPushButton>("Reset to Defaults"));
+    resetBtn->setStyleClass("btn btn-outline btn-sm");
+    resetBtn->setAttributeValue("style", "margin-top: 16px;");
+    resetBtn->clicked().connect([this, penaltySliders, penaltyChecks, bonusSliders, bonusChecks]() {
+        scoringEngine_->resetAllToDefaults();
+        // Refresh the page to update UI
+        showSettingsPage();
+        setInternalPath("/settings", true);
+    });
+
     // ===========================================
     // Tab 4: Data Sources
     // ===========================================
@@ -2876,7 +3026,8 @@ void FranchiseApp::showSettingsPage() {
     // Connect save button - saves ALL tabs
     saveBtn->clicked().connect([this, saveBtn, storeCombo, nameInput, addressInput, ownerInput, phoneInput, radiusInput,
                                 sizeCombo, typeCheckboxes, openaiInput, modelSelect, geminiInput,
-                                googleInput, bbbInput, censusInput, logoUrlInput, statusMessage, aiStatus]() {
+                                googleInput, bbbInput, censusInput, logoUrlInput, statusMessage, aiStatus,
+                                penaltySliders, penaltyChecks, bonusSliders, bonusChecks]() {
         std::cout << "  [Settings] Save button clicked" << std::endl;
         auto& appConfig = AppConfig::instance();
         bool changed = false;
@@ -2978,6 +3129,22 @@ void FranchiseApp::showSettingsPage() {
             appConfig.setGeminiApiKey(geminiKey);
             changed = true;
         }
+
+        // === Save Scoring Optimization ===
+        for (const auto& [ruleId, slider] : penaltySliders) {
+            scoringEngine_->setRulePoints(ruleId, slider->value());
+        }
+        for (const auto& [ruleId, checkbox] : penaltyChecks) {
+            scoringEngine_->setRuleEnabled(ruleId, checkbox->isChecked());
+        }
+        for (const auto& [ruleId, slider] : bonusSliders) {
+            scoringEngine_->setRulePoints(ruleId, slider->value());
+        }
+        for (const auto& [ruleId, checkbox] : bonusChecks) {
+            scoringEngine_->setRuleEnabled(ruleId, checkbox->isChecked());
+        }
+        // Persist scoring rules to ApiLogicServer
+        saveScoringRulesToALS();
 
         // === Save Data Sources ===
         std::string googleKey = googleInput->text().toUTF8();
@@ -3416,6 +3583,72 @@ void FranchiseApp::selectFranchiseeById(const std::string& franchiseeId) {
             franchisee_.storeName
         );
     }
+}
+
+// ============================================================================
+// Scoring Rules ALS Integration
+// ============================================================================
+
+void FranchiseApp::loadScoringRulesFromALS() {
+    std::cout << "  [App] Loading scoring rules from ALS..." << std::endl;
+
+    auto response = alsClient_->getScoringRules();
+    if (!response.success) {
+        std::cout << "  [App] No scoring rules found in ALS, using defaults" << std::endl;
+        return;
+    }
+
+    auto rules = Services::ApiLogicServerClient::parseScoringRules(response);
+    if (rules.empty()) {
+        std::cout << "  [App] No scoring rules returned, using defaults" << std::endl;
+        return;
+    }
+
+    std::cout << "  [App] Loaded " << rules.size() << " scoring rules from ALS" << std::endl;
+
+    // Update the scoring engine with loaded rules
+    for (const auto& dto : rules) {
+        if (dto.ruleId.empty()) continue;
+
+        // Update existing rule in scoring engine
+        scoringEngine_->setRuleEnabled(dto.ruleId, dto.enabled);
+        scoringEngine_->setRulePoints(dto.ruleId, dto.currentPoints);
+
+        std::cout << "  [App] Updated rule: " << dto.ruleId
+                  << " enabled=" << (dto.enabled ? "true" : "false")
+                  << " points=" << dto.currentPoints << std::endl;
+    }
+}
+
+bool FranchiseApp::saveScoringRulesToALS() {
+    std::cout << "  [App] Saving scoring rules to ApiLogicServer..." << std::endl;
+
+    const auto& rules = scoringEngine_->getRules();
+    bool allSuccess = true;
+
+    for (const auto& rule : rules) {
+        Services::ScoringRuleDTO dto;
+        dto.ruleId = rule.id;
+        dto.name = rule.name;
+        dto.description = rule.description;
+        dto.isPenalty = rule.isPenalty;
+        dto.enabled = rule.enabled;
+        dto.defaultPoints = rule.defaultPoints;
+        dto.currentPoints = rule.currentPoints;
+        dto.minPoints = rule.minPoints;
+        dto.maxPoints = rule.maxPoints;
+
+        auto response = alsClient_->saveScoringRule(dto);
+        if (!response.success) {
+            std::cerr << "  [App] Failed to save scoring rule: " << rule.id
+                      << " - " << response.errorMessage << std::endl;
+            allSuccess = false;
+        } else {
+            std::cout << "  [App] Saved scoring rule: " << rule.id << std::endl;
+        }
+    }
+
+    return allSuccess;
 }
 
 std::unique_ptr<Wt::WApplication> createFranchiseApp(const Wt::WEnvironment& env) {

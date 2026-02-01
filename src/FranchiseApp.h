@@ -11,6 +11,7 @@
 #include "widgets/LoginDialog.h"
 #include "widgets/AuditTrailPage.h"
 #include "services/AISearchService.h"
+#include "services/ScoringEngine.h"
 #include "services/AuditLogger.h"
 #include "services/ApiLogicServerClient.h"
 #include "services/AuthService.h"
@@ -122,6 +123,10 @@ private:
     void selectFranchiseeById(const std::string& franchiseeId);
     std::vector<Services::FranchiseeDTO> loadAvailableFranchisees();
 
+    // ApiLogicServer integration - Scoring Rules
+    void loadScoringRulesFromALS();
+    bool saveScoringRulesToALS();
+
     // Cached list of available stores (for selector)
     std::vector<Services::StoreLocationDTO> availableStores_;
 
@@ -130,6 +135,7 @@ private:
 
     // Services
     std::unique_ptr<Services::AISearchService> searchService_;
+    std::unique_ptr<Services::ScoringEngine> scoringEngine_;
     std::unique_ptr<Services::ApiLogicServerClient> alsClient_;
     std::unique_ptr<Services::AuthService> authService_;
 

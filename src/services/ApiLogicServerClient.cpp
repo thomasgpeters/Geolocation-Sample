@@ -270,6 +270,78 @@ FranchiseeDTO FranchiseeDTO::fromJson(const std::string& json) {
 }
 
 // ============================================================================
+// ScoringRuleDTO implementation
+// ============================================================================
+
+std::string ScoringRuleDTO::toJson() const {
+    std::ostringstream json;
+    // Wrap in JSON:API format for ApiLogicServer
+    json << "{\"data\": {\"attributes\": {";
+    json << "\"rule_id\": \"" << ruleId << "\"";
+    json << ", \"name\": \"" << name << "\"";
+
+    if (!description.empty()) {
+        json << ", \"description\": \"" << description << "\"";
+    }
+
+    json << ", \"is_penalty\": " << (isPenalty ? "true" : "false");
+    json << ", \"enabled\": " << (enabled ? "true" : "false");
+    json << ", \"default_points\": " << defaultPoints;
+    json << ", \"current_points\": " << currentPoints;
+    json << ", \"min_points\": " << minPoints;
+    json << ", \"max_points\": " << maxPoints;
+
+    if (!franchiseeId.empty()) {
+        json << ", \"franchisee_id\": \"" << franchiseeId << "\"";
+    }
+
+    json << "}, \"type\": \"ScoringRule\"";
+    if (!id.empty()) {
+        json << ", \"id\": \"" << id << "\"";
+    }
+    json << "}}";
+    return json.str();
+}
+
+ScoringRuleDTO ScoringRuleDTO::fromJson(const std::string& json) {
+    ScoringRuleDTO dto;
+
+    dto.id = extractJsonString(json, "id");
+    dto.ruleId = extractJsonString(json, "rule_id");
+    dto.name = extractJsonString(json, "name");
+    dto.description = extractJsonString(json, "description");
+    dto.franchiseeId = extractJsonString(json, "franchisee_id");
+
+    std::string penaltyStr = extractJsonString(json, "is_penalty");
+    dto.isPenalty = (penaltyStr == "true" || penaltyStr == "1");
+
+    std::string enabledStr = extractJsonString(json, "enabled");
+    dto.enabled = (enabledStr == "true" || enabledStr == "1");
+
+    std::string defaultPtsStr = extractJsonString(json, "default_points");
+    if (!defaultPtsStr.empty()) {
+        try { dto.defaultPoints = std::stoi(defaultPtsStr); } catch (...) {}
+    }
+
+    std::string currentPtsStr = extractJsonString(json, "current_points");
+    if (!currentPtsStr.empty()) {
+        try { dto.currentPoints = std::stoi(currentPtsStr); } catch (...) {}
+    }
+
+    std::string minPtsStr = extractJsonString(json, "min_points");
+    if (!minPtsStr.empty()) {
+        try { dto.minPoints = std::stoi(minPtsStr); } catch (...) {}
+    }
+
+    std::string maxPtsStr = extractJsonString(json, "max_points");
+    if (!maxPtsStr.empty()) {
+        try { dto.maxPoints = std::stoi(maxPtsStr); } catch (...) {}
+    }
+
+    return dto;
+}
+
+// ============================================================================
 // ApiLogicServerClient implementation
 // ============================================================================
 
@@ -663,6 +735,109 @@ std::vector<FranchiseeDTO> ApiLogicServerClient::parseFranchisees(const ApiRespo
     }
 
     return franchisees;
+}
+
+// ============================================================================
+// Scoring Rule API Operations
+// ============================================================================
+
+ApiResponse ApiLogicServerClient::saveScoringRule(const ScoringRuleDTO& rule) {
+    if (rule.id.empty()) {
+        // Create new record - generate UUID client-side
+        ScoringRuleDTO newRule = rule;
+        newRule.id = generateUUID();
+        std::string json = newRule.toJson();
+
+        std::cout << "  [ALS] Creating new ScoringRule with generated UUID: " << newRule.id << std::endl;
+        return httpPost("/ScoringRule", json);
+    } else {
+        // Update existing record
+        std::string json = rule.toJson();
+        std::cout << "  [ALS] Updating existing ScoringRule: " << rule.id << std::endl;
+        return httpPatch("/ScoringRule/" + rule.id, json);
+    }
+}
+
+ApiResponse ApiLogicServerClient::getScoringRules() {
+    return httpGet("/ScoringRule");
+}
+
+ApiResponse ApiLogicServerClient::getScoringRulesForFranchisee(const std::string& franchiseeId) {
+    if (franchiseeId.empty()) {
+        // Get global rules (no franchisee filter)
+        return httpGet("/ScoringRule?filter[franchisee_id]=null");
+    }
+    return httpGet("/ScoringRule?filter[franchisee_id]=" + franchiseeId);
+}
+
+ApiResponse ApiLogicServerClient::getScoringRule(const std::string& id) {
+    if (id.empty()) {
+        ApiResponse response;
+        response.success = false;
+        response.statusCode = 400;
+        response.errorMessage = "Scoring rule ID cannot be empty";
+        return response;
+    }
+    return httpGet("/ScoringRule/" + id);
+}
+
+ApiResponse ApiLogicServerClient::deleteScoringRule(const std::string& id) {
+    if (id.empty()) {
+        ApiResponse response;
+        response.success = false;
+        response.statusCode = 400;
+        response.errorMessage = "Scoring rule ID cannot be empty";
+        return response;
+    }
+    return httpDelete("/ScoringRule/" + id);
+}
+
+std::vector<ScoringRuleDTO> ApiLogicServerClient::parseScoringRules(const ApiResponse& response) {
+    std::vector<ScoringRuleDTO> rules;
+
+    if (!response.success || response.body.empty()) {
+        return rules;
+    }
+
+    const std::string& json = response.body;
+
+    // Find the array start
+    size_t arrayStart = json.find('[');
+    if (arrayStart == std::string::npos) {
+        // Single object?
+        if (json.find('{') != std::string::npos) {
+            rules.push_back(ScoringRuleDTO::fromJson(json));
+        }
+        return rules;
+    }
+
+    // Parse array of objects
+    size_t pos = arrayStart + 1;
+    int braceCount = 0;
+    size_t objStart = std::string::npos;
+
+    while (pos < json.length()) {
+        char c = json[pos];
+
+        if (c == '{') {
+            if (braceCount == 0) {
+                objStart = pos;
+            }
+            braceCount++;
+        } else if (c == '}') {
+            braceCount--;
+            if (braceCount == 0 && objStart != std::string::npos) {
+                std::string objJson = json.substr(objStart, pos - objStart + 1);
+                rules.push_back(ScoringRuleDTO::fromJson(objJson));
+                objStart = std::string::npos;
+            }
+        } else if (c == ']' && braceCount == 0) {
+            break;
+        }
+        pos++;
+    }
+
+    return rules;
 }
 
 bool ApiLogicServerClient::isAvailable() {

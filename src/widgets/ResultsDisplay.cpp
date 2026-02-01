@@ -98,9 +98,17 @@ void ResultsDisplay::createSummarySection() {
         chip->setStyleClass(id == "all" ? "filter-chip-sm active" : "filter-chip-sm");
     }
 
-    // Right side: action buttons
+    // Right side: optimizing indicator and action buttons
     auto rightGroup = compactRow->addWidget(std::make_unique<Wt::WContainerWidget>());
     rightGroup->setStyleClass("toolbar-right");
+
+    // Optimizing indicator (hidden by default)
+    optimizingIndicator_ = rightGroup->addWidget(std::make_unique<Wt::WContainerWidget>());
+    optimizingIndicator_->setStyleClass("optimizing-indicator hidden");
+    auto spinner = optimizingIndicator_->addWidget(std::make_unique<Wt::WText>("⟳"));
+    spinner->setStyleClass("optimizing-spinner");
+    auto optText = optimizingIndicator_->addWidget(std::make_unique<Wt::WText>(" Optimizing scores..."));
+    optText->setStyleClass("optimizing-text");
 
     auto addAllBtn = rightGroup->addWidget(std::make_unique<Wt::WPushButton>("+ Add All"));
     addAllBtn->setStyleClass("btn btn-sm btn-secondary");
@@ -249,6 +257,28 @@ void ResultsDisplay::populateResults(const Models::SearchResults& results) {
 
         resultCards_.push_back(card);
     }
+}
+
+void ResultsDisplay::showOptimizing() {
+    if (optimizingIndicator_) {
+        optimizingIndicator_->setStyleClass("optimizing-indicator");
+    }
+}
+
+void ResultsDisplay::hideOptimizing() {
+    if (optimizingIndicator_) {
+        optimizingIndicator_->setStyleClass("optimizing-indicator hidden");
+    }
+}
+
+void ResultsDisplay::updateResults(const Models::SearchResults& results) {
+    currentResults_ = results;
+
+    // Update summary stats
+    updateSummary(results);
+
+    // Repopulate the results (will recreate cards with updated scores)
+    populateResults(results);
 }
 
 } // namespace Widgets

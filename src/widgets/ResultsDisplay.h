@@ -29,6 +29,22 @@ public:
     void showResults(const Models::SearchResults& results);
 
     /**
+     * @brief Update displayed results with new data (preserves UI state)
+     * @param results Updated search results
+     */
+    void updateResults(const Models::SearchResults& results);
+
+    /**
+     * @brief Show optimizing indicator (spinner in toolbar)
+     */
+    void showOptimizing();
+
+    /**
+     * @brief Hide optimizing indicator
+     */
+    void hideOptimizing();
+
+    /**
      * @brief Clear all results
      */
     void clearResults();
@@ -98,6 +114,9 @@ private:
     Wt::WText* totalResultsText_ = nullptr;
     Wt::WText* analysisText_ = nullptr;
     Wt::WText* searchTimeText_ = nullptr;
+
+    // Optimizing indicator
+    Wt::WContainerWidget* optimizingIndicator_ = nullptr;
 
     // Result cards
     std::vector<ResultCard*> resultCards_;

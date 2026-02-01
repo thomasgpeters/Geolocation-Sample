@@ -1303,6 +1303,37 @@ html, body {
     margin-left: auto;
 }
 
+/* Optimizing indicator - spinner shown during score optimization */
+.optimizing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    background: #fef3c7;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #92400e;
+    animation: pulse-bg 1.5s ease-in-out infinite;
+}
+
+.optimizing-indicator.hidden {
+    display: none;
+}
+
+.optimizing-spinner {
+    font-size: 14px;
+    animation: spin 1s linear infinite;
+}
+
+.optimizing-text {
+    font-weight: 500;
+}
+
+@keyframes pulse-bg {
+    0%, 100% { background: #fef3c7; }
+    50% { background: #fde68a; }
+}
+
 .stat-count {
     font-size: 14px;
     font-weight: 700;
@@ -1815,6 +1846,83 @@ html, body {
 .section-description {
     font-size: 13px;
     color: var(--text-secondary);
+}
+
+/* ==================== Scoring Optimization ==================== */
+.scoring-rules-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.scoring-rule-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    background: #f9fafb;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+}
+
+.scoring-rule-row .Wt-checkbox {
+    flex-shrink: 0;
+}
+
+.rule-name {
+    font-size: 13px;
+    color: #374151;
+    min-width: 180px;
+    flex-shrink: 0;
+}
+
+.slider-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+}
+
+.scoring-slider {
+    flex: 1;
+    min-width: 120px;
+    max-width: 200px;
+}
+
+.scoring-slider input[type="range"] {
+    width: 100%;
+    height: 6px;
+    -webkit-appearance: none;
+    background: #e5e7eb;
+    border-radius: 3px;
+    outline: none;
+}
+
+.scoring-slider input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #4f46e5;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.points-value {
+    font-size: 12px;
+    font-weight: 600;
+    min-width: 55px;
+    text-align: right;
+}
+
+.points-value.penalty {
+    color: #dc2626;
+}
+
+.points-value.bonus {
+    color: #059669;
 }
 
 /* ==================== Settings Tab Interface ==================== */

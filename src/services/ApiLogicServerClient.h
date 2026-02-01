@@ -119,6 +119,29 @@ struct FranchiseeDTO {
 };
 
 /**
+ * @brief Scoring rule data for API communication
+ */
+struct ScoringRuleDTO {
+    std::string id;              // UUID from database
+    std::string ruleId;          // Rule identifier (e.g., 'no_address')
+    std::string name;            // Display name
+    std::string description;     // Rule description
+    bool isPenalty = false;      // True for penalties, false for bonuses
+    bool enabled = true;         // Whether rule is active
+    int defaultPoints = 0;       // Default point adjustment
+    int currentPoints = 0;       // Current configured adjustment
+    int minPoints = -50;         // Minimum allowed value
+    int maxPoints = 50;          // Maximum allowed value
+    std::string franchiseeId;    // Optional: rule belongs to specific franchisee
+
+    // Convert to JSON string for API
+    std::string toJson() const;
+
+    // Parse from JSON response
+    static ScoringRuleDTO fromJson(const std::string& json);
+};
+
+/**
  * @brief API response wrapper
  */
 struct ApiResponse {
@@ -210,6 +233,51 @@ public:
      * @return Vector of franchisee DTOs
      */
     static std::vector<FranchiseeDTO> parseFranchisees(const ApiResponse& response);
+
+    // ========================================================================
+    // Scoring Rule Operations
+    // ========================================================================
+
+    /**
+     * @brief Save a scoring rule (create or update)
+     * @param rule Scoring rule data
+     * @return API response with created/updated record
+     */
+    ApiResponse saveScoringRule(const ScoringRuleDTO& rule);
+
+    /**
+     * @brief Get all scoring rules
+     * @return API response with list of scoring rules
+     */
+    ApiResponse getScoringRules();
+
+    /**
+     * @brief Get scoring rules for a specific franchisee
+     * @param franchiseeId UUID of the franchisee (empty for global rules)
+     * @return API response with list of scoring rules
+     */
+    ApiResponse getScoringRulesForFranchisee(const std::string& franchiseeId = "");
+
+    /**
+     * @brief Get a specific scoring rule by ID
+     * @param id UUID of the scoring rule
+     * @return API response with scoring rule data
+     */
+    ApiResponse getScoringRule(const std::string& id);
+
+    /**
+     * @brief Delete a scoring rule
+     * @param id UUID of the scoring rule
+     * @return API response
+     */
+    ApiResponse deleteScoringRule(const std::string& id);
+
+    /**
+     * @brief Parse scoring rules from API response
+     * @param response API response containing JSON array
+     * @return Vector of scoring rule DTOs
+     */
+    static std::vector<ScoringRuleDTO> parseScoringRules(const ApiResponse& response);
 
     // ========================================================================
     // App Config Operations
