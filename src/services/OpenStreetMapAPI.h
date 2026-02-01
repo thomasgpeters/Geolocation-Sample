@@ -20,10 +20,11 @@ namespace Services {
 struct OSMAPIConfig {
     std::string overpassEndpoint = "https://overpass-api.de/api/interpreter";
     std::string nominatimEndpoint = "https://nominatim.openstreetmap.org";
-    int requestTimeoutMs = 30000;
+    int requestTimeoutMs = 10000;       // 10 seconds (reduced for faster feedback)
+    int connectTimeoutMs = 5000;        // 5 seconds connection timeout
     bool enableCaching = true;
     int cacheDurationMinutes = 1440;  // 24 hours - OSM data is relatively static
-    int maxResultsPerQuery = 100;
+    int maxResultsPerQuery = 50;        // Reduced for faster response
     std::string userAgent = "FranchiseAI/1.0";  // Required by OSM usage policy
 };
 

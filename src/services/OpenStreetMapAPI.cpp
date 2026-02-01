@@ -483,33 +483,34 @@ std::string OpenStreetMapAPI::buildCateringProspectQuery(
     double lon,
     int radiusMeters
 ) {
+    // Limit radius to avoid overly large queries that timeout
+    int limitedRadius = std::min(radiusMeters, 16000);  // Max ~10 miles
+
     std::ostringstream query;
     query << std::fixed << std::setprecision(6);
-    query << "[out:json][timeout:30];(";
+    // Reduced timeout from 30s to 10s for faster feedback
+    query << "[out:json][timeout:10];(";
 
-    // Offices and corporate buildings
-    query << "node[\"office\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
-    query << "way[\"office\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+    // Focus on high-value catering prospects only (simplified query)
+    // Offices with names (more likely to be relevant)
+    query << "node[\"office\"][\"name\"](around:" << limitedRadius << "," << lat << "," << lon << ");";
+    query << "way[\"office\"][\"name\"](around:" << limitedRadius << "," << lat << "," << lon << ");";
 
-    // Commercial buildings
-    query << "way[\"building\"=\"office\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
-    query << "way[\"building\"=\"commercial\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+    // Hotels (high catering value)
+    query << "node[\"tourism\"=\"hotel\"](around:" << limitedRadius << "," << lat << "," << lon << ");";
+    query << "way[\"tourism\"=\"hotel\"](around:" << limitedRadius << "," << lat << "," << lon << ");";
 
-    // Conference centers and venues
-    query << "node[\"amenity\"=\"conference_centre\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
-    query << "way[\"amenity\"=\"conference_centre\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+    // Conference centers (high catering value)
+    query << "node[\"amenity\"=\"conference_centre\"](around:" << limitedRadius << "," << lat << "," << lon << ");";
+    query << "way[\"amenity\"=\"conference_centre\"](around:" << limitedRadius << "," << lat << "," << lon << ");";
 
-    // Hotels
-    query << "node[\"tourism\"=\"hotel\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
-    query << "way[\"tourism\"=\"hotel\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+    // Hospitals (regular catering needs)
+    query << "node[\"amenity\"=\"hospital\"](around:" << limitedRadius << "," << lat << "," << lon << ");";
+    query << "way[\"amenity\"=\"hospital\"](around:" << limitedRadius << "," << lat << "," << lon << ");";
 
-    // Medical facilities
-    query << "node[\"amenity\"=\"hospital\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
-    query << "way[\"amenity\"=\"hospital\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
-
-    // Educational institutions
-    query << "node[\"amenity\"=\"university\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
-    query << "way[\"amenity\"=\"university\"](around:" << radiusMeters << "," << lat << "," << lon << ");";
+    // Universities (large catering potential)
+    query << "node[\"amenity\"=\"university\"](around:" << limitedRadius << "," << lat << "," << lon << ");";
+    query << "way[\"amenity\"=\"university\"](around:" << limitedRadius << "," << lat << "," << lon << ");";
 
     query << ");out center;";
     return query.str();
@@ -528,7 +529,10 @@ std::string OpenStreetMapAPI::executeOverpassQuery(const std::string& query) {
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
         curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, config_.requestTimeoutMs);
+        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, config_.connectTimeoutMs);
         curl_easy_setopt(curl, CURLOPT_USERAGENT, config_.userAgent.c_str());
+        // Enable TCP keepalive for faster failure detection
+        curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 1L);
 
         CURLcode res = curl_easy_perform(curl);
         if (res != CURLE_OK) {
@@ -550,7 +554,9 @@ std::string OpenStreetMapAPI::executeNominatimQuery(const std::string& endpoint)
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
         curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, config_.requestTimeoutMs);
+        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, config_.connectTimeoutMs);
         curl_easy_setopt(curl, CURLOPT_USERAGENT, config_.userAgent.c_str());
+        curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 1L);
 
         CURLcode res = curl_easy_perform(curl);
         if (res != CURLE_OK) {

@@ -136,7 +136,9 @@ std::string GoogleGeocodingAPI::executeHttpRequest(const std::string& url) {
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, config_.userAgent.c_str());
     curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, config_.requestTimeoutMs);
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, config_.connectTimeoutMs);
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 1L);
 
     // SSL settings
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
