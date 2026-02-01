@@ -1279,17 +1279,20 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 12px;
-    background: var(--bg-secondary);
-    border-radius: var(--border-radius);
-    gap: 16px;
+    padding: 10px 16px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    flex-wrap: nowrap;
+    min-height: 44px;
 }
 
 .toolbar-left {
     display: flex;
     align-items: center;
-    gap: 4px;
-    flex-wrap: wrap;
+    gap: 6px;
+    flex-wrap: nowrap;
+    white-space: nowrap;
 }
 
 .toolbar-right {
@@ -1297,59 +1300,93 @@ html, body {
     align-items: center;
     gap: 8px;
     flex-shrink: 0;
+    margin-left: auto;
 }
 
 .stat-count {
     font-size: 14px;
     font-weight: 700;
-    color: var(--primary-color);
+    color: #4f46e5;
 }
 
 .stat-suffix {
     font-size: 13px;
-    color: var(--text-secondary);
+    color: #6b7280;
 }
 
 .stat-separator {
-    color: var(--text-muted);
-    margin: 0 2px;
+    color: #9ca3af;
+    margin: 0 4px;
 }
 
 .stat-time {
     font-size: 12px;
-    color: var(--text-muted);
+    color: #9ca3af;
 }
 
 .filter-separator {
-    color: var(--border-color);
-    margin: 0 6px;
+    color: #d1d5db;
+    margin: 0 10px;
+    font-weight: 300;
 }
 
+/* Filter chip buttons - small inline style */
+.results-toolbar .filter-chip-sm,
 .filter-chip-sm {
-    padding: 2px 8px;
-    font-size: 11px;
-    border: 1px solid var(--border-color);
-    background: transparent;
-    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px !important;
+    font-size: 12px !important;
+    font-weight: 500;
+    border: 1px solid #d1d5db !important;
+    background: white !important;
+    border-radius: 16px !important;
     cursor: pointer;
-    color: var(--text-secondary);
+    color: #4b5563 !important;
     transition: all 0.15s ease;
+    margin: 0 2px;
+    line-height: 1.2;
 }
 
+.results-toolbar .filter-chip-sm:hover,
 .filter-chip-sm:hover {
-    border-color: var(--primary-color);
-    color: var(--primary-color);
+    border-color: #4f46e5 !important;
+    color: #4f46e5 !important;
+    background: #f5f3ff !important;
 }
 
+.results-toolbar .filter-chip-sm.active,
 .filter-chip-sm.active {
-    background: var(--primary-color);
-    border-color: var(--primary-color);
-    color: white;
+    background: #4f46e5 !important;
+    border-color: #4f46e5 !important;
+    color: white !important;
 }
 
+/* Small buttons for toolbar */
+.results-toolbar .btn-sm,
 .btn-sm {
-    padding: 4px 10px;
-    font-size: 12px;
+    padding: 6px 14px !important;
+    font-size: 12px !important;
+    font-weight: 500;
+    border-radius: 6px;
+    line-height: 1.2;
+}
+
+.results-toolbar .btn-secondary {
+    background: #4f46e5;
+    color: white;
+    border: none;
+}
+
+.results-toolbar .btn-outline {
+    background: white;
+    color: #4b5563;
+    border: 1px solid #d1d5db;
+}
+
+.results-toolbar .btn-outline:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
 }
 
 /* Legacy styles kept for backwards compatibility */
