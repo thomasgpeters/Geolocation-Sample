@@ -50,48 +50,49 @@ void Sidebar::createHeader() {
     auto brandText = logoContainer->addWidget(std::make_unique<Wt::WText>("FranchiseAI"));
     brandText->setStyleClass("brand-text");
 
-    // Franchise info section with popup
-    auto franchiseSectionWrapper = headerContainer_->addWidget(std::make_unique<Wt::WContainerWidget>());
-    franchiseSectionWrapper->setStyleClass("franchise-section-wrapper");
+    // User/Franchise section - original compact style with dropdown
+    auto userSectionWrapper = headerContainer_->addWidget(std::make_unique<Wt::WContainerWidget>());
+    userSectionWrapper->setStyleClass("user-section-wrapper");
 
-    auto franchiseSection = franchiseSectionWrapper->addWidget(std::make_unique<Wt::WContainerWidget>());
-    franchiseSection->setStyleClass("franchise-section clickable");
+    auto userSection = userSectionWrapper->addWidget(std::make_unique<Wt::WContainerWidget>());
+    userSection->setStyleClass("user-section clickable");
 
-    // Owner avatar container (supports image or emoji fallback)
-    auto avatarContainer = franchiseSection->addWidget(std::make_unique<Wt::WContainerWidget>());
-    avatarContainer->setStyleClass("owner-avatar-container");
+    // User avatar
+    auto avatarContainer = userSection->addWidget(std::make_unique<Wt::WContainerWidget>());
+    avatarContainer->setStyleClass("user-avatar");
     ownerAvatar_ = avatarContainer->addWidget(std::make_unique<Wt::WImage>());
-    ownerAvatar_->setStyleClass("owner-avatar-image hidden");
+    ownerAvatar_->setStyleClass("user-avatar-image hidden");
     auto avatarFallback = avatarContainer->addWidget(std::make_unique<Wt::WText>("👤"));
-    avatarFallback->setStyleClass("owner-avatar-fallback");
+    avatarFallback->setStyleClass("user-avatar-fallback");
 
-    auto franchiseInfo = franchiseSection->addWidget(std::make_unique<Wt::WContainerWidget>());
-    franchiseInfo->setStyleClass("franchise-info");
+    // User info (name + franchise)
+    auto userInfo = userSection->addWidget(std::make_unique<Wt::WContainerWidget>());
+    userInfo->setStyleClass("user-info");
 
-    ownerNameText_ = franchiseInfo->addWidget(std::make_unique<Wt::WText>(ownerName_));
-    ownerNameText_->setStyleClass("owner-name");
+    ownerNameText_ = userInfo->addWidget(std::make_unique<Wt::WText>(ownerName_));
+    ownerNameText_->setStyleClass("user-name");
 
-    franchiseNameText_ = franchiseInfo->addWidget(std::make_unique<Wt::WText>(franchiseName_));
-    franchiseNameText_->setStyleClass("franchise-name-text");
+    franchiseNameText_ = userInfo->addWidget(std::make_unique<Wt::WText>(franchiseName_));
+    franchiseNameText_->setStyleClass("franchise-name");
 
-    // Info expand icon
-    auto expandIcon = franchiseSection->addWidget(std::make_unique<Wt::WText>("ℹ️"));
-    expandIcon->setStyleClass("franchise-info-icon");
+    // Dropdown arrow
+    auto dropdownArrow = userSection->addWidget(std::make_unique<Wt::WText>("▼"));
+    dropdownArrow->setStyleClass("dropdown-arrow");
 
-    // Click handler for franchise section
-    franchiseSection->clicked().connect([this] {
+    // Click handler for user section
+    userSection->clicked().connect([this] {
         toggleFranchisePopup();
     });
 
-    // Franchise Info Popup (hidden by default)
-    franchisePopup_ = franchiseSectionWrapper->addWidget(std::make_unique<Wt::WContainerWidget>());
+    // Franchise Info Popup (hidden by default) - styled like user dropdown
+    franchisePopup_ = userSectionWrapper->addWidget(std::make_unique<Wt::WContainerWidget>());
     franchisePopup_->setStyleClass("franchise-popup hidden");
 
-    // Popup header with avatar and edit button
+    // Popup header with avatar, info, and edit button
     auto popupHeader = franchisePopup_->addWidget(std::make_unique<Wt::WContainerWidget>());
     popupHeader->setStyleClass("franchise-popup-header");
 
-    // Large avatar in popup
+    // Avatar in header
     auto popupAvatarContainer = popupHeader->addWidget(std::make_unique<Wt::WContainerWidget>());
     popupAvatarContainer->setStyleClass("franchise-popup-avatar");
     popupOwnerAvatar_ = popupAvatarContainer->addWidget(std::make_unique<Wt::WImage>());
@@ -99,20 +100,20 @@ void Sidebar::createHeader() {
     auto popupAvatarFallback = popupAvatarContainer->addWidget(std::make_unique<Wt::WText>("👤"));
     popupAvatarFallback->setStyleClass("popup-avatar-fallback");
 
-    // Header info (name + franchise)
-    auto popupHeaderInfo = popupHeader->addWidget(std::make_unique<Wt::WContainerWidget>());
-    popupHeaderInfo->setStyleClass("franchise-popup-header-info");
+    // Info section in header
+    auto headerInfo = popupHeader->addWidget(std::make_unique<Wt::WContainerWidget>());
+    headerInfo->setStyleClass("franchise-popup-header-info");
 
-    popupOwnerNameText_ = popupHeaderInfo->addWidget(std::make_unique<Wt::WText>(ownerName_));
+    popupOwnerNameText_ = headerInfo->addWidget(std::make_unique<Wt::WText>(ownerName_));
     popupOwnerNameText_->setStyleClass("popup-owner-name");
 
-    popupFranchiseNameText_ = popupHeaderInfo->addWidget(std::make_unique<Wt::WText>(franchiseName_));
+    popupFranchiseNameText_ = headerInfo->addWidget(std::make_unique<Wt::WText>(franchiseName_));
     popupFranchiseNameText_->setStyleClass("popup-franchise-name");
 
-    popupStoreIdText_ = popupHeaderInfo->addWidget(std::make_unique<Wt::WText>(storeId_));
+    popupStoreIdText_ = headerInfo->addWidget(std::make_unique<Wt::WText>(storeId_));
     popupStoreIdText_->setStyleClass("popup-store-id");
 
-    // Edit button with pencil icon
+    // Edit button in header
     auto editBtn = popupHeader->addWidget(std::make_unique<Wt::WPushButton>("✏️"));
     editBtn->setStyleClass("franchise-edit-btn");
     editBtn->setToolTip("Edit Franchise Details");
@@ -121,61 +122,54 @@ void Sidebar::createHeader() {
         editFranchiseRequested_.emit();
     });
 
-    // Popup divider
-    auto popupDivider = franchisePopup_->addWidget(std::make_unique<Wt::WContainerWidget>());
-    popupDivider->setStyleClass("franchise-popup-divider");
+    // Divider
+    auto divider1 = franchisePopup_->addWidget(std::make_unique<Wt::WContainerWidget>());
+    divider1->setStyleClass("franchise-popup-divider");
 
-    // Popup details section
-    auto popupDetails = franchisePopup_->addWidget(std::make_unique<Wt::WContainerWidget>());
-    popupDetails->setStyleClass("franchise-popup-details");
+    // Contact details section
+    auto detailsSection = franchisePopup_->addWidget(std::make_unique<Wt::WContainerWidget>());
+    detailsSection->setStyleClass("franchise-popup-details");
 
-    // Address row
-    auto addressRow = popupDetails->addWidget(std::make_unique<Wt::WContainerWidget>());
+    // Address
+    auto addressRow = detailsSection->addWidget(std::make_unique<Wt::WContainerWidget>());
     addressRow->setStyleClass("popup-detail-row");
-    auto addressIcon = addressRow->addWidget(std::make_unique<Wt::WText>("📍"));
-    addressIcon->setStyleClass("popup-detail-icon");
+    addressRow->addWidget(std::make_unique<Wt::WText>("📍"))->setStyleClass("popup-detail-icon");
     popupAddressText_ = addressRow->addWidget(std::make_unique<Wt::WText>("No address set"));
     popupAddressText_->setStyleClass("popup-detail-text");
 
-    // Phone row
-    auto phoneRow = popupDetails->addWidget(std::make_unique<Wt::WContainerWidget>());
+    // Phone
+    auto phoneRow = detailsSection->addWidget(std::make_unique<Wt::WContainerWidget>());
     phoneRow->setStyleClass("popup-detail-row");
-    auto phoneIcon = phoneRow->addWidget(std::make_unique<Wt::WText>("📞"));
-    phoneIcon->setStyleClass("popup-detail-icon");
+    phoneRow->addWidget(std::make_unique<Wt::WText>("📞"))->setStyleClass("popup-detail-icon");
     popupPhoneText_ = phoneRow->addWidget(std::make_unique<Wt::WText>("No phone set"));
     popupPhoneText_->setStyleClass("popup-detail-text");
 
-    // Email row
-    auto emailRow = popupDetails->addWidget(std::make_unique<Wt::WContainerWidget>());
+    // Email
+    auto emailRow = detailsSection->addWidget(std::make_unique<Wt::WContainerWidget>());
     emailRow->setStyleClass("popup-detail-row");
-    auto emailIcon = emailRow->addWidget(std::make_unique<Wt::WText>("✉️"));
-    emailIcon->setStyleClass("popup-detail-icon");
+    emailRow->addWidget(std::make_unique<Wt::WText>("✉️"))->setStyleClass("popup-detail-icon");
     popupEmailText_ = emailRow->addWidget(std::make_unique<Wt::WText>("No email set"));
     popupEmailText_->setStyleClass("popup-detail-text");
 
-    // Quick actions section
-    auto popupActions = franchisePopup_->addWidget(std::make_unique<Wt::WContainerWidget>());
-    popupActions->setStyleClass("franchise-popup-actions");
+    // Actions section
+    auto actionsSection = franchisePopup_->addWidget(std::make_unique<Wt::WContainerWidget>());
+    actionsSection->setStyleClass("franchise-popup-actions");
 
-    // View Profile action
-    auto profileAction = popupActions->addWidget(std::make_unique<Wt::WContainerWidget>());
+    // View Profile
+    auto profileAction = actionsSection->addWidget(std::make_unique<Wt::WContainerWidget>());
     profileAction->setStyleClass("popup-action-item");
-    auto profileIcon = profileAction->addWidget(std::make_unique<Wt::WText>("👤"));
-    profileIcon->setStyleClass("popup-action-icon");
-    auto profileLabel = profileAction->addWidget(std::make_unique<Wt::WText>("View My Profile"));
-    profileLabel->setStyleClass("popup-action-label");
+    profileAction->addWidget(std::make_unique<Wt::WText>("👤"))->setStyleClass("popup-action-icon");
+    profileAction->addWidget(std::make_unique<Wt::WText>("View My Profile"))->setStyleClass("popup-action-label");
     profileAction->clicked().connect([this] {
         toggleFranchisePopup();
         viewProfileRequested_.emit();
     });
 
-    // Logout action
-    auto logoutAction = popupActions->addWidget(std::make_unique<Wt::WContainerWidget>());
+    // Logout
+    auto logoutAction = actionsSection->addWidget(std::make_unique<Wt::WContainerWidget>());
     logoutAction->setStyleClass("popup-action-item logout-action");
-    auto logoutIcon = logoutAction->addWidget(std::make_unique<Wt::WText>("🚪"));
-    logoutIcon->setStyleClass("popup-action-icon");
-    auto logoutLabel = logoutAction->addWidget(std::make_unique<Wt::WText>("Logout"));
-    logoutLabel->setStyleClass("popup-action-label");
+    logoutAction->addWidget(std::make_unique<Wt::WText>("🚪"))->setStyleClass("popup-action-icon");
+    logoutAction->addWidget(std::make_unique<Wt::WText>("Logout"))->setStyleClass("popup-action-label");
     logoutAction->clicked().connect([this] {
         toggleFranchisePopup();
         logoutRequested_.emit();
