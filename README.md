@@ -228,6 +228,41 @@ Main search interface with:
 - **Multi-threaded geocoding**: Uses a configurable thread pool for parallel address resolution
 - **Google APIs integration**: Leverages Google Geocoding and Places APIs for faster, more accurate results
 - **Intelligent caching**: Reduces redundant API calls for repeated searches
+- **Optimized timeouts**: Connection and request timeouts tuned for responsive feedback
+- **Simplified Overpass queries**: Focused queries on high-value prospects for faster results
+
+#### API Timeout Configuration
+
+All external API calls use optimized timeout settings to provide fast feedback:
+
+| API Service | Connection Timeout | Request Timeout | Notes |
+|-------------|-------------------|-----------------|-------|
+| OpenStreetMap Overpass | 5s | 10s | Reduced from 30s for faster feedback |
+| Nominatim Geocoding | 5s | 8s | Fast-fail on network issues |
+| Google Places | 3s | 8s | Reliable with connection timeout |
+| Google Geocoding | 3s | 5s | Fast responses expected |
+
+#### Error Handling & Fallbacks
+
+The search system includes robust error handling to ensure results even when some APIs fail:
+
+1. **Geocoding Fallback Chain**:
+   - Try Google Geocoding (if API key configured)
+   - Fall back to Nominatim (OpenStreetMap)
+   - Fall back to Denver, CO as default location
+
+2. **Coordinate Validation**:
+   - Rejects invalid (0,0) coordinates before searching
+   - Validates coordinate ranges (-90 to 90 lat, -180 to 180 lon)
+
+3. **API Error Detection**:
+   - Properly detects and reports Overpass API errors/timeouts
+   - Extracts error messages from API responses
+   - Prevents silent failures from empty results
+
+4. **Known Locations Cache**:
+   - Common US cities geocoded locally (instant results)
+   - Includes: New York, Los Angeles, Chicago, Houston, Phoenix, Seattle, Denver, etc.
 
 ### My Prospects
 View and manage saved prospects with AI-powered analysis.
@@ -465,13 +500,26 @@ The OpenStreetMap integration uses the free Overpass API and requires no API key
 struct OSMAPIConfig {
     std::string overpassEndpoint = "https://overpass-api.de/api/interpreter";
     std::string nominatimEndpoint = "https://nominatim.openstreetmap.org";
-    int requestTimeoutMs = 30000;
+    int requestTimeoutMs = 10000;       // 10 seconds (optimized for faster feedback)
+    int connectTimeoutMs = 5000;        // 5 seconds connection timeout
     bool enableCaching = true;
-    int cacheDurationMinutes = 1440;  // 24 hours
-    int maxResultsPerQuery = 100;
+    int cacheDurationMinutes = 1440;    // 24 hours - OSM data is relatively static
+    int maxResultsPerQuery = 50;        // Reduced for faster response
     std::string userAgent = "FranchiseAI/1.0";
 };
 ```
+
+**Overpass Query Optimization:**
+
+The Overpass API query has been optimized for faster results:
+- Query timeout reduced from 30s to 10s
+- Search radius capped at ~10 miles to avoid slow queries
+- Focused on high-value catering prospects:
+  - Offices (with names only)
+  - Hotels
+  - Conference centers
+  - Hospitals
+  - Universities
 
 ## ApiLogicServer Integration
 
