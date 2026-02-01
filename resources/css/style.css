@@ -3376,6 +3376,34 @@ html, body {
     flex-shrink: 0;
 }
 
+/* Scrollable table body */
+.prospect-table-body {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+    max-height: 280px;
+}
+
+/* Custom scrollbar for table body */
+.prospect-table-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.prospect-table-body::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+}
+
+.prospect-table-body::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+.prospect-table-body::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
 .prospect-table-row {
     display: flex;
     border-bottom: 1px solid #f1f5f9;
