@@ -33,6 +33,9 @@ set(MODEL_SOURCES
 # Source files - Services
 set(SERVICE_SOURCES
     src/services/GoogleMyBusinessAPI.cpp
+    src/services/GoogleGeocodingAPI.cpp
+    src/services/GooglePlacesAPI.cpp
+    src/services/ThreadPool.cpp
     src/services/BBBAPI.cpp
     src/services/DemographicsAPI.cpp
     src/services/OpenStreetMapAPI.cpp
