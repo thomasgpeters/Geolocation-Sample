@@ -159,14 +159,10 @@ private:
     Wt::WImage* brandLogo_ = nullptr;
     Wt::WImage* ownerAvatar_ = nullptr;
 
-    // Franchise popup detail texts
-    Wt::WText* popupOwnerNameText_ = nullptr;
-    Wt::WText* popupFranchiseNameText_ = nullptr;
-    Wt::WText* popupStoreIdText_ = nullptr;
+    // Franchise popup contact detail texts
     Wt::WText* popupAddressText_ = nullptr;
     Wt::WText* popupPhoneText_ = nullptr;
     Wt::WText* popupEmailText_ = nullptr;
-    Wt::WImage* popupOwnerAvatar_ = nullptr;
 };
 
 } // namespace Widgets
