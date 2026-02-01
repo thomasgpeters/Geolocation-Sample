@@ -230,7 +230,7 @@ void TestRunnerUI::registerTestSuites() {
         []() -> TestResult {
             try {
                 ApiLogicServerClient client;
-                auto response = client.listFranchisees();
+                auto response = client.getFranchisees();
                 if (response.success) {
                     return TEST_PASS("Listed franchisees successfully");
                 }
@@ -246,7 +246,7 @@ void TestRunnerUI::registerTestSuites() {
         []() -> TestResult {
             try {
                 ApiLogicServerClient client;
-                auto response = client.listStoreLocations();
+                auto response = client.getStoreLocations();
                 if (response.success) {
                     return TEST_PASS("Listed stores successfully");
                 }
