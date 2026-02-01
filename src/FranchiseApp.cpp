@@ -1821,8 +1821,10 @@ void FranchiseApp::showOpenStreetMapPage() {
         popup << "<div style=\"font-size: 12px; color: #333; font-weight: 500;\">";
         if (bizInfo.employeeCount > 0) {
             popup << bizInfo.employeeCount << " employees";
+        } else if (bizInfo.estimatedEmployeesOnSite > 0) {
+            popup << "~" << bizInfo.estimatedEmployeesOnSite << " on-site";
         } else {
-            popup << bizInfo.getBusinessSizeCategory();
+            popup << "Unknown";
         }
         popup << "</div></div>";
         popup << "</div>";
