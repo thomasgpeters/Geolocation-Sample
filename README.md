@@ -101,6 +101,9 @@ The production authentication system will include:
 │   │   ├── OpenAIEngine.cpp/h          # OpenAI GPT integration
 │   │   ├── GeminiEngine.cpp/h          # Google Gemini integration
 │   │   ├── GoogleMyBusinessAPI.cpp/h   # Google Places API
+│   │   ├── GoogleGeocodingAPI.cpp/h    # Google Geocoding API for address resolution
+│   │   ├── GooglePlacesAPI.cpp/h       # Google Places API for POI search
+│   │   ├── ThreadPool.cpp/h            # Multi-threaded task execution pool
 │   │   ├── BBBAPI.cpp/h               # BBB API service
 │   │   ├── DemographicsAPI.cpp/h      # Demographics API
 │   │   ├── OpenStreetMapAPI.cpp/h     # OpenStreetMap/Overpass API
@@ -111,6 +114,9 @@ The production authentication system will include:
 │       ├── SearchPanel.cpp/h       # Search form panel
 │       ├── ResultCard.cpp/h        # Individual result card
 │       └── ResultsDisplay.cpp/h    # Results container
+├── tests/                      # Test framework
+│   ├── TestOrchestrator.cpp/h      # Test suite management and execution
+│   └── test_runner_ui.cpp          # ncurses-based test runner UI
 └── resources/
     └── css/
         └── style.css           # Application styles
@@ -191,6 +197,21 @@ The sidebar provides the main navigation with the following structure:
 
 The divider visually separates discovery tools (Dashboard, AI Search, Demographics) from management tools (My Prospects, Reports, Settings).
 
+#### Franchise Info Popup
+The sidebar header includes a clickable user section that displays a franchise information popup:
+
+**Compact User Section:**
+- User avatar (image or fallback icon)
+- Owner name and franchise name
+- Dropdown arrow indicator (▼)
+
+**Popup Contents (on click):**
+- **Header**: Large avatar, owner name, franchise name, store ID badge, edit button (✏️)
+- **Contact Details**: Address, phone, and email with icons
+- **Actions**: View My Profile, Logout
+
+The popup uses smooth slide-in animation and matches the application's dark theme styling.
+
 ### Dashboard
 Overview of prospect discovery statistics with quick action buttons.
 
@@ -198,9 +219,15 @@ Overview of prospect discovery statistics with quick action buttons.
 Main search interface with:
 - Location input (city, state, ZIP code)
 - Search radius slider
-- Business type filters
-- Data source selection
-- Advanced sorting options
+- Minimum catering score filter
+- Advanced sorting options (relevance, catering potential, distance, employee count, rating)
+
+**Note**: Business type filters and data source selection have been moved to **Settings > Marketing** tab for centralized configuration. These preferences are automatically applied to all searches.
+
+#### Performance Optimizations
+- **Multi-threaded geocoding**: Uses a configurable thread pool for parallel address resolution
+- **Google APIs integration**: Leverages Google Geocoding and Places APIs for faster, more accurate results
+- **Intelligent caching**: Reduces redundant API calls for repeated searches
 
 ### My Prospects
 View and manage saved prospects with AI-powered analysis.
@@ -285,33 +312,50 @@ View analytics and generate reports (placeholder).
 Unified configuration hub with a tabbed interface for managing all application settings.
 
 #### Tab Interface
-The Settings page uses a modern tab navigation with three sections:
+The Settings page uses a modern tab navigation with four sections:
 
 | Tab | Purpose |
 |-----|---------|
-| **Store Setup** | Configure your franchise location and search preferences |
+| **Store Setup** | Configure your franchise location and contact details |
+| **Marketing** | Configure target business types, employee ranges, and data sources for AI Search |
 | **AI Configuration** | Set up OpenAI or Gemini for prospect analysis |
 | **Data Sources** | Configure API keys for business data providers |
 
 #### Tab 1: Store Setup
-Configure your franchise store details and default search preferences.
+Configure your franchise store details and contact information.
 
 **Store Information:**
 - **Store Name**: Your franchise location name (e.g., "Vocelli Pizza - Downtown")
 - **Store Address**: Full address used as the center point for prospect searches
 - **Owner/Manager Name**: Contact person for the franchise
 - **Store Phone**: Business contact number
+- **Store Email**: Contact email address
 
-**Default Search Preferences:**
-- **Search Radius**: Default radius in miles for prospect searches
-- **Target Business Types**: Checkboxes for 12 business categories:
-  - Corporate Offices, Conference Centers, Hotels
-  - Medical Facilities, Educational Institutions, Manufacturing/Industrial
-  - Warehouses/Distribution, Government Offices, Tech Companies
-  - Financial Services, Coworking Spaces, Non-profits
-- **Target Organization Size**: Employee count range filter
+#### Tab 2: Marketing
+Configure your target market preferences for AI Search. These settings are automatically applied to all searches.
 
-#### Tab 2: AI Configuration
+**Target Business Types:**
+Checkboxes for 12 business categories to target:
+- Corporate Offices, Conference Centers, Hotels
+- Medical Facilities, Educational Institutions, Manufacturing/Industrial
+- Warehouses/Distribution, Government Offices, Tech Companies
+- Financial Services, Coworking Spaces, Non-profits
+
+**Target Employee Ranges:**
+Checkboxes to filter by organization size:
+- Small (1-50 employees)
+- Medium (51-200 employees)
+- Large (201-500 employees)
+- Enterprise (500+ employees)
+
+**Data Sources:**
+Select which data sources to use for searches:
+- Google My Business
+- Better Business Bureau (BBB)
+- Demographics Data
+- OpenStreetMap
+
+#### Tab 3: AI Configuration
 Configure AI providers for intelligent prospect analysis.
 
 - **OpenAI API Key**: Enter your OpenAI API key for GPT-powered analysis
@@ -322,7 +366,7 @@ Configure AI providers for intelligent prospect analysis.
 - **Google Gemini API Key**: Alternative AI provider (used if OpenAI not configured)
 - **Status Indicator**: Shows current AI engine configuration status with color coding
 
-#### Tab 3: Data Sources
+#### Tab 4: Data Sources
 Configure API keys for business data providers.
 
 - **Google Places API Key**: For Google My Business integration
@@ -623,6 +667,9 @@ export API_LOGIC_SERVER_ENDPOINT="http://localhost:5657/api"
 ### Services Layer
 - `AISearchService`: Orchestrates searches across all data sources and performs AI analysis
 - `GoogleMyBusinessAPI`: Interface to Google Places API
+- `GoogleGeocodingAPI`: High-performance address-to-coordinate resolution using Google Geocoding API
+- `GooglePlacesAPI`: POI search and business details using Google Places API
+- `ThreadPool`: Configurable thread pool for parallel geocoding and API requests
 - `BBBAPI`: Interface to Better Business Bureau API
 - `DemographicsAPI`: Interface to Census and economic data APIs
 - `OpenStreetMapAPI`: Interface to OpenStreetMap Overpass API for geolocation and POI data
@@ -634,6 +681,42 @@ export API_LOGIC_SERVER_ENDPOINT="http://localhost:5657/api"
 - `SearchPanel`: Form for configuring search parameters
 - `ResultsDisplay`: Container for displaying search results
 - `ResultCard`: Individual prospect card with metrics and actions
+
+## Testing
+
+### Test Orchestrator
+The project includes a comprehensive test framework with an ncurses-based UI for interactive test execution.
+
+#### Components
+- **TestOrchestrator**: Core class managing test suites, test cases, and execution
+- **TestSuite**: Groups related tests with enable/disable functionality
+- **TestCase**: Individual test with executor function, description, and result tracking
+- **TestResult**: Contains pass/fail status, message, duration, and logs
+
+#### ncurses Test Runner UI
+A terminal-based test runner with visual interface:
+
+**Features:**
+- **Suite/Test Tree View**: Hierarchical display of test suites and individual tests
+- **Checkbox Selection**: Enable/disable individual tests or entire suites
+- **Keyboard Navigation**:
+  - `↑/↓`: Navigate between items
+  - `Space`: Toggle selection
+  - `Enter`: Run selected tests
+  - `r`: Run all enabled tests
+  - `a`: Select all tests
+  - `n`: Deselect all tests
+  - `q`: Quit
+- **Progress Display**: Real-time progress bar during test execution
+- **Result Summary**: Pass/fail counts with color-coded status
+
+#### Building the Test Runner
+```bash
+# Requires ncurses library
+cmake .. -DBUILD_TESTS=ON
+make test_runner
+./test_runner
+```
 
 ## License
 
