@@ -148,21 +148,37 @@ void AISearchService::geocodeBatch(
 }
 
 Models::GeoLocation AISearchService::geocodeAddress(const std::string& address) {
+    Models::GeoLocation result;
+
     // Use Google Geocoding API if configured (faster and more reliable)
     if (config_.preferGoogleAPIs && isGoogleAPIAvailable()) {
-        return googleGeocodingAPI_.geocodeSync(address);
+        result = googleGeocodingAPI_.geocodeSync(address);
+        if (result.isValid) {
+            return result;
+        }
+        // Fall through to try other providers
     }
 
-    // Fall back to Nominatim or other configured service
-    if (!geocodingService_) {
-        // Fallback: return default location
-        return Models::GeoLocation(39.7392, -104.9903, "Denver", "CO");
+    // Try Nominatim or other configured service
+    if (geocodingService_) {
+        result = geocodingService_->geocodeSync(address);
+        if (result.isValid) {
+            return result;
+        }
     }
-    return geocodingService_->geocodeSync(address);
+
+    // Fallback: return default Denver location if all geocoding failed
+    return Models::GeoLocation(39.7392, -104.9903, "Denver", "CO");
 }
 
 Models::SearchArea AISearchService::createSearchArea(const std::string& address, double radiusMiles) {
     Models::GeoLocation location = geocodeAddress(address);
+
+    // If geocoding completely failed (0,0 coordinates), use Denver as fallback
+    if (location.latitude == 0.0 && location.longitude == 0.0) {
+        location = Models::GeoLocation(39.7392, -104.9903, "Denver", "CO");
+    }
+
     return Models::SearchArea::fromMiles(location, radiusMiles);
 }
 
