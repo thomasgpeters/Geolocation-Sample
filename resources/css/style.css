@@ -870,6 +870,7 @@ html, body {
     display: flex;
     gap: 24px;
     height: calc(100vh - var(--nav-height) - 48px);
+    overflow: hidden;
 }
 
 .search-column {
@@ -885,6 +886,10 @@ html, body {
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
+    padding: 12px 0 12px 16px;
 }
 
 .search-column.right {
@@ -899,12 +904,16 @@ html, body {
 .search-panel {
     display: flex;
     flex-direction: column;
-    height: 100%;
+    flex: 1;
+    min-height: 0;
     overflow: hidden;
+    background: white;
+    border-radius: 10px;
 }
 
 .search-content {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
     padding: 20px 24px;
     padding-bottom: 8px;
@@ -1127,9 +1136,21 @@ html, body {
 
 .search-actions {
     flex-shrink: 0;
-    padding: 14px 24px 20px 24px;
-    background: var(--bg-card);
-    border-top: 1px solid var(--border-color);
+    padding: 14px 24px;
+    background: transparent;
+    border-top: 1px solid #e9ecef;
+}
+
+/* Lighter Clear button in search panel */
+.search-actions .btn-secondary {
+    background: #f3f4f6;
+    color: #4b5563;
+    border: 1px solid #d1d5db;
+}
+
+.search-actions .btn-secondary:hover {
+    background: #e5e7eb;
+    border-color: #9ca3af;
 }
 
 .progress-container {
