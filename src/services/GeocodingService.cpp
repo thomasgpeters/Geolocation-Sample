@@ -185,14 +185,14 @@ Models::GeoLocation NominatimGeocodingService::callNominatimAPI(const std::strin
         return invalid;
     }
 
-    // Set up CURL request
+    // Set up CURL request with fast timeouts
     std::string response;
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, config_.userAgent.c_str());
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 8L);           // 8 second total timeout
-    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 5L);    // 5 second connection timeout
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, config_.requestTimeoutMs);
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, config_.connectTimeoutMs);
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 1L);
 

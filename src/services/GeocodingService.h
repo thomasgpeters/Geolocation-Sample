@@ -29,7 +29,8 @@ struct GeocodingConfig {
     GeocodingProvider provider = GeocodingProvider::NOMINATIM;
     std::string apiKey;
     std::string endpoint;
-    int requestTimeoutMs = 10000;
+    int requestTimeoutMs = 5000;      // 5 seconds - geocoding is usually fast
+    int connectTimeoutMs = 2000;      // 2 seconds connection timeout
     bool enableCaching = true;
     int cacheDurationMinutes = 1440;  // 24 hours
     std::string userAgent = "FranchiseAI/1.0";
