@@ -72,9 +72,21 @@ void ResultCard::createHeader() {
     auto typeIconText = typeBadge->addWidget(std::make_unique<Wt::WText>(typeIcon));
     auto typeNameText = typeBadge->addWidget(std::make_unique<Wt::WText>(" " + typeName));
 
-    // Right side: Expand button
+    // Right side: Action buttons and expand button
     auto rightSection = headerContainer_->addWidget(std::make_unique<Wt::WContainerWidget>());
     rightSection->setStyleClass("header-right");
+
+    auto viewBtn = rightSection->addWidget(std::make_unique<Wt::WPushButton>("View Details"));
+    viewBtn->setStyleClass("btn btn-outline btn-xs");
+    viewBtn->clicked().connect([this] {
+        viewDetailsRequested_.emit(item_.id);
+    });
+
+    auto addBtn = rightSection->addWidget(std::make_unique<Wt::WPushButton>("+ Add to Prospects"));
+    addBtn->setStyleClass("btn btn-primary btn-xs");
+    addBtn->clicked().connect([this] {
+        addToProspectsRequested_.emit(item_.id);
+    });
 
     expandBtn_ = rightSection->addWidget(std::make_unique<Wt::WPushButton>("▼"));
     expandBtn_->setStyleClass("expand-btn");
@@ -87,7 +99,6 @@ void ResultCard::createBody() {
 
     createMetrics();
     createInsights();
-    createActions();
 }
 
 void ResultCard::createMetrics() {
@@ -190,23 +201,6 @@ void ResultCard::createInsights() {
 
     auto insightsText = insightsContainer->addWidget(std::make_unique<Wt::WText>(item_.aiSummary, Wt::TextFormat::Plain));
     insightsText->setStyleClass("insights-text");
-}
-
-void ResultCard::createActions() {
-    auto actionsContainer = bodyContainer_->addWidget(std::make_unique<Wt::WContainerWidget>());
-    actionsContainer->setStyleClass("card-actions");
-
-    auto viewBtn = actionsContainer->addWidget(std::make_unique<Wt::WPushButton>("View Details"));
-    viewBtn->setStyleClass("btn btn-outline");
-    viewBtn->clicked().connect([this] {
-        viewDetailsRequested_.emit(item_.id);
-    });
-
-    auto addBtn = actionsContainer->addWidget(std::make_unique<Wt::WPushButton>("+ Add to Prospects"));
-    addBtn->setStyleClass("btn btn-primary");
-    addBtn->clicked().connect([this] {
-        addToProspectsRequested_.emit(item_.id);
-    });
 }
 
 void ResultCard::createExpandedDetails() {
