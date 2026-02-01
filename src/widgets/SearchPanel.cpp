@@ -53,12 +53,9 @@ void SearchPanel::createLocationSection() {
     locationInput_->setStyleClass("form-input location-input");
     locationInput_->setPlaceholderText("Enter city, state or address...");
 
-    // Radius slider - separate row
-    auto radiusRow = section->addWidget(std::make_unique<Wt::WContainerWidget>());
-    radiusRow->setStyleClass("form-row");
-
-    auto radiusGroup = radiusRow->addWidget(std::make_unique<Wt::WContainerWidget>());
-    radiusGroup->setStyleClass("form-group");
+    // Radius slider
+    auto radiusGroup = section->addWidget(std::make_unique<Wt::WContainerWidget>());
+    radiusGroup->setStyleClass("slider-group");
 
     auto radiusLabelContainer = radiusGroup->addWidget(std::make_unique<Wt::WContainerWidget>());
     radiusLabelContainer->setStyleClass("label-with-value");
@@ -157,12 +154,9 @@ void SearchPanel::createFiltersSection() {
     keywordsInput_->setStyleClass("form-input location-input");
     keywordsInput_->setPlaceholderText("e.g., technology, manufacturing, corporate...");
 
-    // Min score slider - separate row
-    auto scoreRow = section->addWidget(std::make_unique<Wt::WContainerWidget>());
-    scoreRow->setStyleClass("form-row");
-
-    auto scoreGroup = scoreRow->addWidget(std::make_unique<Wt::WContainerWidget>());
-    scoreGroup->setStyleClass("form-group");
+    // Min score slider
+    auto scoreGroup = section->addWidget(std::make_unique<Wt::WContainerWidget>());
+    scoreGroup->setStyleClass("slider-group");
 
     auto scoreLabelContainer = scoreGroup->addWidget(std::make_unique<Wt::WContainerWidget>());
     scoreLabelContainer->setStyleClass("label-with-value");
