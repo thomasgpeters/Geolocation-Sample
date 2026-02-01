@@ -1607,6 +1607,17 @@ html, body {
 .header-right {
     display: flex;
     align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+
+/* Extra small buttons for card headers */
+.btn-xs {
+    padding: 4px 10px !important;
+    font-size: 11px !important;
+    font-weight: 500;
+    border-radius: 4px;
+    line-height: 1.2;
 }
 
 .expand-btn {
