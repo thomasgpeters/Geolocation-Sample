@@ -44,6 +44,7 @@ set(SERVICE_SOURCES
     src/services/AIEngine.cpp
     src/services/OpenAIEngine.cpp
     src/services/GeminiEngine.cpp
+    src/services/ScoringEngine.cpp
     src/services/ApiLogicServerClient.cpp
     src/services/AuthService.cpp
     src/services/AuditLogger.cpp
