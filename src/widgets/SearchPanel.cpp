@@ -146,23 +146,23 @@ void SearchPanel::createFiltersSection() {
         advancedBtn->setText(advancedFiltersVisible_ ? "Hide Advanced ▲" : "Show Advanced ▼");
     });
 
-    // Keywords input
-    auto keywordsRow = section->addWidget(std::make_unique<Wt::WContainerWidget>());
-    keywordsRow->setStyleClass("form-row");
-
-    auto keywordsGroup = keywordsRow->addWidget(std::make_unique<Wt::WContainerWidget>());
-    keywordsGroup->setStyleClass("form-group flex-2");
+    // Keywords input - full width
+    auto keywordsGroup = section->addWidget(std::make_unique<Wt::WContainerWidget>());
+    keywordsGroup->setStyleClass("form-group location-input-group");
 
     auto keywordsLabel = keywordsGroup->addWidget(std::make_unique<Wt::WText>("Keywords"));
     keywordsLabel->setStyleClass("form-label");
 
     keywordsInput_ = keywordsGroup->addWidget(std::make_unique<Wt::WLineEdit>());
-    keywordsInput_->setStyleClass("form-input");
+    keywordsInput_->setStyleClass("form-input location-input");
     keywordsInput_->setPlaceholderText("e.g., technology, manufacturing, corporate...");
 
-    // Min score slider
-    auto scoreGroup = keywordsRow->addWidget(std::make_unique<Wt::WContainerWidget>());
-    scoreGroup->setStyleClass("form-group flex-1");
+    // Min score slider - separate row
+    auto scoreRow = section->addWidget(std::make_unique<Wt::WContainerWidget>());
+    scoreRow->setStyleClass("form-row");
+
+    auto scoreGroup = scoreRow->addWidget(std::make_unique<Wt::WContainerWidget>());
+    scoreGroup->setStyleClass("form-group");
 
     auto scoreLabelContainer = scoreGroup->addWidget(std::make_unique<Wt::WContainerWidget>());
     scoreLabelContainer->setStyleClass("label-with-value");
