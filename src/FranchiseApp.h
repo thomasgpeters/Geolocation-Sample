@@ -11,6 +11,7 @@
 #include "widgets/LoginDialog.h"
 #include "widgets/AuditTrailPage.h"
 #include "services/AISearchService.h"
+#include "services/ScoringEngine.h"
 #include "services/AuditLogger.h"
 #include "services/ApiLogicServerClient.h"
 #include "services/AuthService.h"
@@ -130,6 +131,7 @@ private:
 
     // Services
     std::unique_ptr<Services::AISearchService> searchService_;
+    std::unique_ptr<Services::ScoringEngine> scoringEngine_;
     std::unique_ptr<Services::ApiLogicServerClient> alsClient_;
     std::unique_ptr<Services::AuthService> authService_;
 
