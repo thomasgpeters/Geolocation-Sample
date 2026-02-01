@@ -70,7 +70,6 @@ private:
     void createSearchHeader();
     void createLocationSection();
     void createFiltersSection();
-    void createDataSourcesSection();
     void createSearchActions();
     void onSearch();
     void onCancel();
@@ -89,19 +88,6 @@ private:
     Wt::WText* radiusLabel_ = nullptr;
     Wt::WSlider* minScoreSlider_ = nullptr;
     Wt::WText* minScoreLabel_ = nullptr;
-
-    // Business type checkboxes
-    Wt::WCheckBox* cbCorporateOffice_ = nullptr;
-    Wt::WCheckBox* cbWarehouse_ = nullptr;
-    Wt::WCheckBox* cbConferenceCenter_ = nullptr;
-    Wt::WCheckBox* cbTechCompany_ = nullptr;
-    Wt::WCheckBox* cbHotel_ = nullptr;
-    Wt::WCheckBox* cbCoworking_ = nullptr;
-
-    // Data source checkboxes
-    Wt::WCheckBox* cbGoogleMyBusiness_ = nullptr;
-    Wt::WCheckBox* cbBBB_ = nullptr;
-    Wt::WCheckBox* cbDemographics_ = nullptr;
 
     // Sort options
     Wt::WComboBox* sortByCombo_ = nullptr;

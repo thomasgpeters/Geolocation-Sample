@@ -432,15 +432,29 @@ void FranchiseApp::onQuickSearch(const std::string& query) {
 void FranchiseApp::onSearchRequested(const Models::SearchQuery& query) {
     if (!searchService_) return;
 
+    // Create a modified query that includes settings from Settings > Marketing tab
+    Models::SearchQuery searchQuery = query;
+
+    // Apply business types and data sources from franchisee's saved settings
+    if (franchisee_.isConfigured) {
+        searchQuery.businessTypes = franchisee_.searchCriteria.businessTypes;
+        searchQuery.minEmployees = franchisee_.searchCriteria.minEmployees;
+        searchQuery.maxEmployees = franchisee_.searchCriteria.maxEmployees;
+        searchQuery.includeOpenStreetMap = franchisee_.searchCriteria.includeOpenStreetMap;
+        searchQuery.includeBBB = franchisee_.searchCriteria.includeBBB;
+        searchQuery.includeGoogleMyBusiness = true;  // Always include if configured
+        searchQuery.includeDemographics = true;      // Always include demographics
+    }
+
     // Store the search context for syncing with Open Street Map page
-    currentSearchLocation_ = query.location;
-    if (query.latitude != 0 && query.longitude != 0) {
-        Models::GeoLocation location(query.latitude, query.longitude);
-        location.formattedAddress = query.location;
-        currentSearchArea_ = Models::SearchArea::fromMiles(location, query.radiusMiles);
-    } else if (!query.location.empty()) {
-        Models::GeoLocation location = searchService_->geocodeAddress(query.location);
-        currentSearchArea_ = Models::SearchArea::fromMiles(location, query.radiusMiles);
+    currentSearchLocation_ = searchQuery.location;
+    if (searchQuery.latitude != 0 && searchQuery.longitude != 0) {
+        Models::GeoLocation location(searchQuery.latitude, searchQuery.longitude);
+        location.formattedAddress = searchQuery.location;
+        currentSearchArea_ = Models::SearchArea::fromMiles(location, searchQuery.radiusMiles);
+    } else if (!searchQuery.location.empty()) {
+        Models::GeoLocation location = searchService_->geocodeAddress(searchQuery.location);
+        currentSearchArea_ = Models::SearchArea::fromMiles(location, searchQuery.radiusMiles);
     }
     hasActiveSearch_ = true;
 
@@ -454,9 +468,9 @@ void FranchiseApp::onSearchRequested(const Models::SearchQuery& query) {
         searchPanel_->showProgress(true);
     }
 
-    // Perform search
+    // Perform search with merged query
     searchService_->search(
-        query,
+        searchQuery,
         [this](const Models::SearchResults& results) {
             // This callback is called when search completes
             onSearchComplete(results);

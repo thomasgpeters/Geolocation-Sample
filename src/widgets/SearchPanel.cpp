@@ -17,7 +17,6 @@ void SearchPanel::setupUI() {
     createSearchHeader();
     createLocationSection();
     createFiltersSection();
-    createDataSourcesSection();
 
     // Actions stay outside scrollable area (sticky at bottom)
     createSearchActions();
@@ -182,36 +181,8 @@ void SearchPanel::createFiltersSection() {
         minScoreLabel_->setText(std::to_string(minScoreSlider_->value()));
     });
 
-    // Business types (checkboxes in a grid)
-    auto typesLabel = section->addWidget(std::make_unique<Wt::WText>("Business Types"));
-    typesLabel->setStyleClass("form-label");
-
-    auto typesGrid = section->addWidget(std::make_unique<Wt::WContainerWidget>());
-    typesGrid->setStyleClass("checkbox-grid");
-
-    cbCorporateOffice_ = typesGrid->addWidget(std::make_unique<Wt::WCheckBox>("Corporate Offices"));
-    cbCorporateOffice_->setChecked(true);
-    cbCorporateOffice_->setStyleClass("checkbox-item");
-
-    cbWarehouse_ = typesGrid->addWidget(std::make_unique<Wt::WCheckBox>("Warehouses"));
-    cbWarehouse_->setChecked(true);
-    cbWarehouse_->setStyleClass("checkbox-item");
-
-    cbConferenceCenter_ = typesGrid->addWidget(std::make_unique<Wt::WCheckBox>("Conference Centers"));
-    cbConferenceCenter_->setChecked(true);
-    cbConferenceCenter_->setStyleClass("checkbox-item");
-
-    cbTechCompany_ = typesGrid->addWidget(std::make_unique<Wt::WCheckBox>("Tech Companies"));
-    cbTechCompany_->setChecked(true);
-    cbTechCompany_->setStyleClass("checkbox-item");
-
-    cbHotel_ = typesGrid->addWidget(std::make_unique<Wt::WCheckBox>("Hotels"));
-    cbHotel_->setChecked(true);
-    cbHotel_->setStyleClass("checkbox-item");
-
-    cbCoworking_ = typesGrid->addWidget(std::make_unique<Wt::WCheckBox>("Coworking Spaces"));
-    cbCoworking_->setChecked(true);
-    cbCoworking_->setStyleClass("checkbox-item");
+    // Note: Business Types and Data Sources are configured in Settings > Marketing tab
+    // and are automatically applied to searches
 
     // Advanced filters (hidden by default)
     advancedFilters_ = section->addWidget(std::make_unique<Wt::WContainerWidget>());
@@ -233,29 +204,6 @@ void SearchPanel::createFiltersSection() {
     sortByCombo_->addItem("Distance");
     sortByCombo_->addItem("Employee Count");
     sortByCombo_->addItem("Rating");
-}
-
-void SearchPanel::createDataSourcesSection() {
-    auto section = scrollableContent_->addWidget(std::make_unique<Wt::WContainerWidget>());
-    section->setStyleClass("search-section");
-
-    auto sectionTitle = section->addWidget(std::make_unique<Wt::WText>("📊 Data Sources"));
-    sectionTitle->setStyleClass("section-title");
-
-    auto sourcesGrid = section->addWidget(std::make_unique<Wt::WContainerWidget>());
-    sourcesGrid->setStyleClass("checkbox-grid sources-grid");
-
-    cbGoogleMyBusiness_ = sourcesGrid->addWidget(std::make_unique<Wt::WCheckBox>("Google My Business"));
-    cbGoogleMyBusiness_->setChecked(true);
-    cbGoogleMyBusiness_->setStyleClass("checkbox-item source-item");
-
-    cbBBB_ = sourcesGrid->addWidget(std::make_unique<Wt::WCheckBox>("Better Business Bureau"));
-    cbBBB_->setChecked(true);
-    cbBBB_->setStyleClass("checkbox-item source-item");
-
-    cbDemographics_ = sourcesGrid->addWidget(std::make_unique<Wt::WCheckBox>("Demographics Data"));
-    cbDemographics_->setChecked(true);
-    cbDemographics_->setStyleClass("checkbox-item source-item");
 }
 
 void SearchPanel::createSearchActions() {
@@ -312,24 +260,8 @@ Models::SearchQuery SearchPanel::getSearchQuery() const {
     if (radiusSlider_) query.radiusMiles = radiusSlider_->value();
     if (minScoreSlider_) query.minCateringScore = minScoreSlider_->value();
 
-    // Business types
-    if (cbCorporateOffice_ && cbCorporateOffice_->isChecked())
-        query.businessTypes.push_back(Models::BusinessType::CORPORATE_OFFICE);
-    if (cbWarehouse_ && cbWarehouse_->isChecked())
-        query.businessTypes.push_back(Models::BusinessType::WAREHOUSE);
-    if (cbConferenceCenter_ && cbConferenceCenter_->isChecked())
-        query.businessTypes.push_back(Models::BusinessType::CONFERENCE_CENTER);
-    if (cbTechCompany_ && cbTechCompany_->isChecked())
-        query.businessTypes.push_back(Models::BusinessType::TECH_COMPANY);
-    if (cbHotel_ && cbHotel_->isChecked())
-        query.businessTypes.push_back(Models::BusinessType::HOTEL);
-    if (cbCoworking_ && cbCoworking_->isChecked())
-        query.businessTypes.push_back(Models::BusinessType::COWORKING_SPACE);
-
-    // Data sources
-    if (cbGoogleMyBusiness_) query.includeGoogleMyBusiness = cbGoogleMyBusiness_->isChecked();
-    if (cbBBB_) query.includeBBB = cbBBB_->isChecked();
-    if (cbDemographics_) query.includeDemographics = cbDemographics_->isChecked();
+    // Note: Business types and data sources are set from Settings > Marketing tab
+    // and will be populated by FranchiseApp before search is executed
 
     // Sort option
     if (sortByCombo_) {
@@ -358,10 +290,7 @@ void SearchPanel::setSearchQuery(const Models::SearchQuery& query) {
         minScoreSlider_->setValue(static_cast<int>(query.minCateringScore));
         minScoreLabel_->setText(std::to_string(static_cast<int>(query.minCateringScore)));
     }
-
-    if (cbGoogleMyBusiness_) cbGoogleMyBusiness_->setChecked(query.includeGoogleMyBusiness);
-    if (cbBBB_) cbBBB_->setChecked(query.includeBBB);
-    if (cbDemographics_) cbDemographics_->setChecked(query.includeDemographics);
+    // Business types and data sources are configured in Settings > Marketing tab
 }
 
 void SearchPanel::clearForm() {
@@ -378,17 +307,6 @@ void SearchPanel::clearForm() {
         minScoreSlider_->setValue(0);
         minScoreLabel_->setText("0");
     }
-
-    if (cbCorporateOffice_) cbCorporateOffice_->setChecked(true);
-    if (cbWarehouse_) cbWarehouse_->setChecked(true);
-    if (cbConferenceCenter_) cbConferenceCenter_->setChecked(true);
-    if (cbTechCompany_) cbTechCompany_->setChecked(true);
-    if (cbHotel_) cbHotel_->setChecked(true);
-    if (cbCoworking_) cbCoworking_->setChecked(true);
-
-    if (cbGoogleMyBusiness_) cbGoogleMyBusiness_->setChecked(true);
-    if (cbBBB_) cbBBB_->setChecked(true);
-    if (cbDemographics_) cbDemographics_->setChecked(true);
 
     if (sortByCombo_) sortByCombo_->setCurrentIndex(0);
 }
