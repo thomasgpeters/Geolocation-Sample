@@ -84,6 +84,7 @@ The production authentication system will include:
 
 ```
 ├── CMakeLists.txt              # Build configuration
+├── wt_config.xml               # Wt server configuration (clean URLs, sessions)
 ├── config/
 │   ├── app_config.json         # User configuration (git-ignored)
 │   └── app_config.sample.json  # Sample configuration template
@@ -118,8 +119,11 @@ The production authentication system will include:
 │   ├── TestOrchestrator.cpp/h      # Test suite management and execution
 │   └── test_runner_ui.cpp          # ncurses-based test runner UI
 └── resources/
-    └── css/
-        └── style.css           # Application styles
+    ├── wt_config.xml           # Wt configuration (copied here for --approot)
+    ├── css/
+    │   └── style.css           # Application styles
+    └── scripts/
+        └── leaflet.js          # Leaflet map library (local)
 ```
 
 ## Prerequisites
@@ -176,9 +180,117 @@ Then open your browser to: http://localhost:8080
 | Option | Description | Default |
 |--------|-------------|---------|
 | `--docroot <path>` | Document root for static resources | ./resources |
+| `--approot <path>` | Application root (where wt_config.xml is located) | ./resources |
 | `--http-address <addr>` | HTTP server bind address | 0.0.0.0 |
 | `--http-port <port>` | HTTP server port | 8080 |
 | `--help` | Show help message | - |
+
+## Wt Server Configuration
+
+The application uses Wt's (Witty) web framework with specific configuration for clean URLs and session management.
+
+### Configuration File: wt_config.xml
+
+The `wt_config.xml` file is located in the `resources/` directory and is automatically loaded when `--approot` points to that directory.
+
+**Location:** `resources/wt_config.xml`
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<server>
+    <application-settings location="*">
+        <!-- Disable progressive bootstrap - required for HTML5 history-based URLs -->
+        <progressive-bootstrap>false</progressive-bootstrap>
+
+        <!-- Use cookies for session ID instead of URL parameter -->
+        <session-id-cookie>true</session-id-cookie>
+
+        <!-- Session timeout in seconds (30 minutes) -->
+        <session-timeout>1800</session-timeout>
+
+        <!-- Idle timeout - disconnect idle sessions after 10 minutes -->
+        <idle-timeout>600</idle-timeout>
+
+        <!-- Leaflet Map Configuration - Local Resources -->
+        <properties>
+            <property name="leafletJSURL">scripts/leaflet.js</property>
+            <property name="leafletCSSURL">css/leaflet.css</property>
+        </properties>
+    </application-settings>
+</server>
+```
+
+### Clean URL Configuration
+
+By default, Wt uses query parameters like `?_=/dashboard` or `?wtd=abc123` for internal routing and session tracking. The configuration above eliminates these for cleaner URLs:
+
+| Setting | Purpose | Effect |
+|---------|---------|--------|
+| `progressive-bootstrap: false` | Disables hash-based URL fallback | Enables HTML5 History API for clean paths |
+| `session-id-cookie: true` | Stores session ID in cookie | Removes `wtd=` parameter from URLs |
+
+**URL Comparison:**
+
+| Without Config | With Config |
+|----------------|-------------|
+| `/?_=/dashboard` | `/dashboard` |
+| `/search?_=abc123&wtd=xyz` | `/search` |
+| `/prospects?wtd=session123` | `/prospects` |
+
+### Configuration Loading Order
+
+Wt searches for `wt_config.xml` in this order:
+
+1. `--config` or `-c` command line parameter
+2. `$WT_CONFIG_XML` environment variable
+3. `appRoot/wt_config.xml` (where appRoot is set via `--approot`) ✓ **Used by this app**
+4. `/etc/wt/wt_config.xml` (system fallback)
+
+### Running with Configuration
+
+The `make run` target automatically sets up the correct paths:
+
+```bash
+# Using make run (recommended)
+cd build
+cmake ..
+make run
+
+# Manual execution with approot
+./franchise_ai_search \
+    --docroot ./resources \
+    --approot ./resources \
+    --http-address 0.0.0.0 \
+    --http-port 8080
+```
+
+### Verifying Configuration Loading
+
+Check the server startup log for confirmation:
+
+```
+# Correct (loading from approot):
+config: reading Wt config file: /path/to/build/resources/wt_config.xml
+
+# Incorrect (falling back to system config):
+config: reading Wt config file: /etc/wt/wt_config.xml
+```
+
+If you see the system path, ensure:
+1. `wt_config.xml` exists in the `resources/` directory
+2. `--approot` parameter points to the `resources/` directory
+
+### Session and Timeout Settings
+
+| Setting | Value | Description |
+|---------|-------|-------------|
+| `session-timeout` | 1800 (30 min) | Maximum session lifetime |
+| `idle-timeout` | 600 (10 min) | Disconnect after inactivity |
+
+Sessions are maintained via cookies (`session-id-cookie: true`), so users can:
+- Bookmark pages directly (e.g., `/dashboard`, `/search`)
+- Use browser back/forward navigation naturally
+- Share clean URLs without session parameters
 
 ## Application Pages
 
