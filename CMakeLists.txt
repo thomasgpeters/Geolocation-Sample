@@ -132,3 +132,41 @@ add_custom_target(test
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     COMMENT "Running ApiLogicServer Client Tests"
 )
+
+# ============================================================================
+# Test Runner UI: ncurses-based test orchestration application
+# ============================================================================
+find_package(Curses)
+
+if(CURSES_FOUND)
+    set(TEST_RUNNER_SOURCES
+        tests/test_runner_ui.cpp
+        tests/TestOrchestrator.cpp
+        src/services/ApiLogicServerClient.cpp
+    )
+
+    add_executable(test_runner ${TEST_RUNNER_SOURCES})
+
+    target_include_directories(test_runner PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/services
+        ${CMAKE_SOURCE_DIR}/src/models
+        ${CMAKE_SOURCE_DIR}/tests
+        ${CURSES_INCLUDE_DIR}
+    )
+
+    target_link_libraries(test_runner
+        CURL::libcurl
+        ${CURSES_LIBRARIES}
+    )
+
+    # Custom target to run the test runner UI
+    add_custom_target(run_tests
+        COMMAND test_runner
+        DEPENDS test_runner
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        COMMENT "Running Test Runner UI"
+    )
+else()
+    message(STATUS "ncurses not found - test_runner target will not be available")
+endif()
