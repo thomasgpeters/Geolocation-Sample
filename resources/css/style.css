@@ -1222,7 +1222,8 @@ html, body {
 
 /* ==================== Results Display ==================== */
 .results-display {
-    padding: 24px;
+    background: transparent;
+    padding: 0;
 }
 
 .state-container {
@@ -1268,7 +1269,13 @@ html, body {
 
 /* Compact results toolbar - replaces old summary/filters layout */
 .results-summary {
-    margin-bottom: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: white;
+    margin: 0 0 12px 0;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e9ecef;
 }
 
 .results-summary.hidden {
@@ -1279,12 +1286,10 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 16px;
-    background: #f8f9fa;
-    border-radius: 8px;
-    border: 1px solid #e9ecef;
+    padding: 0;
+    background: transparent;
     flex-wrap: nowrap;
-    min-height: 44px;
+    min-height: 36px;
 }
 
 .toolbar-left {
@@ -1450,6 +1455,7 @@ html, body {
     display: flex;
     flex-direction: column;
     gap: 16px;
+    padding: 0 16px 16px 16px;
 }
 
 .results-cards.hidden {
