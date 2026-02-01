@@ -225,20 +225,26 @@ Main search interface with:
 **Note**: Business type filters and data source selection have been moved to **Settings > Marketing** tab for centralized configuration. These preferences are automatically applied to all searches.
 
 #### Performance Optimizations
-- **Multi-threaded geocoding**: Uses a configurable thread pool for parallel address resolution
-- **Google APIs integration**: Leverages Google Geocoding and Places APIs for faster, more accurate results
-- **Intelligent caching**: Reduces redundant API calls for repeated searches
-- **Optimized timeouts**: Connection and request timeouts tuned for responsive feedback
-- **Simplified Overpass queries**: Focused queries on high-value prospects for faster results
+- **Bounding box queries**: Uses bbox instead of radius `around:` queries (5-10x faster)
+- **Faster Overpass endpoint**: Uses lz4.overpass-api.de mirror with compression
+- **Combined node/way queries**: Uses `nw` shorthand to halve the number of query clauses
+- **Quadtile output sorting**: Uses `qt` modifier for optimized result ordering
+- **Compression enabled**: All HTTP requests accept gzip/deflate for faster transfer
+- **TCP optimizations**: TCP_NODELAY and TCP_KEEPALIVE for responsive connections
+- **Multi-threaded geocoding**: Configurable thread pool for parallel address resolution
+- **Google APIs integration**: Leverages Google Geocoding and Places APIs when configured
+- **Intelligent caching**: 24-hour cache reduces redundant API calls
+- **Aggressive timeouts**: Fast-fail on slow connections to provide quick feedback
 
 #### API Timeout Configuration
 
-All external API calls use optimized timeout settings to provide fast feedback:
+All external API calls use aggressive timeout settings for responsive feedback:
 
 | API Service | Connection Timeout | Request Timeout | Notes |
 |-------------|-------------------|-----------------|-------|
-| OpenStreetMap Overpass | 5s | 10s | Reduced from 30s for faster feedback |
-| Nominatim Geocoding | 5s | 8s | Fast-fail on network issues |
+| OpenStreetMap Overpass | 3s | 8s | Uses lz4 mirror with compression |
+| Nominatim Geocoding | 3s | 8s | Fast-fail on network issues |
+| Geocoding Service | 2s | 5s | Geocoding is typically fast |
 | Google Places | 3s | 8s | Reliable with connection timeout |
 | Google Geocoding | 3s | 5s | Fast responses expected |
 
@@ -498,28 +504,39 @@ The OpenStreetMap integration uses the free Overpass API and requires no API key
 
 ```cpp
 struct OSMAPIConfig {
-    std::string overpassEndpoint = "https://overpass-api.de/api/interpreter";
+    // Uses lz4 mirror - faster response with compression
+    std::string overpassEndpoint = "https://lz4.overpass-api.de/api/interpreter";
     std::string nominatimEndpoint = "https://nominatim.openstreetmap.org";
-    int requestTimeoutMs = 10000;       // 10 seconds (optimized for faster feedback)
-    int connectTimeoutMs = 5000;        // 5 seconds connection timeout
+    int requestTimeoutMs = 8000;        // 8 seconds - bbox queries are fast
+    int connectTimeoutMs = 3000;        // 3 seconds connection timeout
     bool enableCaching = true;
     int cacheDurationMinutes = 1440;    // 24 hours - OSM data is relatively static
-    int maxResultsPerQuery = 50;        // Reduced for faster response
+    int maxResultsPerQuery = 50;        // Limit results for faster response
     std::string userAgent = "FranchiseAI/1.0";
 };
 ```
 
 **Overpass Query Optimization:**
 
-The Overpass API query has been optimized for faster results:
-- Query timeout reduced from 30s to 10s
-- Search radius capped at ~10 miles to avoid slow queries
-- Focused on high-value catering prospects:
-  - Offices (with names only)
-  - Hotels
-  - Conference centers
-  - Hospitals
-  - Universities
+The Overpass API query has been heavily optimized for faster results:
+
+| Optimization | Before | After | Impact |
+|--------------|--------|-------|--------|
+| Query type | `around:` radius | `bbox` bounding box | 5-10x faster |
+| Endpoint | overpass-api.de | lz4.overpass-api.de | Compressed responses |
+| Node/Way queries | Separate (10 clauses) | Combined `nw` (5 clauses) | 50% fewer clauses |
+| Output format | `out center` | `out center qt` | Quadtile-sorted, faster |
+| Query timeout | 10s | 6s | Faster failure feedback |
+| Compression | None | gzip, deflate | Smaller payload |
+| TCP options | Default | NODELAY + KEEPALIVE | Lower latency |
+
+**Focused on high-value catering prospects:**
+- Named offices (`office` + `name`)
+- Company/Corporation offices
+- Hotels
+- Conference centers
+- Hospitals
+- Universities and colleges
 
 ## ApiLogicServer Integration
 

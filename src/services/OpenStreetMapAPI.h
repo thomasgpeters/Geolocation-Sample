@@ -18,13 +18,14 @@ namespace Services {
  * @brief Configuration for OpenStreetMap API (Overpass)
  */
 struct OSMAPIConfig {
-    std::string overpassEndpoint = "https://overpass-api.de/api/interpreter";
+    // Use lz4 mirror - faster response with compression
+    std::string overpassEndpoint = "https://lz4.overpass-api.de/api/interpreter";
     std::string nominatimEndpoint = "https://nominatim.openstreetmap.org";
-    int requestTimeoutMs = 10000;       // 10 seconds (reduced for faster feedback)
-    int connectTimeoutMs = 5000;        // 5 seconds connection timeout
+    int requestTimeoutMs = 8000;        // 8 seconds - bbox queries are fast
+    int connectTimeoutMs = 3000;        // 3 seconds connection timeout
     bool enableCaching = true;
-    int cacheDurationMinutes = 1440;  // 24 hours - OSM data is relatively static
-    int maxResultsPerQuery = 50;        // Reduced for faster response
+    int cacheDurationMinutes = 1440;    // 24 hours - OSM data is relatively static
+    int maxResultsPerQuery = 50;        // Limit results for faster response
     std::string userAgent = "FranchiseAI/1.0";  // Required by OSM usage policy
 };
 

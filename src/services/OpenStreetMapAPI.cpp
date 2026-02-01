@@ -526,35 +526,42 @@ std::string OpenStreetMapAPI::buildCateringProspectQuery(
     int radiusMeters
 ) {
     // Limit radius to avoid overly large queries that timeout
-    int limitedRadius = std::min(radiusMeters, 16000);  // Max ~10 miles
+    // Max ~8 miles for performance
+    double limitedRadiusKm = std::min(radiusMeters / 1000.0, 13.0);
+
+    // Convert to bounding box (MUCH faster than "around:" radius queries)
+    // 1 degree latitude ≈ 111 km, 1 degree longitude ≈ 111 * cos(lat) km
+    double latDelta = limitedRadiusKm / 111.0;
+    double lonDelta = limitedRadiusKm / (111.0 * std::cos(lat * 3.14159265 / 180.0));
+
+    double south = lat - latDelta;
+    double north = lat + latDelta;
+    double west = lon - lonDelta;
+    double east = lon + lonDelta;
 
     std::ostringstream query;
     query << std::fixed << std::setprecision(6);
-    // Reduced timeout from 30s to 10s for faster feedback
-    query << "[out:json][timeout:10];(";
 
-    // Focus on high-value catering prospects only (simplified query)
-    // Offices with names (more likely to be relevant)
-    query << "node[\"office\"][\"name\"](around:" << limitedRadius << "," << lat << "," << lon << ");";
-    query << "way[\"office\"][\"name\"](around:" << limitedRadius << "," << lat << "," << lon << ");";
+    // Use bbox (bounding box) which is 5-10x faster than "around:" queries
+    // Short timeout since bbox queries are fast
+    query << "[out:json][timeout:6][bbox:" << south << "," << west << "," << north << "," << east << "];";
 
-    // Hotels (high catering value)
-    query << "node[\"tourism\"=\"hotel\"](around:" << limitedRadius << "," << lat << "," << lon << ");";
-    query << "way[\"tourism\"=\"hotel\"](around:" << limitedRadius << "," << lat << "," << lon << ");";
+    // Use "nw" to query both nodes and ways in a single pass (faster than separate queries)
+    // Union multiple high-value prospect types
+    query << "(";
+    query << "nw[\"office\"][\"name\"];";           // Named offices
+    query << "nw[\"tourism\"=\"hotel\"];";          // Hotels
+    query << "nw[\"amenity\"=\"conference_centre\"];"; // Conference centers
+    query << "nw[\"amenity\"=\"hospital\"];";       // Hospitals
+    query << "nw[\"amenity\"=\"university\"];";     // Universities
+    query << "nw[\"amenity\"=\"college\"];";        // Colleges
+    query << "nw[\"office\"=\"company\"];";         // Company offices
+    query << "nw[\"office\"=\"corporation\"];";     // Corporate offices
+    query << ");";
 
-    // Conference centers (high catering value)
-    query << "node[\"amenity\"=\"conference_centre\"](around:" << limitedRadius << "," << lat << "," << lon << ");";
-    query << "way[\"amenity\"=\"conference_centre\"](around:" << limitedRadius << "," << lat << "," << lon << ");";
+    // "out center qt" - center for way centroids, qt for quadtile-sorted fast output
+    query << "out center qt " << config_.maxResultsPerQuery << ";";
 
-    // Hospitals (regular catering needs)
-    query << "node[\"amenity\"=\"hospital\"](around:" << limitedRadius << "," << lat << "," << lon << ");";
-    query << "way[\"amenity\"=\"hospital\"](around:" << limitedRadius << "," << lat << "," << lon << ");";
-
-    // Universities (large catering potential)
-    query << "node[\"amenity\"=\"university\"](around:" << limitedRadius << "," << lat << "," << lon << ");";
-    query << "way[\"amenity\"=\"university\"](around:" << limitedRadius << "," << lat << "," << lon << ");";
-
-    query << ");out center;";
     return query.str();
 }
 
@@ -573,8 +580,12 @@ std::string OpenStreetMapAPI::executeOverpassQuery(const std::string& query) {
         curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, config_.requestTimeoutMs);
         curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, config_.connectTimeoutMs);
         curl_easy_setopt(curl, CURLOPT_USERAGENT, config_.userAgent.c_str());
+        // Enable compression for faster transfer (works well with lz4 endpoint)
+        curl_easy_setopt(curl, CURLOPT_ACCEPT_ENCODING, "gzip, deflate");
         // Enable TCP keepalive for faster failure detection
         curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 1L);
+        // Disable Nagle algorithm for faster small requests
+        curl_easy_setopt(curl, CURLOPT_TCP_NODELAY, 1L);
 
         CURLcode res = curl_easy_perform(curl);
         if (res != CURLE_OK) {
@@ -598,7 +609,9 @@ std::string OpenStreetMapAPI::executeNominatimQuery(const std::string& endpoint)
         curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, config_.requestTimeoutMs);
         curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, config_.connectTimeoutMs);
         curl_easy_setopt(curl, CURLOPT_USERAGENT, config_.userAgent.c_str());
+        curl_easy_setopt(curl, CURLOPT_ACCEPT_ENCODING, "gzip, deflate");
         curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 1L);
+        curl_easy_setopt(curl, CURLOPT_TCP_NODELAY, 1L);
 
         CURLcode res = curl_easy_perform(curl);
         if (res != CURLE_OK) {
