@@ -109,11 +109,32 @@ void OpenStreetMapAPI::searchNearby(
     std::string query = buildCateringProspectQuery(latitude, longitude, radiusMeters);
     std::string response = executeOverpassQuery(query);
 
+    // Check for error in response
+    if (response.empty()) {
+        if (callback) callback({}, "Overpass API request failed - no response");
+        return;
+    }
+
+    // Check for error JSON (from curl failure or API error)
+    if (response.find("\"error\"") != std::string::npos) {
+        // Extract error message if possible
+        size_t errorStart = response.find("\"error\"");
+        size_t colonPos = response.find(':', errorStart);
+        size_t quoteStart = response.find('"', colonPos);
+        size_t quoteEnd = response.find('"', quoteStart + 1);
+        std::string errorMsg = "Overpass API error";
+        if (quoteStart != std::string::npos && quoteEnd != std::string::npos) {
+            errorMsg = response.substr(quoteStart + 1, quoteEnd - quoteStart - 1);
+        }
+        if (callback) callback({}, errorMsg);
+        return;
+    }
+
     // Parse the JSON response
     auto results = parseOverpassResponse(response);
 
     // Cache results
-    if (config_.enableCaching) {
+    if (config_.enableCaching && !results.empty()) {
         poiCache_[cacheKey] = {results, std::time(nullptr)};
     }
 
@@ -290,11 +311,32 @@ std::vector<Models::BusinessInfo> OpenStreetMapAPI::searchBusinessesSync(
     double longitude,
     double radiusMiles
 ) {
+    // Validate coordinates - reject invalid or default (0,0) coordinates
+    if (latitude == 0.0 && longitude == 0.0) {
+        // Invalid coordinates - return empty results
+        return {};
+    }
+
+    // Validate reasonable coordinate ranges
+    if (latitude < -90.0 || latitude > 90.0 || longitude < -180.0 || longitude > 180.0) {
+        return {};
+    }
+
     std::vector<Models::BusinessInfo> results;
+    std::string errorMsg;
     searchBusinesses(latitude, longitude, radiusMiles,
-        [&results](std::vector<Models::BusinessInfo> businesses, const std::string&) {
+        [&results, &errorMsg](std::vector<Models::BusinessInfo> businesses, const std::string& error) {
+            if (!error.empty()) {
+                errorMsg = error;
+            }
             results = std::move(businesses);
         });
+
+    // Log error if any (for debugging)
+    if (!errorMsg.empty()) {
+        // Could add logging here: std::cerr << "OSM search error: " << errorMsg << std::endl;
+    }
+
     return results;
 }
 

@@ -191,8 +191,10 @@ Models::GeoLocation NominatimGeocodingService::callNominatimAPI(const std::strin
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
     curl_easy_setopt(curl, CURLOPT_USERAGENT, config_.userAgent.c_str());
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 8L);           // 8 second total timeout
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 5L);    // 5 second connection timeout
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(curl, CURLOPT_TCP_KEEPALIVE, 1L);
 
     CURLcode res = curl_easy_perform(curl);
     curl_easy_cleanup(curl);
