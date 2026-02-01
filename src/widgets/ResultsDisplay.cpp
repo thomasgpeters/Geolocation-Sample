@@ -62,76 +62,64 @@ void ResultsDisplay::createSummarySection() {
     summaryContainer_ = addWidget(std::make_unique<Wt::WContainerWidget>());
     summaryContainer_->setStyleClass("results-summary hidden");
 
-    // Stats row
-    auto statsRow = summaryContainer_->addWidget(std::make_unique<Wt::WContainerWidget>());
-    statsRow->setStyleClass("summary-stats");
+    // Single compact row with everything
+    auto compactRow = summaryContainer_->addWidget(std::make_unique<Wt::WContainerWidget>());
+    compactRow->setStyleClass("results-toolbar");
 
-    // Total results
-    auto resultsStatBox = statsRow->addWidget(std::make_unique<Wt::WContainerWidget>());
-    resultsStatBox->setStyleClass("stat-box");
+    // Left side: stats and filters
+    auto leftGroup = compactRow->addWidget(std::make_unique<Wt::WContainerWidget>());
+    leftGroup->setStyleClass("toolbar-left");
 
-    totalResultsText_ = resultsStatBox->addWidget(std::make_unique<Wt::WText>("0"));
-    totalResultsText_->setStyleClass("stat-value");
+    // Compact stats inline
+    totalResultsText_ = leftGroup->addWidget(std::make_unique<Wt::WText>("0"));
+    totalResultsText_->setStyleClass("stat-count");
 
-    auto resultsLabel = resultsStatBox->addWidget(std::make_unique<Wt::WText>("Prospects Found"));
-    resultsLabel->setStyleClass("stat-label");
+    auto resultsLabel = leftGroup->addWidget(std::make_unique<Wt::WText>(" results"));
+    resultsLabel->setStyleClass("stat-suffix");
 
-    // Search time
-    auto timeStatBox = statsRow->addWidget(std::make_unique<Wt::WContainerWidget>());
-    timeStatBox->setStyleClass("stat-box");
+    auto separator = leftGroup->addWidget(std::make_unique<Wt::WText>(" · "));
+    separator->setStyleClass("stat-separator");
 
-    searchTimeText_ = timeStatBox->addWidget(std::make_unique<Wt::WText>("0ms"));
-    searchTimeText_->setStyleClass("stat-value");
+    searchTimeText_ = leftGroup->addWidget(std::make_unique<Wt::WText>("0ms"));
+    searchTimeText_->setStyleClass("stat-time");
 
-    auto timeLabel = timeStatBox->addWidget(std::make_unique<Wt::WText>("Search Time"));
-    timeLabel->setStyleClass("stat-label");
+    // Quick filter chips inline
+    auto filterSep = leftGroup->addWidget(std::make_unique<Wt::WText>(" | "));
+    filterSep->setStyleClass("filter-separator");
 
-    // AI Analysis
-    auto analysisBox = summaryContainer_->addWidget(std::make_unique<Wt::WContainerWidget>());
-    analysisBox->setStyleClass("analysis-box");
+    std::vector<std::pair<std::string, std::string>> filters = {
+        {"all", "All"},
+        {"high", "High 60+"},
+        {"conference", "Conference"},
+    };
 
-    auto analysisIcon = analysisBox->addWidget(std::make_unique<Wt::WText>("🤖 "));
-    analysisIcon->setStyleClass("analysis-icon");
+    for (const auto& [id, label] : filters) {
+        auto chip = leftGroup->addWidget(std::make_unique<Wt::WPushButton>(label));
+        chip->setStyleClass(id == "all" ? "filter-chip-sm active" : "filter-chip-sm");
+    }
 
-    auto analysisLabel = analysisBox->addWidget(std::make_unique<Wt::WText>("AI Analysis: "));
-    analysisLabel->setStyleClass("analysis-label");
+    // Right side: action buttons
+    auto rightGroup = compactRow->addWidget(std::make_unique<Wt::WContainerWidget>());
+    rightGroup->setStyleClass("toolbar-right");
 
-    analysisText_ = analysisBox->addWidget(std::make_unique<Wt::WText>(""));
-    analysisText_->setStyleClass("analysis-text");
+    auto addAllBtn = rightGroup->addWidget(std::make_unique<Wt::WPushButton>("+ Add All"));
+    addAllBtn->setStyleClass("btn btn-sm btn-secondary");
 
-    // Actions row
-    auto actionsRow = summaryContainer_->addWidget(std::make_unique<Wt::WContainerWidget>());
-    actionsRow->setStyleClass("summary-actions");
-
-    auto exportBtn = actionsRow->addWidget(std::make_unique<Wt::WPushButton>("📥 Export Results"));
-    exportBtn->setStyleClass("btn btn-outline");
+    auto exportBtn = rightGroup->addWidget(std::make_unique<Wt::WPushButton>("Export"));
+    exportBtn->setStyleClass("btn btn-sm btn-outline");
     exportBtn->clicked().connect([this] {
         exportRequested_.emit();
     });
 
-    auto addAllBtn = actionsRow->addWidget(std::make_unique<Wt::WPushButton>("➕ Add All to Prospects"));
-    addAllBtn->setStyleClass("btn btn-secondary");
+    // Hidden - not used in compact mode
+    analysisText_ = nullptr;
 }
 
 void ResultsDisplay::createFiltersBar() {
+    // Filters are now integrated into the compact toolbar above
+    // This container is kept for backwards compatibility but hidden
     filtersBar_ = addWidget(std::make_unique<Wt::WContainerWidget>());
-    filtersBar_->setStyleClass("results-filters hidden");
-
-    auto filterLabel = filtersBar_->addWidget(std::make_unique<Wt::WText>("Quick Filters: "));
-    filterLabel->setStyleClass("filter-label");
-
-    // Filter chips
-    std::vector<std::pair<std::string, std::string>> filters = {
-        {"all", "All Results"},
-        {"high", "High Potential (60+)"},
-        {"conference", "Has Conference Room"},
-        {"bbb", "BBB Accredited"}
-    };
-
-    for (const auto& [id, label] : filters) {
-        auto chip = filtersBar_->addWidget(std::make_unique<Wt::WPushButton>(label));
-        chip->setStyleClass(id == "all" ? "filter-chip active" : "filter-chip");
-    }
+    filtersBar_->setStyleClass("hidden");
 }
 
 void ResultsDisplay::createResultsContainer() {
@@ -163,9 +151,8 @@ void ResultsDisplay::showResults(const Models::SearchResults& results) {
         return;
     }
 
-    // Show results sections
+    // Show results sections (filters integrated into toolbar)
     summaryContainer_->setStyleClass("results-summary");
-    filtersBar_->setStyleClass("results-filters");
     resultsContainer_->setStyleClass("results-cards");
 
     if (results.hasMoreResults) {

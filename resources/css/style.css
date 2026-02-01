@@ -1266,77 +1266,93 @@ html, body {
     margin: 0 auto;
 }
 
+/* Compact results toolbar - replaces old summary/filters layout */
 .results-summary {
-    margin-bottom: 24px;
+    margin-bottom: 12px;
 }
 
 .results-summary.hidden {
     display: none;
 }
 
-.summary-stats {
+.results-toolbar {
     display: flex;
-    gap: 24px;
-    margin-bottom: 16px;
-}
-
-.stat-box {
-    text-align: center;
-    padding: 16px 24px;
-    background: var(--bg-primary);
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: var(--bg-secondary);
     border-radius: var(--border-radius);
+    gap: 16px;
 }
 
-.stat-box .stat-value {
-    font-size: 28px;
+.toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.stat-count {
+    font-size: 14px;
     font-weight: 700;
     color: var(--primary-color);
-    display: block;
 }
 
-.stat-box .stat-label {
-    font-size: 12px;
+.stat-suffix {
+    font-size: 13px;
     color: var(--text-secondary);
 }
 
-.analysis-box {
-    padding: 16px;
-    background: var(--primary-light);
-    border-radius: var(--border-radius);
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
+.stat-separator {
+    color: var(--text-muted);
+    margin: 0 2px;
 }
 
-.analysis-icon {
-    font-size: 20px;
+.stat-time {
+    font-size: 12px;
+    color: var(--text-muted);
 }
 
-.analysis-label {
-    font-weight: 600;
+.filter-separator {
+    color: var(--border-color);
+    margin: 0 6px;
+}
+
+.filter-chip-sm {
+    padding: 2px 8px;
+    font-size: 11px;
+    border: 1px solid var(--border-color);
+    background: transparent;
+    border-radius: 12px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all 0.15s ease;
+}
+
+.filter-chip-sm:hover {
+    border-color: var(--primary-color);
     color: var(--primary-color);
 }
 
-.analysis-text {
-    color: var(--text-primary);
-    font-size: 13px;
+.filter-chip-sm.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
 }
 
-.summary-actions {
-    display: flex;
-    gap: 12px;
-    margin-top: 16px;
+.btn-sm {
+    padding: 4px 10px;
+    font-size: 12px;
 }
 
-.results-filters {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 0;
-    margin-bottom: 16px;
-    border-bottom: 1px solid var(--border-color);
-}
-
+/* Legacy styles kept for backwards compatibility */
 .results-filters.hidden {
     display: none;
 }
