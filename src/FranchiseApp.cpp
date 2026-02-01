@@ -1032,9 +1032,13 @@ void FranchiseApp::showDashboardPage() {
         auto headerActions = tableHeader->addWidget(std::make_unique<Wt::WText>("Actions"));
         headerActions->setStyleClass("header-cell actions-col");
 
+        // Table body (scrollable)
+        auto tableBody = prospectTable->addWidget(std::make_unique<Wt::WContainerWidget>());
+        tableBody->setStyleClass("prospect-table-body");
+
         // Table rows
         for (const auto& prospect : hotProspects) {
-            auto row = prospectTable->addWidget(std::make_unique<Wt::WContainerWidget>());
+            auto row = tableBody->addWidget(std::make_unique<Wt::WContainerWidget>());
             row->setStyleClass("prospect-table-row");
 
             // Business name

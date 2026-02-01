@@ -25,7 +25,8 @@ struct GooglePlacesConfig {
     std::string detailsEndpoint = "https://maps.googleapis.com/maps/api/place/details/json";
     std::string textSearchEndpoint = "https://maps.googleapis.com/maps/api/place/textsearch/json";
 
-    int requestTimeoutMs = 5000;           // 5 seconds
+    int requestTimeoutMs = 8000;           // 8 seconds (increased slightly for reliability)
+    int connectTimeoutMs = 3000;           // 3 seconds connection timeout
     bool enableCaching = true;
     int cacheDurationMinutes = 60;         // 1 hour for place data
     std::string userAgent = "FranchiseAI/1.0";
@@ -39,7 +40,7 @@ struct GooglePlacesConfig {
 
     // Search settings
     int maxResultsPerPage = 20;            // Google Places returns max 20 per page
-    int maxPages = 3;                      // Up to 60 results total
+    int maxPages = 2;                      // Reduced to 2 pages (40 results) for faster response
 
     /**
      * @brief Check if API key is configured

@@ -22,6 +22,7 @@ struct GoogleGeocodingConfig {
     std::string apiKey;
     std::string endpoint = "https://maps.googleapis.com/maps/api/geocode/json";
     int requestTimeoutMs = 5000;           // 5 seconds (Google is fast)
+    int connectTimeoutMs = 3000;           // 3 seconds connection timeout
     bool enableCaching = true;
     int cacheDurationMinutes = 1440;       // 24 hours
     std::string userAgent = "FranchiseAI/1.0";
@@ -34,7 +35,7 @@ struct GoogleGeocodingConfig {
     int maxRequestsPerSecond = 50;
 
     // Retry settings
-    int maxRetries = 3;
+    int maxRetries = 2;                    // Reduced retries for faster feedback
     int retryDelayMs = 100;
 
     /**
