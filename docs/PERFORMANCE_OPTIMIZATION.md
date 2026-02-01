@@ -293,11 +293,134 @@ osmAPI.getTotalApiCalls();
 osmAPI.getCacheSize();
 ```
 
+## Progressive Loading & Score Optimization
+
+The search results display uses a progressive loading pattern to provide instant feedback while score optimization runs in the background.
+
+### User Experience Flow
+
+1. **Instant Results**: OSM results display immediately after the API returns
+2. **Optimizing Indicator**: Yellow pulsing "⟳ Optimizing scores..." badge appears in toolbar
+3. **Score Updates**: ScoringEngine applies penalties/bonuses to each prospect
+4. **Results Settle**: Cards re-sort by adjusted score, indicator disappears
+
+### Implementation
+
+**FranchiseApp.cpp (`onSearchComplete`):**
+```cpp
+void FranchiseApp::onSearchComplete(const Models::SearchResults& results) {
+    lastResults_ = results;
+
+    // STEP 1: Display results IMMEDIATELY (before scoring)
+    resultsDisplay_->showResults(lastResults_);
+
+    // STEP 2: Show optimizing indicator
+    if (scoringEngine_->hasEnabledRules()) {
+        resultsDisplay_->showOptimizing();
+        processEvents();  // Force UI paint
+
+        // STEP 3: Apply scoring adjustments
+        for (auto& item : lastResults_.items) {
+            int adjustedScore = scoringEngine_->calculateFinalScore(*item.business, baseScore);
+            item.overallScore = adjustedScore;
+        }
+
+        // STEP 4: Re-sort and update display
+        std::sort(lastResults_.items.begin(), lastResults_.items.end(), ...);
+        resultsDisplay_->updateResults(lastResults_);
+
+        // STEP 5: Hide indicator
+        resultsDisplay_->hideOptimizing();
+    }
+}
+```
+
+**ResultsDisplay Methods:**
+```cpp
+void showOptimizing();   // Show pulsing indicator
+void hideOptimizing();   // Remove indicator
+void updateResults();    // Refresh cards with new scores
+```
+
+### Deferred Enrichment
+
+External API calls (OpenAI, BBB, Demographics) are **not** made during search. They are deferred until the user adds a prospect to "My Prospects":
+
+| Phase | APIs Called | Timing |
+|-------|-------------|--------|
+| Search | OSM/Google Places only | Immediate |
+| Score Optimization | Internal ScoringEngine | ~100ms |
+| Add to Prospects | OpenAI, BBB, Demographics | On-demand |
+
+This architecture ensures:
+- Fast search results (1-3 seconds)
+- No wasted API calls on prospects user doesn't save
+- Reduced API costs (pay-per-use APIs only called when needed)
+
+### CSS Animation
+
+The optimizing indicator uses a subtle pulse animation:
+
+```css
+.optimizing-indicator {
+    display: flex;
+    align-items: center;
+    background: #fef3c7;
+    animation: pulse-bg 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-bg {
+    0%, 100% { background: #fef3c7; }
+    50% { background: #fde68a; }
+}
+
+.optimizing-spinner {
+    animation: spin 1s linear infinite;
+}
+```
+
+## Configurable Scoring Engine
+
+The ScoringEngine applies configurable penalties and bonuses to prospect scores based on data quality and business attributes.
+
+### Default Rules
+
+**Penalties (reduce score for missing data):**
+| Rule ID | Name | Default Points |
+|---------|------|----------------|
+| `no_address` | Missing Address | -10 |
+| `no_employees` | Missing Employee Count | -3 |
+| `no_contact` | Missing Contact Info | -5 |
+
+**Bonuses (increase score for quality indicators):**
+| Rule ID | Name | Default Points |
+|---------|------|----------------|
+| `verified` | Verified Business | +5 |
+| `bbb_accredited` | BBB Accredited | +10 |
+| `high_rating` | High Google Rating (4.5+) | +5 |
+| `conference_room` | Has Conference Room | +5 |
+| `event_space` | Has Event Space | +7 |
+| `large_company` | Large Company (100+) | +8 |
+
+### Settings UI
+
+Users can adjust scoring rules via Settings → AI Configuration → Scoring Optimization:
+- Sliders to adjust point values within allowed range
+- Checkboxes to enable/disable individual rules
+- Reset to Defaults button
+
+### Persistence
+
+Scoring rules are persisted to ApiLogicServer:
+- Loaded on app startup via `loadScoringRulesFromALS()`
+- Saved when settings are saved via `saveScoringRulesToALS()`
+- Database table: `scoring_rules` (see `database/schema.sql`)
+
 ## Future Optimization Opportunities
 
 1. **Connection pooling:** Reuse HTTP connections across requests
 2. **Parallel queries:** Query multiple Overpass endpoints simultaneously
-3. **Progressive loading:** Show results as they arrive
+3. ~~**Progressive loading:** Show results as they arrive~~ ✅ Implemented
 4. **Predictive caching:** Pre-cache likely search areas
 5. **WebSocket connections:** Reduce connection overhead for frequent queries
 6. **Local OSM extract:** Use local data for specific regions
