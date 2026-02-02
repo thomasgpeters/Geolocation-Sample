@@ -1042,9 +1042,39 @@ Store Switch → selectStoreById() → loadProspectsFromALS()
                               savedProspects_ populated with store's prospects
 ```
 
+### API Request Pattern (PATCH Upsert)
+
+All save operations use a **PATCH upsert pattern** with client-generated UUIDs:
+
+```cpp
+// All save methods follow this pattern:
+ApiResponse saveFranchisee(const FranchiseeDTO& franchisee) {
+    FranchiseeDTO dto = franchisee;
+    if (dto.id.empty()) {
+        dto.id = generateUUID();  // Client-side UUID generation
+    }
+    return httpPatch("/Franchisee/" + dto.id, dto.toJson());
+}
+```
+
+**Why PATCH instead of POST?**
+- ApiLogicServer expects client-generated UUIDs
+- PATCH with ID in URL works for both create and update (upsert)
+- Avoids 405 Method Not Allowed errors from POST endpoints
+- Consistent pattern across all entity types
+
+**Affected Endpoints:**
+
+| Method | Endpoint | Operation |
+|--------|----------|-----------|
+| `PATCH` | `/Franchisee/{id}` | Create or update franchisee |
+| `PATCH` | `/StoreLocation/{id}` | Create or update store location |
+| `PATCH` | `/ScoringRules/{id}` | Create or update scoring rule |
+| `PATCH` | `/SavedProspect/{id}` | Create or update saved prospect |
+
 ### Client-Side UUID Generation
 
-For new records (Franchisee and StoreLocation), UUIDs are generated client-side before POSTing to ALS. This ensures the client knows the ID immediately and avoids issues with PostgreSQL UUID generation.
+For new records (Franchisee and StoreLocation), UUIDs are generated client-side before sending to ALS. This ensures the client knows the ID immediately and avoids issues with PostgreSQL UUID generation.
 
 **UUID v4 Format:**
 ```
@@ -1094,6 +1124,102 @@ Or via environment variable:
 ```bash
 export API_LOGIC_SERVER_ENDPOINT="http://localhost:5657/api"
 ```
+
+### Scoring Rules API
+
+The Scoring Rules system allows franchisees to customize prospect scoring. Rules are stored in the database and accessed via the `/ScoringRules` API endpoint.
+
+**Naming Convention:**
+| Layer | Name | Notes |
+|-------|------|-------|
+| API Endpoint | `/ScoringRules` | PascalCase for JSON:API |
+| JSON Type | `"type": "ScoringRules"` | Matches endpoint name |
+| Database Table | `scoring_rules` | snake_case for PostgreSQL |
+
+**ScoringRuleDTO Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | UUID | Unique identifier (client-generated) |
+| `ruleId` | string | Rule identifier (e.g., 'no_address', 'verified_business') |
+| `name` | string | Display name |
+| `description` | string | Rule description |
+| `isPenalty` | bool | True for penalties, false for bonuses |
+| `enabled` | bool | Whether rule is active |
+| `defaultPoints` | int | Default point adjustment |
+| `currentPoints` | int | Current configured adjustment |
+| `minPoints` | int | Minimum allowed value (default -50) |
+| `maxPoints` | int | Maximum allowed value (default 50) |
+| `franchiseeId` | UUID | NULL = global rule, otherwise franchisee-specific |
+
+**API Operations:**
+
+```cpp
+// Save scoring rule (create or update)
+ScoringRuleDTO rule;
+rule.ruleId = "no_address";
+rule.name = "Missing Address";
+rule.isPenalty = true;
+rule.currentPoints = -15;
+alsClient->saveScoringRule(rule);
+// PATCH /api/ScoringRules/{id}
+
+// Get all rules
+auto response = alsClient->getScoringRules();
+// GET /api/ScoringRules
+
+// Get rules for specific franchisee
+auto response = alsClient->getScoringRulesForFranchisee(franchiseeId);
+// GET /api/ScoringRules?filter[franchisee_id]=...
+
+// Delete rule
+alsClient->deleteScoringRule(ruleId);
+// DELETE /api/ScoringRules/{id}
+```
+
+**Database Schema (PostgreSQL):**
+
+```sql
+CREATE TABLE scoring_rules (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    rule_id             VARCHAR(50) NOT NULL,
+    name                VARCHAR(100) NOT NULL,
+    description         TEXT,
+    is_penalty          BOOLEAN NOT NULL DEFAULT FALSE,
+    enabled             BOOLEAN NOT NULL DEFAULT TRUE,
+    default_points      INTEGER NOT NULL DEFAULT 0,
+    current_points      INTEGER NOT NULL DEFAULT 0,
+    min_points          INTEGER NOT NULL DEFAULT -50,
+    max_points          INTEGER NOT NULL DEFAULT 50,
+    franchisee_id       UUID,
+    created_at          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_scoring_rules_franchisee
+        FOREIGN KEY (franchisee_id) REFERENCES franchisee(id) ON DELETE CASCADE,
+    CONSTRAINT uq_scoring_rules_rule_franchisee
+        UNIQUE (rule_id, franchisee_id)
+);
+
+-- Indexes
+CREATE INDEX idx_scoring_rules_franchisee_id ON scoring_rules(franchisee_id);
+CREATE INDEX idx_scoring_rules_enabled ON scoring_rules(enabled) WHERE enabled = TRUE;
+CREATE INDEX idx_scoring_rules_rule_id ON scoring_rules(rule_id);
+```
+
+**Default Rules (Sample Data):**
+
+| Rule ID | Name | Type | Default Points |
+|---------|------|------|----------------|
+| `no_address` | Missing Address | Penalty | -15 |
+| `no_phone` | Missing Phone Number | Penalty | -10 |
+| `no_website` | Missing Website | Penalty | -5 |
+| `closed_business` | Potentially Closed | Penalty | -25 |
+| `verified_business` | Verified Business | Bonus | +10 |
+| `complete_profile` | Complete Profile | Bonus | +8 |
+| `high_reviews` | Many Reviews | Bonus | +12 |
+| `excellent_rating` | Excellent Rating | Bonus | +15 |
+| `target_industry` | Target Industry | Bonus | +15 |
 
 ## Architecture
 
