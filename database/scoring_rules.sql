@@ -1,9 +1,63 @@
 -- ============================================================================
+-- Franchisee Table (required for foreign key)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS franchisee (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    business_name       VARCHAR(200) NOT NULL,
+    dba_name            VARCHAR(200),
+    franchise_number    VARCHAR(50),
+    owner_first_name    VARCHAR(100),
+    owner_last_name     VARCHAR(100),
+    email               VARCHAR(255),
+    phone               VARCHAR(50),
+    address_line1       VARCHAR(255),
+    address_line2       VARCHAR(255),
+    city                VARCHAR(100),
+    state_province      VARCHAR(100),
+    postal_code         VARCHAR(20),
+    country_code        VARCHAR(10) DEFAULT 'US',
+    latitude            DECIMAL(10, 8),
+    longitude           DECIMAL(11, 8),
+    start_date          DATE,
+    contract_end_date   DATE,
+    monthly_revenue_target DECIMAL(12, 2),
+    ytd_revenue         DECIMAL(12, 2),
+    is_active           BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Index for active franchisees
+CREATE INDEX IF NOT EXISTS idx_franchisee_is_active
+    ON franchisee(is_active)
+    WHERE is_active = TRUE;
+
+-- Index for franchise number lookups
+CREATE INDEX IF NOT EXISTS idx_franchisee_franchise_number
+    ON franchisee(franchise_number);
+
+-- Trigger for updated_at timestamp
+CREATE OR REPLACE FUNCTION update_franchisee_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_franchisee_updated_at ON franchisee;
+CREATE TRIGGER trg_franchisee_updated_at
+    BEFORE UPDATE ON franchisee
+    FOR EACH ROW
+    EXECUTE FUNCTION update_franchisee_updated_at();
+
+-- ============================================================================
 -- Scoring Rules Table
 -- Stores configurable scoring rules for prospect evaluation
 -- ============================================================================
 
-CREATE TABLE scoring_rules (
+CREATE TABLE IF NOT EXISTS scoring_rules (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     rule_id             VARCHAR(50) NOT NULL,           -- Unique rule identifier (e.g., 'no_address')
     name                VARCHAR(100) NOT NULL,          -- Display name
@@ -34,20 +88,20 @@ CREATE TABLE scoring_rules (
 -- ============================================================================
 
 -- Index for looking up rules by franchisee
-CREATE INDEX idx_scoring_rules_franchisee_id
+CREATE INDEX IF NOT EXISTS idx_scoring_rules_franchisee_id
     ON scoring_rules(franchisee_id);
 
 -- Index for finding enabled rules quickly
-CREATE INDEX idx_scoring_rules_enabled
+CREATE INDEX IF NOT EXISTS idx_scoring_rules_enabled
     ON scoring_rules(enabled)
     WHERE enabled = TRUE;
 
 -- Index for rule lookups by rule_id
-CREATE INDEX idx_scoring_rules_rule_id
+CREATE INDEX IF NOT EXISTS idx_scoring_rules_rule_id
     ON scoring_rules(rule_id);
 
 -- Composite index for common query pattern: active rules for a franchisee
-CREATE INDEX idx_scoring_rules_franchisee_enabled
+CREATE INDEX IF NOT EXISTS idx_scoring_rules_franchisee_enabled
     ON scoring_rules(franchisee_id, enabled);
 
 -- ============================================================================
@@ -62,6 +116,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_scoring_rules_updated_at ON scoring_rules;
 CREATE TRIGGER trg_scoring_rules_updated_at
     BEFORE UPDATE ON scoring_rules
     FOR EACH ROW
@@ -118,7 +173,9 @@ INSERT INTO scoring_rules (id, rule_id, name, description, is_penalty, enabled, 
  'Business size matches target employee range', FALSE, TRUE, 10, 10, 0, 50, NULL),
 
 ('11111111-1111-1111-1111-111111111108', 'target_industry', 'Target Industry',
- 'Business operates in a preferred industry category', FALSE, TRUE, 15, 15, 0, 50, NULL);
+ 'Business operates in a preferred industry category', FALSE, TRUE, 15, 15, 0, 50, NULL)
+
+ON CONFLICT (rule_id, franchisee_id) DO NOTHING;
 
 -- ============================================================================
 -- Verify data
