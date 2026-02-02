@@ -941,17 +941,19 @@ std::vector<FranchiseeDTO> ApiLogicServerClient::parseFranchisees(const ApiRespo
 // ============================================================================
 
 ApiResponse ApiLogicServerClient::saveScoringRule(const ScoringRuleDTO& rule) {
-    // Always use PATCH with ID in URL (upsert pattern)
-    // ApiLogicServer expects client-generated UUIDs
     ScoringRuleDTO dto = rule;
     if (dto.id.empty()) {
+        // Create new record - POST to collection endpoint
         dto.id = generateUUID();
+        std::string json = dto.toJson();
         std::cout << "  [ALS] Creating new ScoringRule with generated UUID: " << dto.id << std::endl;
+        return httpPost("/ScoringRule", json);
     } else {
+        // Update existing record - PATCH to resource endpoint
+        std::string json = dto.toJson();
         std::cout << "  [ALS] Updating existing ScoringRule: " << dto.id << std::endl;
+        return httpPatch("/ScoringRule/" + dto.id, json);
     }
-    std::string json = dto.toJson();
-    return httpPatch("/ScoringRule/" + dto.id, json);
 }
 
 ApiResponse ApiLogicServerClient::getScoringRules() {
