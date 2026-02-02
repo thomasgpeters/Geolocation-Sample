@@ -46,6 +46,14 @@ struct StoreLocationDTO {
     bool isActive = true;
     bool isPrimary = false;
 
+    // Search criteria (persisted to database)
+    std::string targetBusinessTypes;  // Comma-separated list of business type IDs
+    int minEmployees = 0;
+    int maxEmployees = 100000;
+    bool includeOpenStreetMap = true;
+    bool includeGooglePlaces = false;
+    bool includeBBB = false;
+
     // Convert from Franchisee model
     static StoreLocationDTO fromFranchisee(const Models::Franchisee& f) {
         StoreLocationDTO dto;
@@ -61,6 +69,22 @@ struct StoreLocationDTO {
         dto.email = f.email;
         dto.geocodeSource = "nominatim";
         dto.isPrimary = true;
+
+        // Search criteria
+        dto.minEmployees = f.searchCriteria.minEmployees;
+        dto.maxEmployees = f.searchCriteria.maxEmployees;
+        dto.includeOpenStreetMap = f.searchCriteria.includeOpenStreetMap;
+        dto.includeGooglePlaces = f.searchCriteria.includeGooglePlaces;
+        dto.includeBBB = f.searchCriteria.includeBBB;
+
+        // Convert business types to comma-separated string
+        std::string types;
+        for (const auto& bt : f.searchCriteria.businessTypes) {
+            if (!types.empty()) types += ",";
+            types += std::to_string(static_cast<int>(bt));
+        }
+        dto.targetBusinessTypes = types;
+
         return dto;
     }
 
@@ -75,10 +99,41 @@ struct StoreLocationDTO {
         f.location.postalCode = postalCode;
         f.location.latitude = latitude;
         f.location.longitude = longitude;
+        f.location.isValid = true;
         f.defaultSearchRadiusMiles = defaultSearchRadiusMiles;
         f.phone = phone;
         f.email = email;
         f.isConfigured = true;
+
+        // Search criteria
+        f.searchCriteria.radiusMiles = defaultSearchRadiusMiles;
+        f.searchCriteria.minEmployees = minEmployees;
+        f.searchCriteria.maxEmployees = maxEmployees;
+        f.searchCriteria.includeOpenStreetMap = includeOpenStreetMap;
+        f.searchCriteria.includeGooglePlaces = includeGooglePlaces;
+        f.searchCriteria.includeBBB = includeBBB;
+
+        // Parse business types from comma-separated string
+        if (!targetBusinessTypes.empty()) {
+            f.searchCriteria.clearBusinessTypes();
+            std::string types = targetBusinessTypes;
+            size_t pos = 0;
+            while ((pos = types.find(',')) != std::string::npos || !types.empty()) {
+                std::string token;
+                if (pos != std::string::npos) {
+                    token = types.substr(0, pos);
+                    types.erase(0, pos + 1);
+                } else {
+                    token = types;
+                    types.clear();
+                }
+                try {
+                    int typeInt = std::stoi(token);
+                    f.searchCriteria.addBusinessType(static_cast<Models::BusinessType>(typeInt));
+                } catch (...) {}
+            }
+        }
+
         return f;
     }
 
@@ -139,6 +194,47 @@ struct ScoringRuleDTO {
 
     // Parse from JSON response
     static ScoringRuleDTO fromJson(const std::string& json);
+};
+
+/**
+ * @brief Saved prospect data for API communication
+ * Links a prospect (business) to a franchisee
+ */
+struct SavedProspectDTO {
+    std::string id;                  // UUID from database
+    std::string storeLocationId;     // FK to store_locations (current franchisee's store)
+    std::string businessName;
+    std::string businessCategory;
+    std::string addressLine1;
+    std::string addressLine2;
+    std::string city;
+    std::string stateProvince;
+    std::string postalCode;
+    std::string countryCode = "US";
+    double latitude = 0.0;
+    double longitude = 0.0;
+    std::string phone;
+    std::string email;
+    std::string website;
+    int employeeCount = 0;
+    int cateringPotentialScore = 0;
+    double relevanceScore = 0.0;
+    double distanceMiles = 0.0;
+    std::string aiSummary;
+    std::string matchReason;
+    std::string keyHighlights;       // Comma-separated list
+    std::string recommendedActions;  // Comma-separated list
+    std::string dataSource;          // e.g., "OpenStreetMap", "GooglePlaces"
+    std::string savedAt;             // ISO timestamp
+    bool isContacted = false;
+    bool isConverted = false;
+    std::string notes;
+
+    // Convert to JSON string for API
+    std::string toJson() const;
+
+    // Parse from JSON response
+    static SavedProspectDTO fromJson(const std::string& json);
 };
 
 /**
@@ -278,6 +374,45 @@ public:
      * @return Vector of scoring rule DTOs
      */
     static std::vector<ScoringRuleDTO> parseScoringRules(const ApiResponse& response);
+
+    // ========================================================================
+    // Saved Prospect Operations
+    // ========================================================================
+
+    /**
+     * @brief Save a prospect (create or update)
+     * @param prospect Saved prospect data
+     * @return API response with created/updated record
+     */
+    ApiResponse saveProspect(const SavedProspectDTO& prospect);
+
+    /**
+     * @brief Get all saved prospects for a store location
+     * @param storeLocationId UUID of the store location (franchisee)
+     * @return API response with list of saved prospects
+     */
+    ApiResponse getProspectsForStore(const std::string& storeLocationId);
+
+    /**
+     * @brief Get a specific saved prospect by ID
+     * @param id UUID of the saved prospect
+     * @return API response with prospect data
+     */
+    ApiResponse getSavedProspect(const std::string& id);
+
+    /**
+     * @brief Delete a saved prospect
+     * @param id UUID of the saved prospect
+     * @return API response
+     */
+    ApiResponse deleteSavedProspect(const std::string& id);
+
+    /**
+     * @brief Parse saved prospects from API response
+     * @param response API response containing JSON array
+     * @return Vector of saved prospect DTOs
+     */
+    static std::vector<SavedProspectDTO> parseSavedProspects(const ApiResponse& response);
 
     // ========================================================================
     // App Config Operations

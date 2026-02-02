@@ -18,6 +18,8 @@
 #include <iomanip>
 #include <iostream>
 #include <algorithm>
+#include <chrono>
+#include <ctime>
 
 namespace FranchiseAI {
 
@@ -237,9 +239,6 @@ void FranchiseApp::onLoginSuccessful(const Services::LoginResult& result) {
     // Set user role on sidebar (shows/hides admin items like Audit Trail)
     sidebar_->setUserRole(result.role);
 
-    // Connect logout signal
-    sidebar_->logoutRequested().connect(this, &FranchiseApp::onLogout);
-
     // Redirect to Dashboard with token in URL
     std::string dashboardUrl = "/dashboard?token=" + sessionToken_;
     setInternalPath("/dashboard", false);
@@ -322,18 +321,34 @@ void FranchiseApp::setupUI() {
     // Sidebar
     sidebar_ = mainContainer_->addWidget(std::make_unique<Widgets::Sidebar>());
 
-    // Set user info from loaded franchisee (if configured)
+    // Set user info and franchise details from loaded franchisee
     if (franchisee_.isConfigured) {
-        sidebar_->setUserInfo(
-            franchisee_.ownerName.empty() ? "Franchise Owner" : franchisee_.ownerName,
-            franchisee_.storeName
-        );
+        updateHeaderWithFranchisee();
     } else {
         sidebar_->setUserInfo("Franchise Owner", "No Store Selected");
     }
 
     // Connect sidebar signals
     sidebar_->itemSelected().connect(this, &FranchiseApp::onMenuItemSelected);
+
+    // Connect franchise popover actions
+    sidebar_->editFranchiseRequested().connect([this] {
+        // Navigate to Settings page when "Edit Profile" is clicked
+        onMenuItemSelected("settings");
+        setInternalPath("/settings", true);
+    });
+
+    sidebar_->viewProfileRequested().connect([this] {
+        // Navigate to Settings page for viewing profile
+        onMenuItemSelected("settings");
+        setInternalPath("/settings", true);
+    });
+
+    sidebar_->logoutRequested().connect([this] {
+        // Handle logout - reset to login page
+        showLoginPage();
+        setInternalPath("/login", true);
+    });
 
     // Content area (navigation + work area)
     contentArea_ = mainContainer_->addWidget(std::make_unique<Wt::WContainerWidget>());
@@ -620,7 +635,13 @@ void FranchiseApp::onAddToProspects(const std::string& id) {
             // Perform AI analysis for this specific prospect
             analyzeProspect(prospectItem);
 
-            // Add to saved prospects
+            // Save to ApiLogicServer first (persists to database)
+            bool savedToServer = saveProspectToALS(prospectItem);
+            if (!savedToServer) {
+                std::cerr << "  [App] Warning: Prospect saved locally but failed to persist to server" << std::endl;
+            }
+
+            // Add to saved prospects (in-memory)
             savedProspects_.push_back(prospectItem);
 
             // Show confirmation with AI summary if available
@@ -699,9 +720,20 @@ void FranchiseApp::onFranchiseeSetupComplete(const Models::Franchisee& franchise
 
 void FranchiseApp::updateHeaderWithFranchisee() {
     if (sidebar_ && franchisee_.isConfigured) {
+        // Update the header display name and location
         sidebar_->setUserInfo(
             franchisee_.getDisplayName(),
             franchisee_.getLocationDisplay()
+        );
+
+        // Update the franchise details popover with full information
+        sidebar_->setFranchiseDetails(
+            franchisee_.ownerName.empty() ? "Franchise Owner" : franchisee_.ownerName,
+            franchisee_.storeName.empty() ? "My Store" : franchisee_.storeName,
+            franchisee_.storeId,
+            franchisee_.address,
+            franchisee_.phone,
+            franchisee_.email
         );
     }
 }
@@ -1533,10 +1565,14 @@ void FranchiseApp::showProspectsPage() {
             auto removeBtn = actionsContainer->addWidget(std::make_unique<Wt::WPushButton>("Remove"));
             removeBtn->setStyleClass("btn btn-outline btn-sm");
 
-            // Capture index for removal
+            // Capture index and ID for removal
             size_t prospectIndex = i;
-            removeBtn->clicked().connect([this, prospectIndex] {
+            std::string prospectId = prospect.id;
+            removeBtn->clicked().connect([this, prospectIndex, prospectId] {
                 if (prospectIndex < savedProspects_.size()) {
+                    // Delete from API server
+                    deleteProspectFromALS(prospectId);
+                    // Remove from in-memory list
                     savedProspects_.erase(savedProspects_.begin() + prospectIndex);
                     showProspectsPage();  // Refresh the page
                 }
@@ -2730,18 +2766,37 @@ void FranchiseApp::showSettingsPage() {
     auto checkboxGrid = typesGroup->addWidget(std::make_unique<Wt::WContainerWidget>());
     checkboxGrid->setStyleClass("checkbox-grid");
 
-    std::vector<std::pair<std::string, bool>> businessTypes = {
-        {"Corporate Offices", true}, {"Conference Centers", true}, {"Hotels", true},
-        {"Medical Facilities", true}, {"Educational Institutions", true}, {"Manufacturing/Industrial", false},
-        {"Warehouses/Distribution", false}, {"Government Offices", false}, {"Tech Companies", true},
-        {"Financial Services", false}, {"Coworking Spaces", true}, {"Non-profits", false}
+    // Map business type names to their enum values for checking saved preferences
+    std::vector<std::pair<std::string, Models::BusinessType>> businessTypeMap = {
+        {"Corporate Offices", Models::BusinessType::CORPORATE_OFFICE},
+        {"Conference Centers", Models::BusinessType::CONFERENCE_CENTER},
+        {"Hotels", Models::BusinessType::HOTEL},
+        {"Medical Facilities", Models::BusinessType::MEDICAL_FACILITY},
+        {"Educational Institutions", Models::BusinessType::EDUCATIONAL_INSTITUTION},
+        {"Manufacturing/Industrial", Models::BusinessType::MANUFACTURING},
+        {"Warehouses/Distribution", Models::BusinessType::WAREHOUSE},
+        {"Government Offices", Models::BusinessType::GOVERNMENT_OFFICE},
+        {"Tech Companies", Models::BusinessType::TECH_COMPANY},
+        {"Financial Services", Models::BusinessType::FINANCIAL_SERVICES},
+        {"Coworking Spaces", Models::BusinessType::COWORKING_SPACE},
+        {"Non-profits", Models::BusinessType::NONPROFIT}
     };
 
+    // Default checked states (used when no saved preferences)
+    std::vector<bool> defaultChecked = {true, true, true, true, true, false, false, false, true, false, true, false};
+
     std::vector<Wt::WCheckBox*> typeCheckboxes;
-    for (const auto& [typeName, defaultChecked] : businessTypes) {
+    for (size_t i = 0; i < businessTypeMap.size(); ++i) {
+        const auto& [typeName, typeEnum] = businessTypeMap[i];
         auto checkbox = checkboxGrid->addWidget(std::make_unique<Wt::WCheckBox>(typeName));
         checkbox->setStyleClass("form-checkbox");
-        checkbox->setChecked(defaultChecked);
+
+        // Check if this type is in saved preferences, otherwise use default
+        if (franchisee_.isConfigured && !franchisee_.searchCriteria.businessTypes.empty()) {
+            checkbox->setChecked(franchisee_.searchCriteria.hasBusinessType(typeEnum));
+        } else {
+            checkbox->setChecked(defaultChecked[i]);
+        }
         typeCheckboxes.push_back(checkbox);
     }
 
@@ -2751,10 +2806,23 @@ void FranchiseApp::showSettingsPage() {
     sizeGroup->addWidget(std::make_unique<Wt::WText>("Target Organization Size"))->setStyleClass("form-label");
     auto sizeCombo = sizeGroup->addWidget(std::make_unique<Wt::WComboBox>());
     sizeCombo->setStyleClass("form-control");
-    for (const auto& range : Models::EmployeeRange::getStandardRanges()) {
+    auto employeeRanges = Models::EmployeeRange::getStandardRanges();
+    for (const auto& range : employeeRanges) {
         sizeCombo->addItem(range.label);
     }
-    sizeCombo->setCurrentIndex(0);
+
+    // Set combo to saved employee range if configured
+    int selectedSizeIndex = 0;
+    if (franchisee_.isConfigured) {
+        for (size_t i = 0; i < employeeRanges.size(); ++i) {
+            if (employeeRanges[i].minEmployees == franchisee_.searchCriteria.minEmployees &&
+                employeeRanges[i].maxEmployees == franchisee_.searchCriteria.maxEmployees) {
+                selectedSizeIndex = static_cast<int>(i);
+                break;
+            }
+        }
+    }
+    sizeCombo->setCurrentIndex(selectedSizeIndex);
 
     // ===========================================
     // Tab 3: AI Configuration
@@ -3209,8 +3277,9 @@ void FranchiseApp::showSettingsPage() {
             }
 
             franchisee_.isConfigured = geocodeSuccess;  // Only mark configured if geocoding succeeded
-            sidebar_->setUserInfo(franchisee_.ownerName.empty() ? "Franchise Owner" : franchisee_.ownerName,
-                                   franchisee_.storeName);
+
+            // Update sidebar with all franchisee details (header + popover)
+            updateHeaderWithFranchisee();
 
             // Save franchisee and store location to ApiLogicServer
             if (geocodeSuccess) {
@@ -3408,8 +3477,45 @@ void FranchiseApp::loadStoreLocationFromALS() {
                 franchisee_.phone = loc.phone;
                 franchisee_.email = loc.email;
                 franchisee_.isConfigured = true;
+
+                // Load search criteria
+                franchisee_.searchCriteria.radiusMiles = loc.defaultSearchRadiusMiles;
+                franchisee_.searchCriteria.minEmployees = loc.minEmployees;
+                franchisee_.searchCriteria.maxEmployees = loc.maxEmployees;
+                franchisee_.searchCriteria.includeOpenStreetMap = loc.includeOpenStreetMap;
+                franchisee_.searchCriteria.includeGooglePlaces = loc.includeGooglePlaces;
+                franchisee_.searchCriteria.includeBBB = loc.includeBBB;
+
+                // Parse business types from comma-separated string
+                if (!loc.targetBusinessTypes.empty()) {
+                    franchisee_.searchCriteria.clearBusinessTypes();
+                    std::string types = loc.targetBusinessTypes;
+                    size_t pos = 0;
+                    while ((pos = types.find(',')) != std::string::npos || !types.empty()) {
+                        std::string token;
+                        if (pos != std::string::npos) {
+                            token = types.substr(0, pos);
+                            types.erase(0, pos + 1);
+                        } else {
+                            token = types;
+                            types.clear();
+                        }
+                        try {
+                            int typeInt = std::stoi(token);
+                            franchisee_.searchCriteria.addBusinessType(static_cast<Models::BusinessType>(typeInt));
+                        } catch (...) {}
+                    }
+                }
+
                 std::cout << "  [App] Store location loaded successfully: " << loc.storeName
                           << " at " << loc.latitude << ", " << loc.longitude << std::endl;
+                std::cout << "  [App] Search criteria loaded: minEmp=" << franchisee_.searchCriteria.minEmployees
+                          << ", maxEmp=" << franchisee_.searchCriteria.maxEmployees
+                          << ", types=" << franchisee_.searchCriteria.businessTypes.size() << std::endl;
+
+                // Load prospects linked to this store
+                loadProspectsFromALS();
+
                 return;
             }
         } else {
@@ -3444,6 +3550,25 @@ bool FranchiseApp::saveStoreLocationToALS() {
     dto.geocodeSource = "nominatim";
     dto.isPrimary = true;
     dto.isActive = true;
+
+    // Search criteria
+    dto.minEmployees = franchisee_.searchCriteria.minEmployees;
+    dto.maxEmployees = franchisee_.searchCriteria.maxEmployees;
+    dto.includeOpenStreetMap = franchisee_.searchCriteria.includeOpenStreetMap;
+    dto.includeGooglePlaces = franchisee_.searchCriteria.includeGooglePlaces;
+    dto.includeBBB = franchisee_.searchCriteria.includeBBB;
+
+    // Convert business types to comma-separated string
+    std::string types;
+    for (const auto& bt : franchisee_.searchCriteria.businessTypes) {
+        if (!types.empty()) types += ",";
+        types += std::to_string(static_cast<int>(bt));
+    }
+    dto.targetBusinessTypes = types;
+
+    std::cout << "  [App] Saving search criteria: minEmp=" << dto.minEmployees
+              << ", maxEmp=" << dto.maxEmployees
+              << ", types=" << dto.targetBusinessTypes << std::endl;
 
     auto response = alsClient_->saveStoreLocation(dto);
 
@@ -3517,19 +3642,54 @@ void FranchiseApp::selectStoreById(const std::string& storeId) {
         franchisee_.location.postalCode = selectedStore.postalCode;
         franchisee_.location.latitude = selectedStore.latitude;
         franchisee_.location.longitude = selectedStore.longitude;
+        franchisee_.location.isValid = true;
         franchisee_.defaultSearchRadiusMiles = selectedStore.defaultSearchRadiusMiles;
         franchisee_.phone = selectedStore.phone;
         franchisee_.email = selectedStore.email;
         franchisee_.isConfigured = true;
 
+        // Load search criteria from selected store
+        franchisee_.searchCriteria.radiusMiles = selectedStore.defaultSearchRadiusMiles;
+        franchisee_.searchCriteria.minEmployees = selectedStore.minEmployees;
+        franchisee_.searchCriteria.maxEmployees = selectedStore.maxEmployees;
+        franchisee_.searchCriteria.includeOpenStreetMap = selectedStore.includeOpenStreetMap;
+        franchisee_.searchCriteria.includeGooglePlaces = selectedStore.includeGooglePlaces;
+        franchisee_.searchCriteria.includeBBB = selectedStore.includeBBB;
+
+        // Parse business types from comma-separated string
+        if (!selectedStore.targetBusinessTypes.empty()) {
+            franchisee_.searchCriteria.clearBusinessTypes();
+            std::string types = selectedStore.targetBusinessTypes;
+            size_t pos = 0;
+            while ((pos = types.find(',')) != std::string::npos || !types.empty()) {
+                std::string token;
+                if (pos != std::string::npos) {
+                    token = types.substr(0, pos);
+                    types.erase(0, pos + 1);
+                } else {
+                    token = types;
+                    types.clear();
+                }
+                try {
+                    int typeInt = std::stoi(token);
+                    franchisee_.searchCriteria.addBusinessType(static_cast<Models::BusinessType>(typeInt));
+                } catch (...) {}
+            }
+        }
+
         // Save as current store
         alsClient_->setAppConfigValue("current_store_id", storeId);
 
-        // Update sidebar
-        sidebar_->setUserInfo(
-            franchisee_.ownerName.empty() ? "Franchise Owner" : franchisee_.ownerName,
-            franchisee_.storeName
-        );
+        // Update sidebar with full franchisee details
+        updateHeaderWithFranchisee();
+
+        // Load prospects linked to this store
+        loadProspectsFromALS();
+
+        std::cout << "  [App] Selected store: " << selectedStore.storeName
+                  << " at " << selectedStore.city << ", " << selectedStore.stateProvince << std::endl;
+        std::cout << "  [App] Search criteria loaded: minEmp=" << franchisee_.searchCriteria.minEmployees
+                  << ", maxEmp=" << franchisee_.searchCriteria.maxEmployees << std::endl;
     }
 }
 
@@ -3764,6 +3924,211 @@ bool FranchiseApp::saveScoringRulesToALS() {
     }
 
     return allSuccess;
+}
+
+// ============================================================================
+// Prospect Persistence Methods
+// ============================================================================
+
+void FranchiseApp::loadProspectsFromALS() {
+    if (currentStoreLocationId_.empty()) {
+        std::cout << "  [App] Cannot load prospects - no store location selected" << std::endl;
+        savedProspects_.clear();
+        return;
+    }
+
+    std::cout << "  [App] Loading prospects for store: " << currentStoreLocationId_ << std::endl;
+
+    auto response = alsClient_->getProspectsForStore(currentStoreLocationId_);
+    if (!response.success) {
+        std::cerr << "  [App] Failed to load prospects: " << response.errorMessage << std::endl;
+        return;
+    }
+
+    auto prospectDTOs = Services::ApiLogicServerClient::parseSavedProspects(response);
+    savedProspects_.clear();
+
+    for (const auto& dto : prospectDTOs) {
+        savedProspects_.push_back(dtoToProspectItem(dto));
+    }
+
+    std::cout << "  [App] Loaded " << savedProspects_.size() << " prospects from database" << std::endl;
+}
+
+bool FranchiseApp::saveProspectToALS(const Models::SearchResultItem& item) {
+    if (currentStoreLocationId_.empty()) {
+        std::cerr << "  [App] Cannot save prospect - no store location selected" << std::endl;
+        return false;
+    }
+
+    Services::SavedProspectDTO dto = prospectItemToDTO(item);
+    dto.storeLocationId = currentStoreLocationId_;
+
+    // Generate ISO timestamp for saved_at
+    auto now = std::chrono::system_clock::now();
+    auto time_t_now = std::chrono::system_clock::to_time_t(now);
+    std::tm tm_now;
+    gmtime_r(&time_t_now, &tm_now);
+    char buffer[30];
+    std::strftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%SZ", &tm_now);
+    dto.savedAt = buffer;
+
+    auto response = alsClient_->saveProspect(dto);
+    if (!response.success) {
+        std::cerr << "  [App] Failed to save prospect: " << response.errorMessage << std::endl;
+        return false;
+    }
+
+    std::cout << "  [App] Saved prospect to database: " << item.getTitle() << std::endl;
+    return true;
+}
+
+bool FranchiseApp::deleteProspectFromALS(const std::string& prospectId) {
+    if (prospectId.empty()) {
+        return false;
+    }
+
+    auto response = alsClient_->deleteSavedProspect(prospectId);
+    if (!response.success) {
+        std::cerr << "  [App] Failed to delete prospect: " << response.errorMessage << std::endl;
+        return false;
+    }
+
+    std::cout << "  [App] Deleted prospect from database: " << prospectId << std::endl;
+    return true;
+}
+
+Services::SavedProspectDTO FranchiseApp::prospectItemToDTO(const Models::SearchResultItem& item) {
+    Services::SavedProspectDTO dto;
+
+    // Copy ID if available (for updates)
+    dto.id = item.id;
+
+    if (item.business) {
+        dto.businessName = item.business->name;
+        dto.businessCategory = item.business->category;
+        dto.addressLine1 = item.business->address.street1;
+        dto.addressLine2 = item.business->address.street2;
+        dto.city = item.business->address.city;
+        dto.stateProvince = item.business->address.state;
+        dto.postalCode = item.business->address.zipCode;
+        dto.countryCode = item.business->address.country;
+        dto.latitude = item.business->address.latitude;
+        dto.longitude = item.business->address.longitude;
+        dto.phone = item.business->contact.primaryPhone;
+        dto.email = item.business->contact.email;
+        dto.website = item.business->contact.website;
+        dto.employeeCount = item.business->employeeCount;
+        dto.cateringPotentialScore = item.business->cateringPotentialScore;
+        dto.dataSource = Models::dataSourceToString(item.business->source);
+    }
+
+    dto.relevanceScore = item.relevanceScore;
+    dto.distanceMiles = item.distanceMiles;
+    dto.aiSummary = item.aiSummary;
+    dto.matchReason = item.matchReason;
+
+    // Convert highlights to comma-separated string
+    std::string highlights;
+    for (const auto& h : item.keyHighlights) {
+        if (!highlights.empty()) highlights += "|";
+        highlights += h;
+    }
+    dto.keyHighlights = highlights;
+
+    // Convert actions to comma-separated string
+    std::string actions;
+    for (const auto& a : item.recommendedActions) {
+        if (!actions.empty()) actions += "|";
+        actions += a;
+    }
+    dto.recommendedActions = actions;
+
+    return dto;
+}
+
+Models::SearchResultItem FranchiseApp::dtoToProspectItem(const Services::SavedProspectDTO& dto) {
+    Models::SearchResultItem item;
+
+    item.id = dto.id;
+    item.resultType = Models::SearchResultType::BUSINESS;
+    item.relevanceScore = dto.relevanceScore;
+    item.overallScore = dto.cateringPotentialScore;
+    item.distanceMiles = dto.distanceMiles;
+    item.aiSummary = dto.aiSummary;
+    item.matchReason = dto.matchReason;
+
+    // Parse highlights from pipe-separated string
+    if (!dto.keyHighlights.empty()) {
+        std::string highlights = dto.keyHighlights;
+        size_t pos = 0;
+        while ((pos = highlights.find('|')) != std::string::npos || !highlights.empty()) {
+            std::string token;
+            if (pos != std::string::npos) {
+                token = highlights.substr(0, pos);
+                highlights.erase(0, pos + 1);
+            } else {
+                token = highlights;
+                highlights.clear();
+            }
+            if (!token.empty()) {
+                item.keyHighlights.push_back(token);
+            }
+        }
+    }
+
+    // Parse actions from pipe-separated string
+    if (!dto.recommendedActions.empty()) {
+        std::string actions = dto.recommendedActions;
+        size_t pos = 0;
+        while ((pos = actions.find('|')) != std::string::npos || !actions.empty()) {
+            std::string token;
+            if (pos != std::string::npos) {
+                token = actions.substr(0, pos);
+                actions.erase(0, pos + 1);
+            } else {
+                token = actions;
+                actions.clear();
+            }
+            if (!token.empty()) {
+                item.recommendedActions.push_back(token);
+            }
+        }
+    }
+
+    // Create business info
+    auto business = std::make_shared<Models::BusinessInfo>();
+    business->id = dto.id;
+    business->name = dto.businessName;
+    business->category = dto.businessCategory;
+    business->address.street1 = dto.addressLine1;
+    business->address.street2 = dto.addressLine2;
+    business->address.city = dto.city;
+    business->address.state = dto.stateProvince;
+    business->address.zipCode = dto.postalCode;
+    business->address.country = dto.countryCode;
+    business->address.latitude = dto.latitude;
+    business->address.longitude = dto.longitude;
+    business->contact.primaryPhone = dto.phone;
+    business->contact.email = dto.email;
+    business->contact.website = dto.website;
+    business->employeeCount = dto.employeeCount;
+    business->cateringPotentialScore = dto.cateringPotentialScore;
+
+    // Parse data source
+    if (dto.dataSource == "OpenStreetMap") {
+        business->source = Models::DataSource::OPENSTREETMAP;
+    } else if (dto.dataSource == "Google My Business") {
+        business->source = Models::DataSource::GOOGLE_MY_BUSINESS;
+    } else if (dto.dataSource == "Better Business Bureau") {
+        business->source = Models::DataSource::BBB;
+    } else {
+        business->source = Models::DataSource::IMPORTED;
+    }
+
+    item.business = business;
+
+    return item;
 }
 
 std::unique_ptr<Wt::WApplication> createFranchiseApp(const Wt::WEnvironment& env) {
