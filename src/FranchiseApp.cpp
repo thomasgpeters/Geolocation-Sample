@@ -1764,7 +1764,10 @@ void FranchiseApp::showOpenStreetMapPage() {
 
         // Add markers for each prospect
         for (const auto& item : lastResults_.items) {
-            if (item.location.hasValidCoordinates()) {
+            // Check if item has business data with valid coordinates
+            if (item.business &&
+                item.business->address.latitude != 0.0 &&
+                item.business->address.longitude != 0.0) {
                 std::string name = item.getTitle();
                 std::string address = item.getSubtitle();
                 int score = item.overallScore;
@@ -1778,7 +1781,7 @@ void FranchiseApp::showOpenStreetMapPage() {
                 }
 
                 addProspectsJs << "    var marker = L.marker(["
-                              << item.location.latitude << ", " << item.location.longitude
+                              << item.business->address.latitude << ", " << item.business->address.longitude
                               << "], {icon: getScoreIcon(" << score << ")})"
                               << ".addTo(map)"
                               << ".bindPopup('<div style=\"min-width: 180px;\"><b>" << name << "</b><br>"
