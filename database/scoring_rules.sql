@@ -23,12 +23,24 @@ CREATE TABLE IF NOT EXISTS scoring_rules (
     CONSTRAINT fk_scoring_rules_franchisee
         FOREIGN KEY (franchisee_id)
         REFERENCES franchisees(id)
-        ON DELETE CASCADE,
-
-    -- Ensure rule_id is unique per franchisee (or globally if franchisee_id is NULL)
-    CONSTRAINT uq_scoring_rules_rule_franchisee
-        UNIQUE (rule_id, franchisee_id)
+        ON DELETE CASCADE
 );
+
+-- ============================================================================
+-- Add unique constraint if it doesn't exist (for ON CONFLICT to work)
+-- ============================================================================
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'uq_scoring_rules_rule_franchisee'
+    ) THEN
+        ALTER TABLE scoring_rules
+        ADD CONSTRAINT uq_scoring_rules_rule_franchisee
+        UNIQUE (rule_id, franchisee_id);
+    END IF;
+END $$;
 
 -- ============================================================================
 -- Indexes
