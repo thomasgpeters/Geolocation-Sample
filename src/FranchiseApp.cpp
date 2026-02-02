@@ -14,6 +14,7 @@
 #include <Wt/WComboBox.h>
 #include <Wt/WCheckBox.h>
 #include <Wt/WSlider.h>
+#include <Wt/WTimer.h>
 #include <sstream>
 #include <iomanip>
 #include <iostream>
@@ -361,6 +362,10 @@ void FranchiseApp::setupUI() {
     // Work area
     workArea_ = contentArea_->addWidget(std::make_unique<Wt::WContainerWidget>());
     workArea_->setStyleClass("work-area");
+
+    // Toast notification container (fixed position, top-right)
+    toastContainer_ = mainContainer_->addWidget(std::make_unique<Wt::WContainerWidget>());
+    toastContainer_->setStyleClass("toast-container");
 }
 
 void FranchiseApp::setupRouting() {
@@ -619,13 +624,9 @@ void FranchiseApp::onAddToProspects(const std::string& id) {
             }
 
             if (alreadySaved) {
-                auto dialog = addChild(std::make_unique<Wt::WMessageBox>(
-                    "Already Saved",
-                    item.getTitle() + " is already in your prospects list.",
-                    Wt::Icon::Information,
-                    Wt::StandardButton::Ok
-                ));
-                dialog->show();
+                showToast("Already Saved",
+                          item.getTitle() + " is already in your prospects list.",
+                          item.overallScore);
                 return;
             }
 
@@ -644,22 +645,18 @@ void FranchiseApp::onAddToProspects(const std::string& id) {
             // Add to saved prospects (in-memory)
             savedProspects_.push_back(prospectItem);
 
-            // Show confirmation with AI summary if available
-            std::string message = item.getTitle() + " has been added to your prospects list.";
-            if (!prospectItem.aiSummary.empty() && prospectItem.aiSummary != item.aiSummary) {
-                message += "\n\nAI Analysis: " + prospectItem.aiSummary.substr(0, 200);
-                if (prospectItem.aiSummary.length() > 200) {
-                    message += "...";
+            // Show toast confirmation with AI summary excerpt if available
+            std::string toastMessage = "Added to My Prospects";
+            if (!prospectItem.aiSummary.empty()) {
+                // Truncate AI summary for toast display
+                std::string excerpt = prospectItem.aiSummary.substr(0, 120);
+                if (prospectItem.aiSummary.length() > 120) {
+                    excerpt += "...";
                 }
+                toastMessage = excerpt;
             }
 
-            auto dialog = addChild(std::make_unique<Wt::WMessageBox>(
-                "Added to Prospects",
-                message,
-                Wt::Icon::Information,
-                Wt::StandardButton::Ok
-            ));
-            dialog->show();
+            showToast(item.getTitle(), toastMessage, prospectItem.overallScore);
             break;
         }
     }
@@ -686,6 +683,66 @@ void FranchiseApp::analyzeProspect(Models::SearchResultItem& item) {
             }
         }
     }
+}
+
+void FranchiseApp::showToast(const std::string& title, const std::string& message,
+                              int score, int durationMs) {
+    if (!toastContainer_) return;
+
+    // Create toast element
+    auto toast = toastContainer_->addWidget(std::make_unique<Wt::WContainerWidget>());
+    toast->setStyleClass("toast toast-enter");
+
+    // Toast header with title and close button
+    auto header = toast->addWidget(std::make_unique<Wt::WContainerWidget>());
+    header->setStyleClass("toast-header");
+
+    auto titleText = header->addWidget(std::make_unique<Wt::WText>(title));
+    titleText->setStyleClass("toast-title");
+
+    // Score badge if provided
+    if (score >= 0) {
+        std::string scoreClass = "score-badge ";
+        if (score >= 70) scoreClass += "score-high";
+        else if (score >= 40) scoreClass += "score-medium";
+        else scoreClass += "score-low";
+
+        auto scoreBadge = header->addWidget(std::make_unique<Wt::WText>(std::to_string(score)));
+        scoreBadge->setStyleClass(scoreClass);
+    }
+
+    auto closeBtn = header->addWidget(std::make_unique<Wt::WText>("✕"));
+    closeBtn->setStyleClass("toast-close");
+    closeBtn->clicked().connect([toast] {
+        toast->addStyleClass("toast-exit");
+        // Remove after animation
+        Wt::WTimer::singleShot(std::chrono::milliseconds(300), [toast] {
+            if (toast->parent()) {
+                toast->parent()->removeWidget(toast);
+            }
+        });
+    });
+
+    // Toast body with message
+    auto body = toast->addWidget(std::make_unique<Wt::WContainerWidget>());
+    body->setStyleClass("toast-body");
+    body->addWidget(std::make_unique<Wt::WText>(message));
+
+    // Trigger enter animation
+    doJavaScript("setTimeout(function() { " + toast->jsRef() + ".classList.remove('toast-enter'); }, 10);");
+
+    // Auto-remove after duration
+    Wt::WTimer::singleShot(std::chrono::milliseconds(durationMs), [this, toast] {
+        if (toast->parent()) {
+            toast->addStyleClass("toast-exit");
+            // Remove after exit animation completes
+            Wt::WTimer::singleShot(std::chrono::milliseconds(300), [toast] {
+                if (toast->parent()) {
+                    toast->parent()->removeWidget(toast);
+                }
+            });
+        }
+    });
 }
 
 void FranchiseApp::onExportResults() {
