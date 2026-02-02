@@ -237,9 +237,6 @@ void FranchiseApp::onLoginSuccessful(const Services::LoginResult& result) {
     // Set user role on sidebar (shows/hides admin items like Audit Trail)
     sidebar_->setUserRole(result.role);
 
-    // Connect logout signal
-    sidebar_->logoutRequested().connect(this, &FranchiseApp::onLogout);
-
     // Redirect to Dashboard with token in URL
     std::string dashboardUrl = "/dashboard?token=" + sessionToken_;
     setInternalPath("/dashboard", false);
@@ -322,18 +319,34 @@ void FranchiseApp::setupUI() {
     // Sidebar
     sidebar_ = mainContainer_->addWidget(std::make_unique<Widgets::Sidebar>());
 
-    // Set user info from loaded franchisee (if configured)
+    // Set user info and franchise details from loaded franchisee
     if (franchisee_.isConfigured) {
-        sidebar_->setUserInfo(
-            franchisee_.ownerName.empty() ? "Franchise Owner" : franchisee_.ownerName,
-            franchisee_.storeName
-        );
+        updateHeaderWithFranchisee();
     } else {
         sidebar_->setUserInfo("Franchise Owner", "No Store Selected");
     }
 
     // Connect sidebar signals
     sidebar_->itemSelected().connect(this, &FranchiseApp::onMenuItemSelected);
+
+    // Connect franchise popover actions
+    sidebar_->editFranchiseRequested().connect([this] {
+        // Navigate to Settings page when "Edit Profile" is clicked
+        onMenuItemSelected("settings");
+        setInternalPath("/settings", true);
+    });
+
+    sidebar_->viewProfileRequested().connect([this] {
+        // Navigate to Settings page for viewing profile
+        onMenuItemSelected("settings");
+        setInternalPath("/settings", true);
+    });
+
+    sidebar_->logoutRequested().connect([this] {
+        // Handle logout - reset to login page
+        showLoginPage();
+        setInternalPath("/login", true);
+    });
 
     // Content area (navigation + work area)
     contentArea_ = mainContainer_->addWidget(std::make_unique<Wt::WContainerWidget>());
@@ -699,9 +712,20 @@ void FranchiseApp::onFranchiseeSetupComplete(const Models::Franchisee& franchise
 
 void FranchiseApp::updateHeaderWithFranchisee() {
     if (sidebar_ && franchisee_.isConfigured) {
+        // Update the header display name and location
         sidebar_->setUserInfo(
             franchisee_.getDisplayName(),
             franchisee_.getLocationDisplay()
+        );
+
+        // Update the franchise details popover with full information
+        sidebar_->setFranchiseDetails(
+            franchisee_.ownerName.empty() ? "Franchise Owner" : franchisee_.ownerName,
+            franchisee_.storeName.empty() ? "My Store" : franchisee_.storeName,
+            franchisee_.storeId,
+            franchisee_.address,
+            franchisee_.phone,
+            franchisee_.email
         );
     }
 }
@@ -2730,18 +2754,37 @@ void FranchiseApp::showSettingsPage() {
     auto checkboxGrid = typesGroup->addWidget(std::make_unique<Wt::WContainerWidget>());
     checkboxGrid->setStyleClass("checkbox-grid");
 
-    std::vector<std::pair<std::string, bool>> businessTypes = {
-        {"Corporate Offices", true}, {"Conference Centers", true}, {"Hotels", true},
-        {"Medical Facilities", true}, {"Educational Institutions", true}, {"Manufacturing/Industrial", false},
-        {"Warehouses/Distribution", false}, {"Government Offices", false}, {"Tech Companies", true},
-        {"Financial Services", false}, {"Coworking Spaces", true}, {"Non-profits", false}
+    // Map business type names to their enum values for checking saved preferences
+    std::vector<std::pair<std::string, Models::BusinessType>> businessTypeMap = {
+        {"Corporate Offices", Models::BusinessType::CORPORATE_OFFICE},
+        {"Conference Centers", Models::BusinessType::CONFERENCE_CENTER},
+        {"Hotels", Models::BusinessType::HOTEL},
+        {"Medical Facilities", Models::BusinessType::MEDICAL_FACILITY},
+        {"Educational Institutions", Models::BusinessType::EDUCATIONAL_INSTITUTION},
+        {"Manufacturing/Industrial", Models::BusinessType::MANUFACTURING},
+        {"Warehouses/Distribution", Models::BusinessType::WAREHOUSE},
+        {"Government Offices", Models::BusinessType::GOVERNMENT_OFFICE},
+        {"Tech Companies", Models::BusinessType::TECH_COMPANY},
+        {"Financial Services", Models::BusinessType::FINANCIAL_SERVICES},
+        {"Coworking Spaces", Models::BusinessType::COWORKING_SPACE},
+        {"Non-profits", Models::BusinessType::NONPROFIT}
     };
 
+    // Default checked states (used when no saved preferences)
+    std::vector<bool> defaultChecked = {true, true, true, true, true, false, false, false, true, false, true, false};
+
     std::vector<Wt::WCheckBox*> typeCheckboxes;
-    for (const auto& [typeName, defaultChecked] : businessTypes) {
+    for (size_t i = 0; i < businessTypeMap.size(); ++i) {
+        const auto& [typeName, typeEnum] = businessTypeMap[i];
         auto checkbox = checkboxGrid->addWidget(std::make_unique<Wt::WCheckBox>(typeName));
         checkbox->setStyleClass("form-checkbox");
-        checkbox->setChecked(defaultChecked);
+
+        // Check if this type is in saved preferences, otherwise use default
+        if (franchisee_.isConfigured && !franchisee_.searchCriteria.businessTypes.empty()) {
+            checkbox->setChecked(franchisee_.searchCriteria.hasBusinessType(typeEnum));
+        } else {
+            checkbox->setChecked(defaultChecked[i]);
+        }
         typeCheckboxes.push_back(checkbox);
     }
 
@@ -2751,10 +2794,23 @@ void FranchiseApp::showSettingsPage() {
     sizeGroup->addWidget(std::make_unique<Wt::WText>("Target Organization Size"))->setStyleClass("form-label");
     auto sizeCombo = sizeGroup->addWidget(std::make_unique<Wt::WComboBox>());
     sizeCombo->setStyleClass("form-control");
-    for (const auto& range : Models::EmployeeRange::getStandardRanges()) {
+    auto employeeRanges = Models::EmployeeRange::getStandardRanges();
+    for (const auto& range : employeeRanges) {
         sizeCombo->addItem(range.label);
     }
-    sizeCombo->setCurrentIndex(0);
+
+    // Set combo to saved employee range if configured
+    int selectedSizeIndex = 0;
+    if (franchisee_.isConfigured) {
+        for (size_t i = 0; i < employeeRanges.size(); ++i) {
+            if (employeeRanges[i].minEmployees == franchisee_.searchCriteria.minEmployees &&
+                employeeRanges[i].maxEmployees == franchisee_.searchCriteria.maxEmployees) {
+                selectedSizeIndex = static_cast<int>(i);
+                break;
+            }
+        }
+    }
+    sizeCombo->setCurrentIndex(selectedSizeIndex);
 
     // ===========================================
     // Tab 3: AI Configuration
@@ -3209,8 +3265,9 @@ void FranchiseApp::showSettingsPage() {
             }
 
             franchisee_.isConfigured = geocodeSuccess;  // Only mark configured if geocoding succeeded
-            sidebar_->setUserInfo(franchisee_.ownerName.empty() ? "Franchise Owner" : franchisee_.ownerName,
-                                   franchisee_.storeName);
+
+            // Update sidebar with all franchisee details (header + popover)
+            updateHeaderWithFranchisee();
 
             // Save franchisee and store location to ApiLogicServer
             if (geocodeSuccess) {
@@ -3517,6 +3574,7 @@ void FranchiseApp::selectStoreById(const std::string& storeId) {
         franchisee_.location.postalCode = selectedStore.postalCode;
         franchisee_.location.latitude = selectedStore.latitude;
         franchisee_.location.longitude = selectedStore.longitude;
+        franchisee_.location.isValid = true;
         franchisee_.defaultSearchRadiusMiles = selectedStore.defaultSearchRadiusMiles;
         franchisee_.phone = selectedStore.phone;
         franchisee_.email = selectedStore.email;
@@ -3525,11 +3583,11 @@ void FranchiseApp::selectStoreById(const std::string& storeId) {
         // Save as current store
         alsClient_->setAppConfigValue("current_store_id", storeId);
 
-        // Update sidebar
-        sidebar_->setUserInfo(
-            franchisee_.ownerName.empty() ? "Franchise Owner" : franchisee_.ownerName,
-            franchisee_.storeName
-        );
+        // Update sidebar with full franchisee details
+        updateHeaderWithFranchisee();
+
+        std::cout << "  [App] Selected store: " << selectedStore.storeName
+                  << " at " << selectedStore.city << ", " << selectedStore.stateProvince << std::endl;
     }
 }
 
