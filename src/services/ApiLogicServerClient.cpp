@@ -327,7 +327,7 @@ std::string ScoringRuleDTO::toJson() const {
         json << ", \"franchisee_id\": \"" << franchiseeId << "\"";
     }
 
-    json << "}, \"type\": \"ScoringRules\"";
+    json << "}, \"type\": \"ScoringRule\"";
     if (!id.empty()) {
         json << ", \"id\": \"" << id << "\"";
     }
@@ -951,19 +951,19 @@ ApiResponse ApiLogicServerClient::saveScoringRule(const ScoringRuleDTO& rule) {
         std::cout << "  [ALS] Updating existing ScoringRule: " << dto.id << std::endl;
     }
     std::string json = dto.toJson();
-    return httpPatch("/ScoringRules/" + dto.id, json);
+    return httpPatch("/ScoringRule/" + dto.id, json);
 }
 
 ApiResponse ApiLogicServerClient::getScoringRules() {
-    return httpGet("/ScoringRules");
+    return httpGet("/ScoringRule");
 }
 
 ApiResponse ApiLogicServerClient::getScoringRulesForFranchisee(const std::string& franchiseeId) {
     if (franchiseeId.empty()) {
         // Get global rules (no franchisee filter)
-        return httpGet("/ScoringRules?filter[franchisee_id]=null");
+        return httpGet("/ScoringRule?filter[franchisee_id]=null");
     }
-    return httpGet("/ScoringRules?filter[franchisee_id]=" + franchiseeId);
+    return httpGet("/ScoringRule?filter[franchisee_id]=" + franchiseeId);
 }
 
 ApiResponse ApiLogicServerClient::getScoringRule(const std::string& id) {
@@ -974,7 +974,7 @@ ApiResponse ApiLogicServerClient::getScoringRule(const std::string& id) {
         response.errorMessage = "Scoring rule ID cannot be empty";
         return response;
     }
-    return httpGet("/ScoringRules/" + id);
+    return httpGet("/ScoringRule/" + id);
 }
 
 ApiResponse ApiLogicServerClient::deleteScoringRule(const std::string& id) {
@@ -985,7 +985,7 @@ ApiResponse ApiLogicServerClient::deleteScoringRule(const std::string& id) {
         response.errorMessage = "Scoring rule ID cannot be empty";
         return response;
     }
-    return httpDelete("/ScoringRules/" + id);
+    return httpDelete("/ScoringRule/" + id);
 }
 
 std::vector<ScoringRuleDTO> ApiLogicServerClient::parseScoringRules(const ApiResponse& response) {
