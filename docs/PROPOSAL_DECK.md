@@ -1,3 +1,40 @@
+---
+marp: true
+theme: default
+paginate: true
+backgroundColor: #fff
+style: |
+  section {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  h1 {
+    color: #2563eb;
+  }
+  h2 {
+    color: #1e40af;
+  }
+  h3 {
+    color: #3b82f6;
+  }
+  table {
+    font-size: 0.85em;
+  }
+  blockquote {
+    border-left: 4px solid #3b82f6;
+    padding-left: 1em;
+    color: #4b5563;
+    font-style: italic;
+  }
+  code {
+    background-color: #f3f4f6;
+    padding: 0.2em 0.4em;
+    border-radius: 4px;
+  }
+  pre {
+    font-size: 0.7em;
+  }
+---
+
 # FranchiseAI: Intelligent Prospect Discovery Platform
 
 ## Proposal Presentation
