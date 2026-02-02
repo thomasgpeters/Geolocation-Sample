@@ -318,14 +318,49 @@ The sidebar header includes a clickable user section that displays a franchise i
 - Dropdown arrow indicator (▼)
 
 **Popup Contents (on click):**
-- **Header**: Large avatar, owner name, franchise name, store ID badge, edit button (✏️)
-- **Contact Details**: Address, phone, and email with icons
-- **Actions**: View My Profile, Logout
+- **Header**: Large avatar, owner name, franchise name, store ID badge
+- **Contact Details**: Address, phone, and email with icons (synced from Settings)
+- **Actions**:
+  - **Edit Profile** (✏️) - Navigates to Settings page to edit franchisee details
+  - **View Profile** (👤) - Navigates to Settings page
+  - **Logout** (🚪) - Returns to login page
+
+**Synchronization:**
+The popup details (address, phone, email) are automatically updated when:
+- Settings are saved via the Settings page
+- A different store is selected from the store dropdown
+- The app loads franchisee data from ApiLogicServer on startup
 
 The popup uses smooth slide-in animation and matches the application's dark theme styling.
 
 ### Dashboard
 Overview of prospect discovery statistics with quick action buttons.
+
+#### Hot Prospects Section
+The Dashboard features a **Hot Prospects** section that displays your top 5 highest-scoring prospects at a glance:
+
+**Features:**
+- **Top 5 Display**: Shows the five highest-scoring prospects from your most recent search
+- **Score Badges**: Color-coded badges indicate prospect quality
+- **Quick Preview**: Click any prospect to open a detailed preview dialog
+- **One-Click Add**: Add prospects directly to your saved list without leaving the Dashboard
+- **Auto-Refresh**: Automatically pulls from your most recent search or saved prospects
+
+**Score Badge Colors:**
+
+| Score Range | Color | Label |
+|-------------|-------|-------|
+| 80-100 | Green | Excellent |
+| 60-79 | Blue | Good |
+| 40-59 | Amber | Fair |
+| 0-39 | Gray | Low |
+
+**Score Legend:**
+A color-coded legend in the Hot Prospects header helps users quickly understand what each badge color represents.
+
+**Layout:**
+- Limited to 4 visible rows with smooth scrolling for additional prospects
+- Compact card design with score badge, business name, and action buttons
 
 ### AI Search
 Main search interface with:
@@ -335,6 +370,59 @@ Main search interface with:
 - Advanced sorting options (relevance, catering potential, distance, employee count, rating)
 
 **Note**: Business type filters and data source selection have been moved to **Settings > Marketing** tab for centralized configuration. These preferences are automatically applied to all searches.
+
+#### Progressive Loading & Score Optimization
+Search results now appear **instantly** while score optimization happens in the background:
+
+**How It Works:**
+1. User clicks "Search"
+2. Results appear immediately (1-3 seconds) with base scores
+3. "Optimizing scores..." indicator appears (pulsing badge)
+4. Scoring Engine processes results in background
+5. Cards re-sort automatically with final adjusted scores
+6. Indicator disappears when complete
+
+**Visual Indicators:**
+
+| State | Indicator |
+|-------|-----------|
+| Loading | Spinner with "Searching..." text |
+| Results Ready | Results display with base scores |
+| Optimizing | Pulsing badge: "Optimizing scores..." |
+| Complete | Final sorted results, no indicator |
+
+**Benefits:**
+- **Instant Feedback**: See results in 1-3 seconds instead of waiting for full processing
+- **Non-Blocking**: Users can browse and interact with results during optimization
+- **Transparency**: Clear indication when scoring is still in progress
+
+#### Configurable Scoring Engine
+Franchisees can customize how prospects are scored through the Settings page:
+
+**Penalty Rules** (subtract from score):
+
+| Rule | Default | Description |
+|------|---------|-------------|
+| Missing Address | -10 | No street address available |
+| Missing Employee Count | -3 | Unknown organization size |
+| Missing Contact Info | -5 | No phone or email available |
+
+**Bonus Rules** (add to score):
+
+| Rule | Default | Description |
+|------|---------|-------------|
+| Verified Business | +5 | Confirmed accurate information |
+| BBB Accredited | +10 | Better Business Bureau accredited |
+| High Rating | +5 | 4+ star customer rating |
+| Has Conference Room | +5 | Indicates catering opportunity |
+| Has Event Space | +7 | High catering potential |
+| Large Company | +8 | 100+ employees |
+
+**Settings UI Controls:**
+- Sliders to adjust point values (-20 to +20)
+- Checkboxes to enable/disable individual rules
+- Rules persist to PostgreSQL via ApiLogicServer
+- Applied automatically to all searches
 
 #### Performance Optimizations
 - **Bounding box queries**: Uses bbox instead of radius `around:` queries (5-10x faster)
@@ -465,27 +553,43 @@ View analytics and generate reports (placeholder).
 Unified configuration hub with a tabbed interface for managing all application settings.
 
 #### Tab Interface
-The Settings page uses a modern tab navigation with four sections:
+The Settings page uses a modern tab navigation with five sections:
 
 | Tab | Purpose |
 |-----|---------|
-| **Store Setup** | Configure your franchise location and contact details |
-| **Marketing** | Configure target business types, employee ranges, and data sources for AI Search |
+| **Franchisee** | Configure your franchise store, contact details, and select from saved stores |
+| **Marketing** | Configure target business types, employee ranges, and search preferences |
 | **AI Configuration** | Set up OpenAI or Gemini for prospect analysis |
 | **Data Sources** | Configure API keys for business data providers |
+| **Scoring Rules** | Customize prospect scoring penalties and bonuses |
 
-#### Tab 1: Store Setup
+#### Tab 1: Franchisee Information
 Configure your franchise store details and contact information.
+
+**Store Selection:**
+- **Store Dropdown**: Select from previously saved stores or create a new one
+  - "-- New Store --" option to create a new store location
+  - Selecting an existing store populates all fields automatically
+  - Store data is loaded from ApiLogicServer
 
 **Store Information:**
 - **Store Name**: Your franchise location name (e.g., "Vocelli Pizza - Downtown")
-- **Store Address**: Full address used as the center point for prospect searches
+- **Store Address**: Full address used as the center point for prospect searches (geocoded automatically)
 - **Owner/Manager Name**: Contact person for the franchise
 - **Store Phone**: Business contact number
-- **Store Email**: Contact email address
+
+**Synchronization:**
+When a store is selected or saved:
+- Sidebar header updates with store name and location
+- Sidebar popover updates with full contact details (address, phone, email)
+- AI Search uses the store location as the default search center
+- Open Street Map centers on the store location
 
 #### Tab 2: Marketing
 Configure your target market preferences for AI Search. These settings are automatically applied to all searches.
+
+**Search Preferences:**
+- **Default Search Radius**: Miles from your store to search (saved to `franchisee_.defaultSearchRadiusMiles`)
 
 **Target Business Types:**
 Checkboxes for 12 business categories to target:
@@ -494,19 +598,17 @@ Checkboxes for 12 business categories to target:
 - Warehouses/Distribution, Government Offices, Tech Companies
 - Financial Services, Coworking Spaces, Non-profits
 
-**Target Employee Ranges:**
-Checkboxes to filter by organization size:
+**Saved Preferences:** When the Settings page loads, checkboxes are initialized from your saved `franchisee_.searchCriteria.businessTypes`. If no preferences are saved, sensible defaults are used.
+
+**Target Organization Size:**
+Dropdown to filter by employee count:
+- Any Size
 - Small (1-50 employees)
 - Medium (51-200 employees)
 - Large (201-500 employees)
 - Enterprise (500+ employees)
 
-**Data Sources:**
-Select which data sources to use for searches:
-- Google My Business
-- Better Business Bureau (BBB)
-- Demographics Data
-- OpenStreetMap
+**Saved Preferences:** The dropdown initializes to your saved `franchisee_.searchCriteria.minEmployees` and `maxEmployees` values.
 
 #### Tab 3: AI Configuration
 Configure AI providers for intelligent prospect analysis.
@@ -527,6 +629,29 @@ Configure API keys for business data providers.
 - **Census/Demographics API Key**: For population and economic data
 
 **Note**: OpenStreetMap integration requires no API key and is always available.
+
+#### Tab 5: Scoring Rules
+Customize how prospects are scored to match your business priorities.
+
+**Penalty Rules:**
+Adjust point deductions for missing or incomplete data:
+- **Missing Address** (default -10): No street address available
+- **Missing Employee Count** (default -3): Unknown organization size
+- **Missing Contact Info** (default -5): No phone or email
+
+**Bonus Rules:**
+Adjust point bonuses for desirable attributes:
+- **Verified Business** (default +5): Confirmed accurate information
+- **BBB Accredited** (default +10): Better Business Bureau accredited
+- **High Rating** (default +5): 4+ star customer rating
+- **Has Conference Room** (default +5): Indicates catering opportunity
+- **Has Event Space** (default +7): High catering potential
+- **Large Company** (default +8): 100+ employees
+
+**Controls:**
+- **Sliders**: Drag to adjust point values from -20 to +20
+- **Checkboxes**: Enable or disable individual rules
+- **Persistence**: Rules are saved to PostgreSQL via ApiLogicServer and persist across sessions
 
 #### Saving Settings
 - Click **"Save All Settings"** to save changes across all tabs
@@ -706,6 +831,39 @@ alsClient->setAppConfigValue("current_store_id", newStoreId);
 ### Franchisee Management
 
 Franchisees represent the business entity that owns one or more store locations.
+
+#### Synchronization Across Views
+
+The application maintains a single `franchisee_` member variable that is synchronized across all views:
+
+**Settings Page → Sidebar:**
+- Saving settings calls `updateHeaderWithFranchisee()` which updates both the header and popover
+- Store selection via dropdown immediately syncs all franchisee data
+
+**Sidebar Popover:**
+- Displays franchisee contact details (address, phone, email)
+- "Edit Profile" action navigates to Settings page
+- Details auto-update when franchisee data changes
+
+**AI Search Page:**
+- Uses `franchisee_.address` as default search location
+- Uses `franchisee_.searchCriteria` for business types and employee ranges
+- Shows franchisee badge with "Change" button to navigate to Settings
+
+**Open Street Map Page:**
+- Centers map on `franchisee_.location` coordinates
+- Uses `franchisee_.searchCriteria.radiusMiles` for default search radius
+- Shows red pin marker at franchisee location with popup details
+
+**Synchronization Flow:**
+```
+Settings Save → franchisee_ updated → updateHeaderWithFranchisee()
+                                            ↓
+                                    sidebar_->setUserInfo()
+                                    sidebar_->setFranchiseDetails()
+                                            ↓
+                            All views read from franchisee_ on render
+```
 
 **FranchiseeDTO Fields:**
 
