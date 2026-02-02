@@ -632,12 +632,11 @@ void FranchiseApp::onAddToProspects(const std::string& id) {
 
             // Create a copy for saving
             Models::SearchResultItem prospectItem = item;
-            prospectItem.analysisStatus = Models::AnalysisStatus::PENDING;
 
             // Show toast IMMEDIATELY (non-blocking feedback)
             showToast(item.getTitle(), "Added to My Prospects", item.overallScore);
 
-            // Save to ApiLogicServer FIRST (persists to database immediately)
+            // Save to ApiLogicServer (persists to database)
             bool savedToServer = saveProspectToALS(prospectItem);
             if (!savedToServer) {
                 std::cerr << "  [App] Warning: Prospect saved locally but failed to persist to server" << std::endl;
@@ -645,11 +644,58 @@ void FranchiseApp::onAddToProspects(const std::string& id) {
 
             // Add to saved prospects (in-memory)
             savedProspects_.push_back(prospectItem);
-
-            // Queue for background AI analysis (non-blocking, saves tokens by checking status)
-            queueForAnalysis(prospectItem.id);
             break;
         }
+    }
+}
+
+void FranchiseApp::onAddSelectedToProspects(const std::vector<std::string>& ids) {
+    int addedCount = 0;
+    int skippedCount = 0;
+
+    for (const auto& id : ids) {
+        // Find the item in search results
+        for (const auto& item : lastResults_.items) {
+            if (item.id == id) {
+                // Check if already saved
+                bool alreadySaved = false;
+                for (const auto& saved : savedProspects_) {
+                    if (saved.id == id) {
+                        alreadySaved = true;
+                        break;
+                    }
+                }
+
+                if (alreadySaved) {
+                    skippedCount++;
+                } else {
+                    // Create a copy for saving
+                    Models::SearchResultItem prospectItem = item;
+
+                    // Save to ApiLogicServer (persists to database)
+                    bool savedToServer = saveProspectToALS(prospectItem);
+                    if (!savedToServer) {
+                        std::cerr << "  [App] Warning: Prospect saved locally but failed to persist to server" << std::endl;
+                    }
+
+                    // Add to saved prospects (in-memory)
+                    savedProspects_.push_back(prospectItem);
+                    addedCount++;
+                }
+                break;
+            }
+        }
+    }
+
+    // Show toast with summary
+    if (addedCount > 0) {
+        std::string message = std::to_string(addedCount) + " prospect" + (addedCount == 1 ? "" : "s") + " added to My Prospects";
+        if (skippedCount > 0) {
+            message += " (" + std::to_string(skippedCount) + " already saved)";
+        }
+        showToast("Prospects Added", message);
+    } else if (skippedCount > 0) {
+        showToast("Already Saved", "All selected prospects were already in your list.");
     }
 }
 
@@ -1518,6 +1564,11 @@ void FranchiseApp::showAISearchPage() {
     resultsDisplay_->viewDetailsRequested().connect(this, &FranchiseApp::onViewDetails);
     resultsDisplay_->addToProspectsRequested().connect(this, &FranchiseApp::onAddToProspects);
     resultsDisplay_->exportRequested().connect(this, &FranchiseApp::onExportResults);
+
+    // Connect bulk add signal for multi-select
+    resultsDisplay_->addSelectedRequested().connect([this](const std::vector<std::string>& ids) {
+        onAddSelectedToProspects(ids);
+    });
 
     // Restore previous search results if they exist
     if (hasActiveSearch_ && !lastResults_.items.empty()) {

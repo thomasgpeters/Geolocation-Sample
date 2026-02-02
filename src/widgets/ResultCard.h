@@ -4,6 +4,7 @@
 #include <Wt/WContainerWidget.h>
 #include <Wt/WText.h>
 #include <Wt/WPushButton.h>
+#include <Wt/WCheckBox.h>
 #include <Wt/WSignal.h>
 #include "models/SearchResult.h"
 
@@ -35,6 +36,21 @@ public:
      * @brief Signal emitted when add to prospects is clicked
      */
     Wt::Signal<std::string>& addToProspectsRequested() { return addToProspectsRequested_; }
+
+    /**
+     * @brief Signal emitted when selection checkbox is toggled
+     */
+    Wt::Signal<std::string, bool>& selectionChanged() { return selectionChanged_; }
+
+    /**
+     * @brief Check if the card is selected
+     */
+    bool isSelected() const;
+
+    /**
+     * @brief Set the selection state
+     */
+    void setSelected(bool selected);
 
     /**
      * @brief Update the card with new data
@@ -69,8 +85,10 @@ private:
 
     Wt::Signal<std::string> viewDetailsRequested_;
     Wt::Signal<std::string> addToProspectsRequested_;
+    Wt::Signal<std::string, bool> selectionChanged_;
 
     // UI components
+    Wt::WCheckBox* selectCheckbox_ = nullptr;
     Wt::WContainerWidget* headerContainer_ = nullptr;
     Wt::WContainerWidget* bodyContainer_ = nullptr;
     Wt::WContainerWidget* expandedContainer_ = nullptr;

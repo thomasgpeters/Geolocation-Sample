@@ -110,8 +110,25 @@ void ResultsDisplay::createSummarySection() {
     auto optText = optimizingIndicator_->addWidget(std::make_unique<Wt::WText>(" Optimizing scores..."));
     optText->setStyleClass("optimizing-text");
 
-    auto addAllBtn = rightGroup->addWidget(std::make_unique<Wt::WPushButton>("+ Add All"));
-    addAllBtn->setStyleClass("btn btn-sm btn-secondary");
+    // Add Selected button (hidden by default, shown when items are selected)
+    addSelectedBtn_ = rightGroup->addWidget(std::make_unique<Wt::WPushButton>("+ Add Selected"));
+    addSelectedBtn_->setStyleClass("btn btn-sm btn-primary hidden");
+    addSelectedBtn_->clicked().connect([this] {
+        addSelectedRequested_.emit(getSelectedIds());
+        clearSelections();
+    });
+
+    // Add All button (visible by default, hidden when items are selected)
+    addAllBtn_ = rightGroup->addWidget(std::make_unique<Wt::WPushButton>("+ Add All"));
+    addAllBtn_->setStyleClass("btn btn-sm btn-secondary");
+    addAllBtn_->clicked().connect([this] {
+        // Emit add request for all items in current results
+        std::vector<std::string> allIds;
+        for (const auto& item : currentResults_.items) {
+            allIds.push_back(item.id);
+        }
+        addSelectedRequested_.emit(allIds);
+    });
 
     auto exportBtn = rightGroup->addWidget(std::make_unique<Wt::WPushButton>("Export"));
     exportBtn->setStyleClass("btn btn-sm btn-outline");
@@ -243,6 +260,9 @@ void ResultsDisplay::populateResults(const Models::SearchResults& results) {
     resultsContainer_->clear();
     resultCards_.clear();
 
+    // Clear selections when populating new results
+    clearSelections();
+
     for (const auto& item : results.items) {
         auto card = resultsContainer_->addWidget(std::make_unique<ResultCard>(item));
 
@@ -253,6 +273,11 @@ void ResultsDisplay::populateResults(const Models::SearchResults& results) {
 
         card->addToProspectsRequested().connect([this](const std::string& id) {
             addToProspectsRequested_.emit(id);
+        });
+
+        // Connect selection changed signal for multi-select
+        card->selectionChanged().connect([this](const std::string& id, bool selected) {
+            onSelectionChanged(id, selected);
         });
 
         resultCards_.push_back(card);
@@ -279,6 +304,56 @@ void ResultsDisplay::updateResults(const Models::SearchResults& results) {
 
     // Repopulate the results (will recreate cards with updated scores)
     populateResults(results);
+}
+
+void ResultsDisplay::onSelectionChanged(const std::string& id, bool selected) {
+    if (selected) {
+        selectedIds_.insert(id);
+    } else {
+        selectedIds_.erase(id);
+    }
+    updateActionButtons();
+}
+
+void ResultsDisplay::updateActionButtons() {
+    bool hasSelections = !selectedIds_.empty();
+
+    if (addSelectedBtn_) {
+        if (hasSelections) {
+            // Show "Add Selected" with count, hide "Add All"
+            std::string label = "+ Add Selected (" + std::to_string(selectedIds_.size()) + ")";
+            addSelectedBtn_->setText(label);
+            addSelectedBtn_->setStyleClass("btn btn-sm btn-primary");
+        } else {
+            // Hide "Add Selected"
+            addSelectedBtn_->setStyleClass("btn btn-sm btn-primary hidden");
+        }
+    }
+
+    if (addAllBtn_) {
+        if (hasSelections) {
+            // Hide "Add All" when items are selected (mutually exclusive)
+            addAllBtn_->setStyleClass("btn btn-sm btn-secondary hidden");
+        } else {
+            // Show "Add All" when no items selected
+            addAllBtn_->setStyleClass("btn btn-sm btn-secondary");
+        }
+    }
+}
+
+std::vector<std::string> ResultsDisplay::getSelectedIds() const {
+    return std::vector<std::string>(selectedIds_.begin(), selectedIds_.end());
+}
+
+void ResultsDisplay::clearSelections() {
+    selectedIds_.clear();
+
+    // Uncheck all cards
+    for (auto* card : resultCards_) {
+        card->setSelected(false);
+    }
+
+    updateActionButtons();
 }
 
 } // namespace Widgets

@@ -5,6 +5,7 @@
 #include <Wt/WContainerWidget.h>
 #include <memory>
 #include <map>
+#include <vector>
 #include "widgets/Sidebar.h"
 #include "widgets/Navigation.h"
 #include "widgets/SearchPanel.h"
@@ -91,6 +92,7 @@ private:
     // Result handlers
     void onViewDetails(const std::string& id);
     void onAddToProspects(const std::string& id);
+    void onAddSelectedToProspects(const std::vector<std::string>& ids);
     void onExportResults();
 
     // Franchisee setup

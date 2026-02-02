@@ -20,6 +20,13 @@ void ResultCard::createHeader() {
     headerContainer_ = addWidget(std::make_unique<Wt::WContainerWidget>());
     headerContainer_->setStyleClass("card-header");
 
+    // Selection checkbox (leftmost)
+    selectCheckbox_ = headerContainer_->addWidget(std::make_unique<Wt::WCheckBox>());
+    selectCheckbox_->setStyleClass("result-select-checkbox");
+    selectCheckbox_->changed().connect([this] {
+        selectionChanged_.emit(item_.id, selectCheckbox_->isChecked());
+    });
+
     // Left side: Score badge and title
     auto leftSection = headerContainer_->addWidget(std::make_unique<Wt::WContainerWidget>());
     leftSection->setStyleClass("header-left");
@@ -318,6 +325,16 @@ void ResultCard::toggleExpanded() {
 void ResultCard::updateData(const Models::SearchResultItem& item) {
     item_ = item;
     // Would need to rebuild UI - simplified for now
+}
+
+bool ResultCard::isSelected() const {
+    return selectCheckbox_ && selectCheckbox_->isChecked();
+}
+
+void ResultCard::setSelected(bool selected) {
+    if (selectCheckbox_) {
+        selectCheckbox_->setChecked(selected);
+    }
 }
 
 std::string ResultCard::formatScore(int score) const {
