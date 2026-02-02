@@ -2669,11 +2669,42 @@ void FranchiseApp::showSettingsPage() {
     // Store Address
     auto addressGroup = franchiseeFormGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
     addressGroup->setStyleClass("form-group");
-    addressGroup->addWidget(std::make_unique<Wt::WText>("Store Address"))->setStyleClass("form-label");
+    addressGroup->addWidget(std::make_unique<Wt::WText>("Street Address"))->setStyleClass("form-label");
     auto addressInput = addressGroup->addWidget(std::make_unique<Wt::WLineEdit>());
-    addressInput->setPlaceholderText("e.g., 123 Main St, Denver, CO 80202");
+    addressInput->setPlaceholderText("e.g., 123 Main St");
     addressInput->setStyleClass("form-control");
     if (franchisee_.isConfigured) addressInput->setText(franchisee_.address);
+
+    // City, State, Zip in a row
+    auto locationRow = franchiseeFormGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
+    locationRow->setStyleClass("form-row");
+
+    // City
+    auto cityGroup = locationRow->addWidget(std::make_unique<Wt::WContainerWidget>());
+    cityGroup->setStyleClass("form-group form-group-city");
+    cityGroup->addWidget(std::make_unique<Wt::WText>("City"))->setStyleClass("form-label");
+    auto cityInput = cityGroup->addWidget(std::make_unique<Wt::WLineEdit>());
+    cityInput->setPlaceholderText("e.g., Denver");
+    cityInput->setStyleClass("form-control");
+    if (franchisee_.isConfigured) cityInput->setText(franchisee_.location.city);
+
+    // State
+    auto stateGroup = locationRow->addWidget(std::make_unique<Wt::WContainerWidget>());
+    stateGroup->setStyleClass("form-group form-group-state");
+    stateGroup->addWidget(std::make_unique<Wt::WText>("State"))->setStyleClass("form-label");
+    auto stateInput = stateGroup->addWidget(std::make_unique<Wt::WLineEdit>());
+    stateInput->setPlaceholderText("e.g., CO");
+    stateInput->setStyleClass("form-control");
+    if (franchisee_.isConfigured) stateInput->setText(franchisee_.location.state);
+
+    // Zip Code
+    auto zipGroup = locationRow->addWidget(std::make_unique<Wt::WContainerWidget>());
+    zipGroup->setStyleClass("form-group form-group-zip");
+    zipGroup->addWidget(std::make_unique<Wt::WText>("Zip Code"))->setStyleClass("form-label");
+    auto zipInput = zipGroup->addWidget(std::make_unique<Wt::WLineEdit>());
+    zipInput->setPlaceholderText("e.g., 80202");
+    zipInput->setStyleClass("form-control");
+    if (franchisee_.isConfigured) zipInput->setText(franchisee_.location.postalCode);
 
     // Owner Name
     auto ownerGroup = franchiseeFormGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
@@ -2694,7 +2725,7 @@ void FranchiseApp::showSettingsPage() {
     if (franchisee_.isConfigured) phoneInput->setText(franchisee_.phone);
 
     // Handle store selection change
-    storeCombo->changed().connect([this, storeCombo, nameInput, addressInput, ownerInput, phoneInput] {
+    storeCombo->changed().connect([this, storeCombo, nameInput, addressInput, cityInput, stateInput, zipInput, ownerInput, phoneInput] {
         int idx = storeCombo->currentIndex();
         if (idx == 0) {
             // New Store - show name input and clear fields
@@ -2702,6 +2733,9 @@ void FranchiseApp::showSettingsPage() {
             nameInput->setHidden(false);
             nameInput->setText("");
             addressInput->setText("");
+            cityInput->setText("");
+            stateInput->setText("");
+            zipInput->setText("");
             ownerInput->setText("");
             phoneInput->setText("");
         } else if (idx > 0 && static_cast<size_t>(idx - 1) < availableStores_.size()) {
@@ -2710,18 +2744,11 @@ void FranchiseApp::showSettingsPage() {
             const auto& store = availableStores_[idx - 1];
             selectStoreById(store.id);
 
-            // Update form fields
-            std::string fullAddress = store.addressLine1;
-            if (!store.city.empty()) {
-                fullAddress += ", " + store.city;
-            }
-            if (!store.stateProvince.empty()) {
-                fullAddress += ", " + store.stateProvince;
-            }
-            if (!store.postalCode.empty()) {
-                fullAddress += " " + store.postalCode;
-            }
-            addressInput->setText(fullAddress);
+            // Update form fields with separate address components
+            addressInput->setText(store.addressLine1);
+            cityInput->setText(store.city);
+            stateInput->setText(store.stateProvince);
+            zipInput->setText(store.postalCode);
             ownerInput->setText(franchisee_.ownerName);
             phoneInput->setText(store.phone);
         }
@@ -3207,7 +3234,8 @@ void FranchiseApp::showSettingsPage() {
     statusMessage->setHidden(true);
 
     // Connect save button - saves ALL tabs
-    saveBtn->clicked().connect([this, saveBtn, storeCombo, nameInput, addressInput, ownerInput, phoneInput, radiusInput,
+    saveBtn->clicked().connect([this, saveBtn, storeCombo, nameInput, addressInput, cityInput, stateInput, zipInput,
+                                ownerInput, phoneInput, radiusInput,
                                 sizeCombo, typeCheckboxes, openaiInput, modelSelect, geminiInput,
                                 googleInput, bbbInput, censusInput, logoUrlInput, statusMessage, aiStatus,
                                 penaltySliders, penaltyChecks, bonusSliders, bonusChecks]() {
@@ -3226,19 +3254,42 @@ void FranchiseApp::showSettingsPage() {
             // Existing store - get name from combo
             storeName = availableStores_[storeIdx - 1].storeName;
         }
-        std::string address = addressInput->text().toUTF8();
+
+        // Get address components
+        std::string streetAddress = addressInput->text().toUTF8();
+        std::string city = cityInput->text().toUTF8();
+        std::string state = stateInput->text().toUTF8();
+        std::string zipCode = zipInput->text().toUTF8();
+
+        // Build full address for geocoding
+        std::string fullAddress = streetAddress;
+        if (!city.empty()) {
+            fullAddress += ", " + city;
+        }
+        if (!state.empty()) {
+            fullAddress += ", " + state;
+        }
+        if (!zipCode.empty()) {
+            fullAddress += " " + zipCode;
+        }
+
         std::cout << "  [Settings] Store name: '" << storeName << "'" << std::endl;
-        std::cout << "  [Settings] Address: '" << address << "'" << std::endl;
+        std::cout << "  [Settings] Full Address: '" << fullAddress << "'" << std::endl;
 
         bool geocodeSuccess = false;
-        if (!storeName.empty() && !address.empty()) {
+        if (!storeName.empty() && !streetAddress.empty()) {
             std::cout << "  [Settings] Geocoding address..." << std::endl;
-            Models::GeoLocation location = searchService_->geocodeAddress(address);
+            Models::GeoLocation location = searchService_->geocodeAddress(fullAddress);
 
             franchisee_.storeName = storeName;
-            franchisee_.address = address;
+            franchisee_.address = streetAddress;
             franchisee_.ownerName = ownerInput->text().toUTF8();
             franchisee_.phone = phoneInput->text().toUTF8();
+
+            // Store location details from separate fields (overriding geocoded values for accuracy)
+            location.city = city;
+            location.state = state;
+            location.postalCode = zipCode;
             franchisee_.location = location;
 
             // Check if geocoding was successful
@@ -3374,7 +3425,7 @@ void FranchiseApp::showSettingsPage() {
                 aiStatus->setStyleClass("status-indicator status-configured");
             }
 
-            if (!geocodeSuccess && !address.empty()) {
+            if (!geocodeSuccess && !streetAddress.empty()) {
                 statusMessage->setText("Settings saved, but address could not be geocoded. Check the address and try again.");
                 statusMessage->setStyleClass("settings-status-message status-warning");
             } else {
