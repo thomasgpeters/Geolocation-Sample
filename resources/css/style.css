@@ -862,12 +862,21 @@ html, body {
 /* ==================== Search Page Layout ==================== */
 .search-page {
     height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .search-columns {
     display: flex;
     gap: 24px;
-    height: calc(100vh - var(--nav-height) - 48px);
+    flex: 1;
+    min-height: 0;  /* Allow flex item to shrink below content size */
+    overflow: hidden;
+}
+
+/* Prevent work-area scrolling on search page - search panel has its own scroll */
+.work-area:has(.search-page) {
     overflow: hidden;
 }
 
@@ -1244,9 +1253,8 @@ html, body {
 
 /* ==================== Results Display ==================== */
 .results-display {
-    background: #ffffff;  /* White background for prospects section */
+    background: transparent;
     padding: 0;
-    border-radius: 10px;
 }
 
 .state-container {
