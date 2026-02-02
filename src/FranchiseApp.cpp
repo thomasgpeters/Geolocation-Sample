@@ -346,7 +346,7 @@ void FranchiseApp::setupUI() {
 
     sidebar_->logoutRequested().connect([this] {
         // Handle logout - reset to login page
-        showLoginPage();
+        redirectToLogin();
         setInternalPath("/login", true);
     });
 
