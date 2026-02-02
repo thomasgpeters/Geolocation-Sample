@@ -1064,6 +1064,38 @@ ApiResponse ApiLogicServerClient::getProspectsForStore(const std::string& storeL
     return httpGet("/SavedProspect?filter[store_location_id]=" + storeLocationId);
 }
 
+ApiResponse ApiLogicServerClient::getProspectsForFranchisee(const std::string& franchiseeId, int offset, int limit) {
+    if (franchiseeId.empty()) {
+        ApiResponse response;
+        response.success = false;
+        response.statusCode = 400;
+        response.errorMessage = "Franchisee ID cannot be empty";
+        return response;
+    }
+
+    // Build the API URL for the franchisee's prospect list
+    // GET /api/Franchisee/{franchisee_id}/ProspectList
+    std::string url = "/Franchisee/" + franchiseeId + "/ProspectList";
+
+    // Add fields selection for Prospect entity
+    url += "?fields[Prospect]=territory_id,franchisee_id,assigned_to_user_id,business_name,dba_name,";
+    url += "legal_name,industry_id,industry_naics,business_type,employee_count,employee_count_range,";
+    url += "annual_revenue,year_established,address_line1,address_line2,city,state_province,postal_code,";
+    url += "country_code,latitude,longitude,geocode_accuracy,primary_phone,secondary_phone,email,website,";
+    url += "linkedin_url,facebook_url,status,status_changed_at,data_source,source_record_id,is_verified,";
+    url += "is_duplicate,duplicate_of_id,do_not_contact,created_at,updated_at";
+
+    // Add pagination
+    url += "&page[offset]=" + std::to_string(offset);
+    url += "&page[limit]=" + std::to_string(limit);
+
+    // Sort by id (default)
+    url += "&sort=id";
+
+    std::cout << "  [ALS] Getting prospects for franchisee: " << franchiseeId << std::endl;
+    return httpGet(url);
+}
+
 ApiResponse ApiLogicServerClient::getSavedProspect(const std::string& id) {
     if (id.empty()) {
         ApiResponse response;
