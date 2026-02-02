@@ -50,6 +50,14 @@
     --transition-normal: 250ms ease;
 }
 
+/* ==================== Wt Framework Overrides ==================== */
+/* Hide Wt's default loading indicator */
+.Wt-loading,
+.wt-loading,
+body > .Wt-domRoot > div[style*="position: absolute"][style*="right: 0"] {
+    display: none !important;
+}
+
 /* ==================== Reset & Base ==================== */
 * {
     margin: 0;
