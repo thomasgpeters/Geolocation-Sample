@@ -1355,7 +1355,7 @@ void FranchiseApp::showAISearchPage() {
         searchPanel_->setSearchQuery(defaultQuery);
     } else if (franchisee_.isConfigured && franchisee_.hasValidLocation()) {
         // Use franchisee location as default
-        defaultQuery.location = franchisee_.address;
+        defaultQuery.location = franchisee_.getFullAddress();
         defaultQuery.latitude = franchisee_.location.latitude;
         defaultQuery.longitude = franchisee_.location.longitude;
         defaultQuery.radiusMiles = franchisee_.searchCriteria.radiusMiles;
@@ -1609,7 +1609,7 @@ void FranchiseApp::showOpenStreetMapPage() {
         defaultRadiusKm = currentSearchArea_.radiusKm;
         initialSearchArea = currentSearchArea_;
     } else if (franchisee_.isConfigured && franchisee_.hasValidLocation()) {
-        defaultLocation = franchisee_.address;
+        defaultLocation = franchisee_.getFullAddress();
         defaultRadiusKm = franchisee_.searchCriteria.radiusMiles * 1.60934;
         initialSearchArea = Models::SearchArea::fromMiles(
             franchisee_.location,
@@ -3332,6 +3332,13 @@ void FranchiseApp::showSettingsPage() {
             // Update sidebar with all franchisee details (header + popover)
             updateHeaderWithFranchisee();
 
+            // Sync location across all views (AI Search, Open Street Map)
+            if (geocodeSuccess) {
+                currentSearchLocation_ = franchisee_.getFullAddress();
+                currentSearchArea_ = franchisee_.createSearchArea();
+                // Don't set hasActiveSearch_ here - let the search trigger that
+            }
+
             // Save franchisee and store location to ApiLogicServer
             if (geocodeSuccess) {
                 std::cout << "  [Settings] Saving to ALS..." << std::endl;
@@ -3564,6 +3571,10 @@ void FranchiseApp::loadStoreLocationFromALS() {
                           << ", maxEmp=" << franchisee_.searchCriteria.maxEmployees
                           << ", types=" << franchisee_.searchCriteria.businessTypes.size() << std::endl;
 
+                // Sync location across all views (AI Search, Open Street Map)
+                currentSearchLocation_ = franchisee_.getFullAddress();
+                currentSearchArea_ = franchisee_.createSearchArea();
+
                 // Load prospects linked to this store
                 loadProspectsFromALS();
 
@@ -3733,6 +3744,10 @@ void FranchiseApp::selectStoreById(const std::string& storeId) {
 
         // Update sidebar with full franchisee details
         updateHeaderWithFranchisee();
+
+        // Sync location across all views (AI Search, Open Street Map)
+        currentSearchLocation_ = franchisee_.getFullAddress();
+        currentSearchArea_ = franchisee_.createSearchArea();
 
         // Load prospects linked to this store
         loadProspectsFromALS();
