@@ -394,6 +394,15 @@ public:
     ApiResponse getProspectsForStore(const std::string& storeLocationId);
 
     /**
+     * @brief Get all prospects for a franchisee using the ProspectList relationship
+     * @param franchiseeId UUID of the franchisee
+     * @param offset Pagination offset (default 0)
+     * @param limit Pagination limit (default 50)
+     * @return API response with list of prospects
+     */
+    ApiResponse getProspectsForFranchisee(const std::string& franchiseeId, int offset = 0, int limit = 50);
+
+    /**
      * @brief Get a specific saved prospect by ID
      * @param id UUID of the saved prospect
      * @return API response with prospect data
