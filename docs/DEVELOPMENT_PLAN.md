@@ -122,6 +122,11 @@ This document outlines the development roadmap for each interface in the Franchi
 - [ ] List view vs. card view toggle
 - [ ] Bulk select for adding multiple prospects
 - [ ] Export to CSV/Excel directly from results
+- [ ] Duplicate prospect detection - grey out "Add to Prospects" button if business name + address already exists in My Prospects for the current franchisee
+  - **Dependencies**: Requires unique key strategy for Prospect table (name + address composite) or client-side lookup against existing prospects
+  - **Implementation options**:
+    1. Client-side: Query `getProspectsForFranchisee()` and compare before enabling button
+    2. Database: Add unique constraint on `(franchisee_id, business_name, address)` to Prospect table
 
 #### Phase 4: Map Integration (Priority: Medium)
 - [ ] Split view with map showing result locations
