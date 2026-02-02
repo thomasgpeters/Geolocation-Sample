@@ -2666,18 +2666,18 @@ void FranchiseApp::showSettingsPage() {
     nameInput->setMargin(5, Wt::Side::Top);
     nameInput->setHidden(selectedIndex != 0);  // Hide if existing store selected
 
-    // Store Address
+    // Store Address - full width row
     auto addressGroup = franchiseeFormGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
-    addressGroup->setStyleClass("form-group");
+    addressGroup->setStyleClass("form-group full-width");
     addressGroup->addWidget(std::make_unique<Wt::WText>("Street Address"))->setStyleClass("form-label");
     auto addressInput = addressGroup->addWidget(std::make_unique<Wt::WLineEdit>());
-    addressInput->setPlaceholderText("e.g., 123 Main St");
+    addressInput->setPlaceholderText("e.g., 123 Main St, Suite 200");
     addressInput->setStyleClass("form-control");
     if (franchisee_.isConfigured) addressInput->setText(franchisee_.address);
 
-    // City, State, Zip in a row
+    // City, State, Zip on second row
     auto locationRow = franchiseeFormGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
-    locationRow->setStyleClass("form-row");
+    locationRow->setStyleClass("form-row address-row");
 
     // City
     auto cityGroup = locationRow->addWidget(std::make_unique<Wt::WContainerWidget>());
