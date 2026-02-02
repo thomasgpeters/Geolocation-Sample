@@ -1889,45 +1889,150 @@ html, body {
 }
 
 /* ==================== Scoring Optimization ==================== */
-.scoring-rules-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 8px;
+
+/* Two-column layout for penalties and bonuses side by side */
+.scoring-panels-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-top: 16px;
 }
 
-.scoring-rule-row {
+@media (max-width: 1200px) {
+    .scoring-panels-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Base panel styling */
+.scoring-panel {
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+/* Penalties panel - red theme */
+.scoring-panel.penalties {
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    border: 1px solid #fecaca;
+}
+
+.scoring-panel.penalties .panel-header {
+    color: #991b1b;
+    border-bottom: 2px solid #f87171;
+}
+
+.scoring-panel.penalties .panel-icon {
+    background: #dc2626;
+    color: white;
+}
+
+/* Bonuses panel - green theme */
+.scoring-panel.bonuses {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border: 1px solid #bbf7d0;
+}
+
+.scoring-panel.bonuses .panel-header {
+    color: #166534;
+    border-bottom: 2px solid #4ade80;
+}
+
+.scoring-panel.bonuses .panel-icon {
+    background: #059669;
+    color: white;
+}
+
+/* Panel header */
+.panel-header {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 8px 12px;
-    background: #f9fafb;
-    border-radius: 6px;
-    border: 1px solid #e5e7eb;
+    padding-bottom: 12px;
+    margin-bottom: 16px;
 }
 
-.scoring-rule-row .Wt-checkbox {
-    flex-shrink: 0;
-}
-
-.rule-name {
-    font-size: 13px;
-    color: #374151;
-    min-width: 180px;
-    flex-shrink: 0;
-}
-
-.slider-container {
+.panel-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
-    gap: 10px;
-    flex: 1;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.panel-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.panel-subtitle {
+    font-size: 12px;
+    opacity: 0.8;
+    margin-top: 2px;
+}
+
+/* GridBag-style rule grid */
+.scoring-grid {
+    display: grid;
+    grid-template-columns: 28px 1fr 140px 60px;
+    gap: 8px 12px;
+    align-items: center;
+}
+
+/* Grid header row */
+.scoring-grid-header {
+    display: contents;
+}
+
+.scoring-grid-header span {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6b7280;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+}
+
+/* Grid data row */
+.scoring-grid-row {
+    display: contents;
+}
+
+.scoring-grid-row:hover > * {
+    background: rgba(255,255,255,0.5);
+}
+
+/* Checkbox cell */
+.scoring-grid .cell-checkbox {
+    justify-self: center;
+}
+
+/* Rule name cell */
+.scoring-grid .cell-name {
+    font-size: 13px;
+    color: #374151;
+    padding: 6px 0;
+}
+
+.scoring-grid .cell-name .rule-description {
+    font-size: 11px;
+    color: #9ca3af;
+    display: block;
+    margin-top: 2px;
+}
+
+/* Slider cell */
+.scoring-grid .cell-slider {
+    padding: 4px 0;
 }
 
 .scoring-slider {
-    flex: 1;
-    min-width: 120px;
-    max-width: 200px;
+    width: 100%;
 }
 
 .scoring-slider input[type="range"] {
@@ -1939,17 +2044,45 @@ html, body {
     outline: none;
 }
 
-.scoring-slider input[type="range"]::-webkit-slider-thumb {
+.scoring-panel.penalties .scoring-slider input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
     width: 16px;
     height: 16px;
-    background: #4f46e5;
+    background: #dc2626;
     border-radius: 50%;
     cursor: pointer;
     border: 2px solid white;
     box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 
+.scoring-panel.bonuses .scoring-slider input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #059669;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+/* Points value cell */
+.scoring-grid .cell-points {
+    font-size: 13px;
+    font-weight: 700;
+    text-align: right;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+}
+
+.scoring-panel.penalties .cell-points {
+    color: #dc2626;
+}
+
+.scoring-panel.bonuses .cell-points {
+    color: #059669;
+}
+
+/* Legacy support */
 .points-value {
     font-size: 12px;
     font-weight: 600;

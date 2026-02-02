@@ -2935,98 +2935,151 @@ void FranchiseApp::showSettingsPage() {
         "Adjust how prospects are scored. Enable/disable rules and customize point values."
     ))->setStyleClass("section-description");
 
-    // Penalties section
-    auto penaltiesLabel = scoringSection->addWidget(std::make_unique<Wt::WText>("Penalties (reduce score)"));
-    penaltiesLabel->setStyleClass("form-label");
-    penaltiesLabel->setAttributeValue("style", "margin-top: 16px; font-weight: 600; color: #dc2626;");
+    // Two-column container for Penalties and Bonuses panels
+    auto panelsContainer = scoringSection->addWidget(std::make_unique<Wt::WContainerWidget>());
+    panelsContainer->setStyleClass("scoring-panels-container");
 
-    auto penaltiesGrid = scoringSection->addWidget(std::make_unique<Wt::WContainerWidget>());
-    penaltiesGrid->setStyleClass("scoring-rules-grid");
-
-    // Store slider pointers for save handler
+    // Store slider/checkbox pointers for save handler
     std::vector<std::pair<std::string, Wt::WSlider*>> penaltySliders;
     std::vector<std::pair<std::string, Wt::WCheckBox*>> penaltyChecks;
+    std::vector<std::pair<std::string, Wt::WSlider*>> bonusSliders;
+    std::vector<std::pair<std::string, Wt::WCheckBox*>> bonusChecks;
 
+    // ========== PENALTIES PANEL ==========
+    auto penaltiesPanel = panelsContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
+    penaltiesPanel->setStyleClass("scoring-panel penalties");
+
+    // Penalties header
+    auto penaltiesHeader = penaltiesPanel->addWidget(std::make_unique<Wt::WContainerWidget>());
+    penaltiesHeader->setStyleClass("panel-header");
+
+    auto penaltyIcon = penaltiesHeader->addWidget(std::make_unique<Wt::WText>("-"));
+    penaltyIcon->setStyleClass("panel-icon");
+
+    auto penaltyTitleContainer = penaltiesHeader->addWidget(std::make_unique<Wt::WContainerWidget>());
+    penaltyTitleContainer->addWidget(std::make_unique<Wt::WText>("Penalties"))->setStyleClass("panel-title");
+    penaltyTitleContainer->addWidget(std::make_unique<Wt::WText>("Reduce prospect scores"))->setStyleClass("panel-subtitle");
+
+    // Penalties GridBag
+    auto penaltiesGrid = penaltiesPanel->addWidget(std::make_unique<Wt::WContainerWidget>());
+    penaltiesGrid->setStyleClass("scoring-grid");
+
+    // Grid header row
+    auto penaltyHeaderRow = penaltiesGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
+    penaltyHeaderRow->setStyleClass("scoring-grid-header");
+    penaltyHeaderRow->addWidget(std::make_unique<Wt::WText>(""));  // checkbox column
+    penaltyHeaderRow->addWidget(std::make_unique<Wt::WText>("Rule"));
+    penaltyHeaderRow->addWidget(std::make_unique<Wt::WText>("Adjustment"));
+    penaltyHeaderRow->addWidget(std::make_unique<Wt::WText>("Points"));
+
+    // Penalty rules
     for (const auto* rule : scoringEngine_->getPenaltyRules()) {
         auto ruleRow = penaltiesGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
-        ruleRow->setStyleClass("scoring-rule-row");
+        ruleRow->setStyleClass("scoring-grid-row");
 
-        // Enable checkbox
-        auto enableCheck = ruleRow->addWidget(std::make_unique<Wt::WCheckBox>());
+        // Checkbox cell
+        auto checkCell = ruleRow->addWidget(std::make_unique<Wt::WContainerWidget>());
+        checkCell->setStyleClass("cell-checkbox");
+        auto enableCheck = checkCell->addWidget(std::make_unique<Wt::WCheckBox>());
         enableCheck->setChecked(rule->enabled);
         penaltyChecks.push_back({rule->id, enableCheck});
 
-        // Rule name
-        auto nameLabel = ruleRow->addWidget(std::make_unique<Wt::WText>(rule->name));
-        nameLabel->setStyleClass("rule-name");
+        // Name cell with description
+        auto nameCell = ruleRow->addWidget(std::make_unique<Wt::WContainerWidget>());
+        nameCell->setStyleClass("cell-name");
+        nameCell->addWidget(std::make_unique<Wt::WText>(rule->name));
+        auto descText = nameCell->addWidget(std::make_unique<Wt::WText>(rule->description));
+        descText->setStyleClass("rule-description");
 
-        // Points slider
-        auto sliderContainer = ruleRow->addWidget(std::make_unique<Wt::WContainerWidget>());
-        sliderContainer->setStyleClass("slider-container");
-
-        auto slider = sliderContainer->addWidget(std::make_unique<Wt::WSlider>());
+        // Slider cell
+        auto sliderCell = ruleRow->addWidget(std::make_unique<Wt::WContainerWidget>());
+        sliderCell->setStyleClass("cell-slider");
+        auto slider = sliderCell->addWidget(std::make_unique<Wt::WSlider>());
         slider->setMinimum(rule->minPoints);
         slider->setMaximum(rule->maxPoints);
         slider->setValue(rule->currentPoints);
         slider->setStyleClass("scoring-slider");
         penaltySliders.push_back({rule->id, slider});
 
-        // Points display
-        auto pointsLabel = sliderContainer->addWidget(std::make_unique<Wt::WText>(std::to_string(rule->currentPoints) + " pts"));
-        pointsLabel->setStyleClass("points-value penalty");
+        // Points cell
+        auto pointsCell = ruleRow->addWidget(std::make_unique<Wt::WContainerWidget>());
+        pointsCell->setStyleClass("cell-points");
+        auto pointsLabel = pointsCell->addWidget(std::make_unique<Wt::WText>(std::to_string(rule->currentPoints)));
 
         // Update display when slider changes
         slider->valueChanged().connect([pointsLabel](int value) {
-            pointsLabel->setText(std::to_string(value) + " pts");
+            pointsLabel->setText(std::to_string(value));
         });
     }
 
-    // Bonuses section
-    auto bonusesLabel = scoringSection->addWidget(std::make_unique<Wt::WText>("Bonuses (increase score)"));
-    bonusesLabel->setStyleClass("form-label");
-    bonusesLabel->setAttributeValue("style", "margin-top: 20px; font-weight: 600; color: #059669;");
+    // ========== BONUSES PANEL ==========
+    auto bonusesPanel = panelsContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
+    bonusesPanel->setStyleClass("scoring-panel bonuses");
 
-    auto bonusesGrid = scoringSection->addWidget(std::make_unique<Wt::WContainerWidget>());
-    bonusesGrid->setStyleClass("scoring-rules-grid");
+    // Bonuses header
+    auto bonusesHeader = bonusesPanel->addWidget(std::make_unique<Wt::WContainerWidget>());
+    bonusesHeader->setStyleClass("panel-header");
 
-    std::vector<std::pair<std::string, Wt::WSlider*>> bonusSliders;
-    std::vector<std::pair<std::string, Wt::WCheckBox*>> bonusChecks;
+    auto bonusIcon = bonusesHeader->addWidget(std::make_unique<Wt::WText>("+"));
+    bonusIcon->setStyleClass("panel-icon");
 
+    auto bonusTitleContainer = bonusesHeader->addWidget(std::make_unique<Wt::WContainerWidget>());
+    bonusTitleContainer->addWidget(std::make_unique<Wt::WText>("Bonuses"))->setStyleClass("panel-title");
+    bonusTitleContainer->addWidget(std::make_unique<Wt::WText>("Increase prospect scores"))->setStyleClass("panel-subtitle");
+
+    // Bonuses GridBag
+    auto bonusesGrid = bonusesPanel->addWidget(std::make_unique<Wt::WContainerWidget>());
+    bonusesGrid->setStyleClass("scoring-grid");
+
+    // Grid header row
+    auto bonusHeaderRow = bonusesGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
+    bonusHeaderRow->setStyleClass("scoring-grid-header");
+    bonusHeaderRow->addWidget(std::make_unique<Wt::WText>(""));  // checkbox column
+    bonusHeaderRow->addWidget(std::make_unique<Wt::WText>("Rule"));
+    bonusHeaderRow->addWidget(std::make_unique<Wt::WText>("Adjustment"));
+    bonusHeaderRow->addWidget(std::make_unique<Wt::WText>("Points"));
+
+    // Bonus rules
     for (const auto* rule : scoringEngine_->getBonusRules()) {
         auto ruleRow = bonusesGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
-        ruleRow->setStyleClass("scoring-rule-row");
+        ruleRow->setStyleClass("scoring-grid-row");
 
-        // Enable checkbox
-        auto enableCheck = ruleRow->addWidget(std::make_unique<Wt::WCheckBox>());
+        // Checkbox cell
+        auto checkCell = ruleRow->addWidget(std::make_unique<Wt::WContainerWidget>());
+        checkCell->setStyleClass("cell-checkbox");
+        auto enableCheck = checkCell->addWidget(std::make_unique<Wt::WCheckBox>());
         enableCheck->setChecked(rule->enabled);
         bonusChecks.push_back({rule->id, enableCheck});
 
-        // Rule name
-        auto nameLabel = ruleRow->addWidget(std::make_unique<Wt::WText>(rule->name));
-        nameLabel->setStyleClass("rule-name");
+        // Name cell with description
+        auto nameCell = ruleRow->addWidget(std::make_unique<Wt::WContainerWidget>());
+        nameCell->setStyleClass("cell-name");
+        nameCell->addWidget(std::make_unique<Wt::WText>(rule->name));
+        auto descText = nameCell->addWidget(std::make_unique<Wt::WText>(rule->description));
+        descText->setStyleClass("rule-description");
 
-        // Points slider
-        auto sliderContainer = ruleRow->addWidget(std::make_unique<Wt::WContainerWidget>());
-        sliderContainer->setStyleClass("slider-container");
-
-        auto slider = sliderContainer->addWidget(std::make_unique<Wt::WSlider>());
+        // Slider cell
+        auto sliderCell = ruleRow->addWidget(std::make_unique<Wt::WContainerWidget>());
+        sliderCell->setStyleClass("cell-slider");
+        auto slider = sliderCell->addWidget(std::make_unique<Wt::WSlider>());
         slider->setMinimum(rule->minPoints);
         slider->setMaximum(rule->maxPoints);
         slider->setValue(rule->currentPoints);
         slider->setStyleClass("scoring-slider");
         bonusSliders.push_back({rule->id, slider});
 
-        // Points display
-        auto pointsLabel = sliderContainer->addWidget(std::make_unique<Wt::WText>("+" + std::to_string(rule->currentPoints) + " pts"));
-        pointsLabel->setStyleClass("points-value bonus");
+        // Points cell
+        auto pointsCell = ruleRow->addWidget(std::make_unique<Wt::WContainerWidget>());
+        pointsCell->setStyleClass("cell-points");
+        auto pointsLabel = pointsCell->addWidget(std::make_unique<Wt::WText>("+" + std::to_string(rule->currentPoints)));
 
         // Update display when slider changes
         slider->valueChanged().connect([pointsLabel](int value) {
-            pointsLabel->setText("+" + std::to_string(value) + " pts");
+            pointsLabel->setText("+" + std::to_string(value));
         });
     }
 
-    // Reset to defaults button
+    // Reset to defaults button (below both panels)
     auto resetBtn = scoringSection->addWidget(std::make_unique<Wt::WPushButton>("Reset to Defaults"));
     resetBtn->setStyleClass("btn btn-outline btn-sm");
     resetBtn->setAttributeValue("style", "margin-top: 16px;");
