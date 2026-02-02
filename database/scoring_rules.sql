@@ -1,60 +1,7 @@
 -- ============================================================================
--- Franchisee Table (required for foreign key)
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS franchisee (
-    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    business_name       VARCHAR(200) NOT NULL,
-    dba_name            VARCHAR(200),
-    franchise_number    VARCHAR(50),
-    owner_first_name    VARCHAR(100),
-    owner_last_name     VARCHAR(100),
-    email               VARCHAR(255),
-    phone               VARCHAR(50),
-    address_line1       VARCHAR(255),
-    address_line2       VARCHAR(255),
-    city                VARCHAR(100),
-    state_province      VARCHAR(100),
-    postal_code         VARCHAR(20),
-    country_code        VARCHAR(10) DEFAULT 'US',
-    latitude            DECIMAL(10, 8),
-    longitude           DECIMAL(11, 8),
-    start_date          DATE,
-    contract_end_date   DATE,
-    monthly_revenue_target DECIMAL(12, 2),
-    ytd_revenue         DECIMAL(12, 2),
-    is_active           BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
--- Index for active franchisees
-CREATE INDEX IF NOT EXISTS idx_franchisee_is_active
-    ON franchisee(is_active)
-    WHERE is_active = TRUE;
-
--- Index for franchise number lookups
-CREATE INDEX IF NOT EXISTS idx_franchisee_franchise_number
-    ON franchisee(franchise_number);
-
--- Trigger for updated_at timestamp
-CREATE OR REPLACE FUNCTION update_franchisee_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS trg_franchisee_updated_at ON franchisee;
-CREATE TRIGGER trg_franchisee_updated_at
-    BEFORE UPDATE ON franchisee
-    FOR EACH ROW
-    EXECUTE FUNCTION update_franchisee_updated_at();
-
--- ============================================================================
 -- Scoring Rules Table
 -- Stores configurable scoring rules for prospect evaluation
+-- References existing 'franchisees' table (plural)
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS scoring_rules (
@@ -72,10 +19,10 @@ CREATE TABLE IF NOT EXISTS scoring_rules (
     created_at          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    -- Foreign key to franchisee table (optional - NULL means global rule)
+    -- Foreign key to existing franchisees table (plural)
     CONSTRAINT fk_scoring_rules_franchisee
         FOREIGN KEY (franchisee_id)
-        REFERENCES franchisee(id)
+        REFERENCES franchisees(id)
         ON DELETE CASCADE,
 
     -- Ensure rule_id is unique per franchisee (or globally if franchisee_id is NULL)
