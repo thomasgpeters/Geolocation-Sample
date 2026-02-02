@@ -1723,6 +1723,81 @@ void FranchiseApp::showOpenStreetMapPage() {
 
     doJavaScript(initMapJs.str());
 
+    // Synchronize AI Search prospects to the map
+    if (!lastResults_.items.empty()) {
+        std::ostringstream addProspectsJs;
+        addProspectsJs << "(function() {"
+                      << "  function addProspectMarkers() {"
+                      << "    if (typeof L === 'undefined' || !window.osmMap) {"
+                      << "      setTimeout(addProspectMarkers, 200);"
+                      << "      return;"
+                      << "    }"
+                      << "    var map = window.osmMap;"
+                      << "    if (!window.prospectMarkers) window.prospectMarkers = [];"
+                      // Clear existing prospect markers
+                      << "    window.prospectMarkers.forEach(function(m) { map.removeLayer(m); });"
+                      << "    window.prospectMarkers = [];"
+                      // Define prospect marker icon (blue/purple)
+                      << "    var prospectIcon = L.divIcon({"
+                      << "      className: 'prospect-marker',"
+                      << "      html: '<div style=\"width: 24px; height: 24px; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); "
+                      << "border-radius: 50%; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.3); "
+                      << "display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: bold;\">"
+                      << "</div>',"
+                      << "      iconSize: [24, 24],"
+                      << "      iconAnchor: [12, 12],"
+                      << "      popupAnchor: [0, -12]"
+                      << "    });"
+                      // Function to create score-based icon
+                      << "    function getScoreIcon(score) {"
+                      << "      var color = score >= 80 ? '#22c55e' : score >= 60 ? '#3b82f6' : score >= 40 ? '#f59e0b' : '#94a3b8';"
+                      << "      return L.divIcon({"
+                      << "        className: 'prospect-marker',"
+                      << "        html: '<div style=\"width: 28px; height: 28px; background: ' + color + '; "
+                      << "border-radius: 50%; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.3); "
+                      << "display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: bold;\">' + score + '</div>',"
+                      << "        iconSize: [28, 28],"
+                      << "        iconAnchor: [14, 14],"
+                      << "        popupAnchor: [0, -14]"
+                      << "      });"
+                      << "    }";
+
+        // Add markers for each prospect
+        for (const auto& item : lastResults_.items) {
+            if (item.location.hasValidCoordinates()) {
+                std::string name = item.getTitle();
+                std::string address = item.getSubtitle();
+                int score = item.overallScore;
+
+                // Sanitize strings for JavaScript
+                for (auto& c : name) {
+                    if (c == '\'' || c == '"' || c == '\\' || c == '\n' || c == '\r') c = ' ';
+                }
+                for (auto& c : address) {
+                    if (c == '\'' || c == '"' || c == '\\' || c == '\n' || c == '\r') c = ' ';
+                }
+
+                addProspectsJs << "    var marker = L.marker(["
+                              << item.location.latitude << ", " << item.location.longitude
+                              << "], {icon: getScoreIcon(" << score << ")})"
+                              << ".addTo(map)"
+                              << ".bindPopup('<div style=\"min-width: 180px;\"><b>" << name << "</b><br>"
+                              << "<span style=\"color: #666;\">" << address << "</span><br>"
+                              << "<span style=\"font-weight: bold; color: "
+                              << (score >= 80 ? "#22c55e" : score >= 60 ? "#3b82f6" : score >= 40 ? "#f59e0b" : "#94a3b8")
+                              << ";\">Score: " << score << "</span></div>');"
+                              << "    window.prospectMarkers.push(marker);";
+            }
+        }
+
+        addProspectsJs << "    console.log('Added ' + window.prospectMarkers.length + ' prospect markers to map');"
+                      << "  }"
+                      << "  setTimeout(addProspectMarkers, 500);"
+                      << "})();";
+
+        doJavaScript(addProspectsJs.str());
+    }
+
     // Categories sidebar (right side of map)
     auto mapSidebar = mapWithSidebar->addWidget(std::make_unique<Wt::WContainerWidget>());
     mapSidebar->setStyleClass("map-sidebar");
