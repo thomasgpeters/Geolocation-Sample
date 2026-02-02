@@ -4038,9 +4038,18 @@ void FranchiseApp::loadScoringRulesFromALS() {
 
     std::cout << "  [App] Loaded " << rules.size() << " scoring rules from ALS" << std::endl;
 
+    // Clear and rebuild the ruleId -> UUID mapping
+    scoringRuleDbIds_.clear();
+
     // Update the scoring engine with loaded rules
     for (const auto& dto : rules) {
         if (dto.ruleId.empty()) continue;
+
+        // Store the database UUID for this ruleId
+        if (!dto.id.empty()) {
+            scoringRuleDbIds_[dto.ruleId] = dto.id;
+            std::cout << "  [App] Cached rule UUID: " << dto.ruleId << " -> " << dto.id << std::endl;
+        }
 
         // Update existing rule in scoring engine
         scoringEngine_->setRuleEnabled(dto.ruleId, dto.enabled);
@@ -4070,6 +4079,15 @@ bool FranchiseApp::saveScoringRulesToALS() {
         dto.minPoints = rule.minPoints;
         dto.maxPoints = rule.maxPoints;
 
+        // Look up the database UUID from our cached mapping
+        auto it = scoringRuleDbIds_.find(rule.id);
+        if (it != scoringRuleDbIds_.end()) {
+            dto.id = it->second;  // Use existing UUID for PATCH
+            std::cout << "  [App] Using existing UUID for rule " << rule.id << ": " << dto.id << std::endl;
+        } else {
+            std::cout << "  [App] No existing UUID found for rule " << rule.id << ", will create new" << std::endl;
+        }
+
         auto response = alsClient_->saveScoringRule(dto);
         if (!response.success) {
             std::cerr << "  [App] Failed to save scoring rule: " << rule.id
@@ -4077,6 +4095,10 @@ bool FranchiseApp::saveScoringRulesToALS() {
             allSuccess = false;
         } else {
             std::cout << "  [App] Saved scoring rule: " << rule.id << std::endl;
+            // If this was a new rule, cache the generated UUID for future saves
+            if (it == scoringRuleDbIds_.end() && !dto.id.empty()) {
+                scoringRuleDbIds_[rule.id] = dto.id;
+            }
         }
     }
 
