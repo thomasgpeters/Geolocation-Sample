@@ -21,6 +21,17 @@ enum class SearchResultType {
 };
 
 /**
+ * @brief AI analysis status for prospects
+ */
+enum class AnalysisStatus {
+    PENDING,        // Not yet analyzed
+    IN_PROGRESS,    // Currently being analyzed
+    COMPLETED,      // Analysis complete
+    FAILED,         // Analysis failed
+    SKIPPED         // Intentionally skipped (e.g., no AI configured)
+};
+
+/**
  * @brief Individual search result item
  *
  * Represents a single result from the AI search,
@@ -55,6 +66,10 @@ public:
 
     // Distance from search location (if applicable)
     double distanceMiles = 0.0;
+
+    // AI Analysis tracking
+    AnalysisStatus analysisStatus = AnalysisStatus::PENDING;
+    std::string analysisError;  // Error message if analysis failed
 
     // Helper methods
     std::string getTitle() const;

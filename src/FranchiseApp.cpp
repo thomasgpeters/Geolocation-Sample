@@ -632,17 +632,12 @@ void FranchiseApp::onAddToProspects(const std::string& id) {
 
             // Create a copy for saving
             Models::SearchResultItem prospectItem = item;
+            prospectItem.analysisStatus = Models::AnalysisStatus::PENDING;
 
             // Show toast IMMEDIATELY (non-blocking feedback)
-            showToast(item.getTitle(), "Added to My Prospects - analyzing...", item.overallScore);
+            showToast(item.getTitle(), "Added to My Prospects", item.overallScore);
 
-            // Force UI update so toast appears before blocking operations
-            processEvents();
-
-            // Perform AI analysis for this specific prospect (may take a few seconds)
-            analyzeProspect(prospectItem);
-
-            // Save to ApiLogicServer (persists to database)
+            // Save to ApiLogicServer FIRST (persists to database immediately)
             bool savedToServer = saveProspectToALS(prospectItem);
             if (!savedToServer) {
                 std::cerr << "  [App] Warning: Prospect saved locally but failed to persist to server" << std::endl;
@@ -650,32 +645,131 @@ void FranchiseApp::onAddToProspects(const std::string& id) {
 
             // Add to saved prospects (in-memory)
             savedProspects_.push_back(prospectItem);
+
+            // Queue for background AI analysis (non-blocking, saves tokens by checking status)
+            queueForAnalysis(prospectItem.id);
             break;
         }
     }
 }
 
 void FranchiseApp::analyzeProspect(Models::SearchResultItem& item) {
-    if (!item.business) return;
+    if (!item.business) {
+        item.analysisStatus = Models::AnalysisStatus::SKIPPED;
+        return;
+    }
+
+    // Check if already analyzed
+    if (item.analysisStatus == Models::AnalysisStatus::COMPLETED) {
+        return;  // Don't re-analyze - saves AI tokens
+    }
+
+    item.analysisStatus = Models::AnalysisStatus::IN_PROGRESS;
 
     // Use AI engine if available for deep analysis
     if (searchService_->isAIEngineConfigured()) {
         auto* aiEngine = searchService_->getAIEngine();
         if (aiEngine) {
-            auto analysis = aiEngine->analyzeBusinessPotentialSync(*item.business);
-            if (!analysis.summary.empty()) {
-                item.aiSummary = analysis.summary;
-                item.keyHighlights = analysis.keyHighlights;
-                item.recommendedActions = analysis.recommendedActions;
-                item.matchReason = analysis.matchReason;
-                item.aiConfidenceScore = analysis.confidenceScore;
+            try {
+                auto analysis = aiEngine->analyzeBusinessPotentialSync(*item.business);
+                if (!analysis.summary.empty()) {
+                    item.aiSummary = analysis.summary;
+                    item.keyHighlights = analysis.keyHighlights;
+                    item.recommendedActions = analysis.recommendedActions;
+                    item.matchReason = analysis.matchReason;
+                    item.aiConfidenceScore = analysis.confidenceScore;
 
-                if (analysis.cateringPotentialScore > 0) {
-                    item.business->cateringPotentialScore = analysis.cateringPotentialScore;
+                    if (analysis.cateringPotentialScore > 0) {
+                        item.business->cateringPotentialScore = analysis.cateringPotentialScore;
+                    }
+                    item.analysisStatus = Models::AnalysisStatus::COMPLETED;
+                } else {
+                    item.analysisStatus = Models::AnalysisStatus::FAILED;
+                    item.analysisError = "Empty analysis response";
                 }
+            } catch (const std::exception& e) {
+                item.analysisStatus = Models::AnalysisStatus::FAILED;
+                item.analysisError = e.what();
+                std::cerr << "  [App] AI analysis failed: " << e.what() << std::endl;
             }
+        } else {
+            item.analysisStatus = Models::AnalysisStatus::SKIPPED;
+        }
+    } else {
+        item.analysisStatus = Models::AnalysisStatus::SKIPPED;
+    }
+}
+
+Models::SearchResultItem* FranchiseApp::findSavedProspect(const std::string& id) {
+    for (auto& prospect : savedProspects_) {
+        if (prospect.id == id) {
+            return &prospect;
         }
     }
+    return nullptr;
+}
+
+void FranchiseApp::queueForAnalysis(const std::string& prospectId) {
+    // Check if already in queue
+    for (const auto& queuedId : analysisQueue_) {
+        if (queuedId == prospectId) return;
+    }
+
+    // Check if already analyzed
+    auto* prospect = findSavedProspect(prospectId);
+    if (prospect && prospect->analysisStatus == Models::AnalysisStatus::COMPLETED) {
+        return;  // Already analyzed, don't waste tokens
+    }
+
+    analysisQueue_.push_back(prospectId);
+
+    // Start processing if not already running
+    if (!isAnalysisRunning_) {
+        processAnalysisQueue();
+    }
+}
+
+void FranchiseApp::processAnalysisQueue() {
+    if (analysisQueue_.empty()) {
+        isAnalysisRunning_ = false;
+        return;
+    }
+
+    isAnalysisRunning_ = true;
+
+    // Get next prospect ID from queue
+    std::string prospectId = analysisQueue_.front();
+    analysisQueue_.erase(analysisQueue_.begin());
+
+    // Find the prospect
+    auto* prospect = findSavedProspect(prospectId);
+    if (!prospect) {
+        // Prospect not found, skip to next
+        processAnalysisQueue();
+        return;
+    }
+
+    // Skip if already completed
+    if (prospect->analysisStatus == Models::AnalysisStatus::COMPLETED) {
+        processAnalysisQueue();
+        return;
+    }
+
+    std::cout << "  [App] Background analysis: " << prospect->getTitle() << std::endl;
+
+    // Perform analysis
+    analyzeProspect(*prospect);
+
+    // Update server with analysis results
+    if (prospect->analysisStatus == Models::AnalysisStatus::COMPLETED) {
+        // Optionally update the prospect on the server with AI analysis data
+        // saveProspectToALS(*prospect);  // Uncomment if you want to persist analysis
+    }
+
+    // Schedule next item with a small delay to allow UI updates
+    Wt::WTimer::singleShot(std::chrono::milliseconds(100), [this] {
+        processAnalysisQueue();
+    });
 }
 
 void FranchiseApp::showToast(const std::string& title, const std::string& message,

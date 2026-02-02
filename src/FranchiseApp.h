@@ -179,8 +179,21 @@ private:
     // Saved prospects list (AI analysis performed when added)
     std::vector<Models::SearchResultItem> savedProspects_;
 
-    // Helper to perform AI analysis on a single prospect
+    // Helper to perform AI analysis on a single prospect (synchronous)
     void analyzeProspect(Models::SearchResultItem& item);
+
+    // Background AI analysis queue
+    std::vector<std::string> analysisQueue_;  // Queue of prospect IDs pending analysis
+    bool isAnalysisRunning_ = false;
+
+    // Queue a prospect for background AI analysis
+    void queueForAnalysis(const std::string& prospectId);
+
+    // Process the next item in the analysis queue
+    void processAnalysisQueue();
+
+    // Find a saved prospect by ID (returns pointer or nullptr)
+    Models::SearchResultItem* findSavedProspect(const std::string& id);
 
     // Toast notification system
     void showToast(const std::string& title, const std::string& message,
