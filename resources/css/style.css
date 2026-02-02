@@ -1244,9 +1244,8 @@ html, body {
 
 /* ==================== Results Display ==================== */
 .results-display {
-    background: #ffffff;  /* White background for prospects section */
+    background: transparent;
     padding: 0;
-    border-radius: 10px;
 }
 
 .state-container {
