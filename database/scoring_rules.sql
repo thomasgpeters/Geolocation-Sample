@@ -1,9 +1,10 @@
 -- ============================================================================
 -- Scoring Rules Table
 -- Stores configurable scoring rules for prospect evaluation
+-- References existing 'franchisees' table (plural)
 -- ============================================================================
 
-CREATE TABLE scoring_rules (
+CREATE TABLE IF NOT EXISTS scoring_rules (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     rule_id             VARCHAR(50) NOT NULL,           -- Unique rule identifier (e.g., 'no_address')
     name                VARCHAR(100) NOT NULL,          -- Display name
@@ -18,10 +19,10 @@ CREATE TABLE scoring_rules (
     created_at          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    -- Foreign key to franchisee table (optional - NULL means global rule)
+    -- Foreign key to existing franchisees table (plural)
     CONSTRAINT fk_scoring_rules_franchisee
         FOREIGN KEY (franchisee_id)
-        REFERENCES franchisee(id)
+        REFERENCES franchisees(id)
         ON DELETE CASCADE,
 
     -- Ensure rule_id is unique per franchisee (or globally if franchisee_id is NULL)
@@ -34,20 +35,20 @@ CREATE TABLE scoring_rules (
 -- ============================================================================
 
 -- Index for looking up rules by franchisee
-CREATE INDEX idx_scoring_rules_franchisee_id
+CREATE INDEX IF NOT EXISTS idx_scoring_rules_franchisee_id
     ON scoring_rules(franchisee_id);
 
 -- Index for finding enabled rules quickly
-CREATE INDEX idx_scoring_rules_enabled
+CREATE INDEX IF NOT EXISTS idx_scoring_rules_enabled
     ON scoring_rules(enabled)
     WHERE enabled = TRUE;
 
 -- Index for rule lookups by rule_id
-CREATE INDEX idx_scoring_rules_rule_id
+CREATE INDEX IF NOT EXISTS idx_scoring_rules_rule_id
     ON scoring_rules(rule_id);
 
 -- Composite index for common query pattern: active rules for a franchisee
-CREATE INDEX idx_scoring_rules_franchisee_enabled
+CREATE INDEX IF NOT EXISTS idx_scoring_rules_franchisee_enabled
     ON scoring_rules(franchisee_id, enabled);
 
 -- ============================================================================
@@ -62,6 +63,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_scoring_rules_updated_at ON scoring_rules;
 CREATE TRIGGER trg_scoring_rules_updated_at
     BEFORE UPDATE ON scoring_rules
     FOR EACH ROW
@@ -118,7 +120,9 @@ INSERT INTO scoring_rules (id, rule_id, name, description, is_penalty, enabled, 
  'Business size matches target employee range', FALSE, TRUE, 10, 10, 0, 50, NULL),
 
 ('11111111-1111-1111-1111-111111111108', 'target_industry', 'Target Industry',
- 'Business operates in a preferred industry category', FALSE, TRUE, 15, 15, 0, 50, NULL);
+ 'Business operates in a preferred industry category', FALSE, TRUE, 15, 15, 0, 50, NULL)
+
+ON CONFLICT (rule_id, franchisee_id) DO NOTHING;
 
 -- ============================================================================
 -- Verify data
