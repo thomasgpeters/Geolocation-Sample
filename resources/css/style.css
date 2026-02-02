@@ -1539,6 +1539,31 @@ html, body {
     border-bottom: 1px solid var(--border-color);
 }
 
+/* Result card selection checkbox */
+.result-select-checkbox {
+    width: 18px;
+    height: 18px;
+    margin-right: 12px;
+    margin-top: 4px;
+    flex-shrink: 0;
+    cursor: pointer;
+    accent-color: var(--primary-color);
+}
+
+.result-select-checkbox:hover {
+    transform: scale(1.1);
+}
+
+.result-select-checkbox:checked {
+    animation: checkPop 0.15s ease-out;
+}
+
+@keyframes checkPop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
 .header-left {
     display: flex;
     gap: 16px;

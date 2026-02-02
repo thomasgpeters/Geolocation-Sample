@@ -5,6 +5,7 @@
 #include <Wt/WText.h>
 #include <Wt/WPushButton.h>
 #include <Wt/WSignal.h>
+#include <set>
 #include "models/SearchResult.h"
 #include "ResultCard.h"
 
@@ -84,6 +85,22 @@ public:
      */
     Wt::Signal<>& loadMoreRequested() { return loadMoreRequested_; }
 
+    /**
+     * @brief Signal emitted when add selected prospects is clicked
+     * @param ids Vector of selected prospect IDs
+     */
+    Wt::Signal<std::vector<std::string>>& addSelectedRequested() { return addSelectedRequested_; }
+
+    /**
+     * @brief Get the currently selected prospect IDs
+     */
+    std::vector<std::string> getSelectedIds() const;
+
+    /**
+     * @brief Clear all selections
+     */
+    void clearSelections();
+
 private:
     void setupUI();
     void createSummarySection();
@@ -92,11 +109,14 @@ private:
     void createPagination();
     void updateSummary(const Models::SearchResults& results);
     void populateResults(const Models::SearchResults& results);
+    void onSelectionChanged(const std::string& id, bool selected);
+    void updateActionButtons();
 
     Wt::Signal<std::string> viewDetailsRequested_;
     Wt::Signal<std::string> addToProspectsRequested_;
     Wt::Signal<> exportRequested_;
     Wt::Signal<> loadMoreRequested_;
+    Wt::Signal<std::vector<std::string>> addSelectedRequested_;
 
     // Current results
     Models::SearchResults currentResults_;
@@ -118,8 +138,15 @@ private:
     // Optimizing indicator
     Wt::WContainerWidget* optimizingIndicator_ = nullptr;
 
+    // Action buttons
+    Wt::WPushButton* addAllBtn_ = nullptr;
+    Wt::WPushButton* addSelectedBtn_ = nullptr;
+
     // Result cards
     std::vector<ResultCard*> resultCards_;
+
+    // Selected item IDs
+    std::set<std::string> selectedIds_;
 };
 
 } // namespace Widgets

@@ -997,361 +997,48 @@ COMMENT ON TABLE audit_log IS 'Security audit log for authentication events';
 
 
 -- ============================================================================
--- SEED DATA: Application Configuration
--- ============================================================================
-
--- Feature Flags (managed via ApiLogicServer)
-INSERT INTO app_config (config_key, config_value, config_type, category, description, is_sensitive, is_required, default_value) VALUES
-('enable_ai_search', 'true', 'boolean', 'features', 'Enable AI-powered prospect search', false, false, 'true'),
-('enable_demographics', 'true', 'boolean', 'features', 'Enable demographics visualization', false, false, 'true'),
-('enable_osm_data', 'true', 'boolean', 'features', 'Enable OpenStreetMap data integration', false, false, 'true'),
-('enable_prospect_scoring', 'true', 'boolean', 'features', 'Enable AI-based prospect scoring', false, false, 'true'),
-('enable_market_analysis', 'true', 'boolean', 'features', 'Enable AI market analysis for prospects', false, false, 'true');
-
--- Display/UI Settings (user preferences stored in database)
-INSERT INTO app_config (config_key, config_value, config_type, category, description, is_sensitive, is_required, default_value) VALUES
-('default_map_zoom', '12', 'integer', 'display', 'Default zoom level for map views', false, false, '12'),
-('default_search_radius', '5', 'integer', 'display', 'Default search radius in miles', false, false, '5'),
-('results_per_page', '25', 'integer', 'display', 'Number of results per page in lists', false, false, '25'),
-('map_tile_provider', 'openstreetmap', 'string', 'display', 'Map tile provider: openstreetmap, mapbox', false, false, 'openstreetmap'),
-('theme', 'light', 'string', 'display', 'UI theme: light, dark', false, false, 'light');
-
--- Business Rules (configurable thresholds)
-INSERT INTO app_config (config_key, config_value, config_type, category, description, is_sensitive, is_required, default_value) VALUES
-('min_prospect_score', '50', 'integer', 'business', 'Minimum score to qualify as a prospect', false, false, '50'),
-('hot_lead_threshold', '80', 'integer', 'business', 'Score threshold for hot lead classification', false, false, '80'),
-('geocoding_cache_minutes', '1440', 'integer', 'business', 'Cache duration for geocoding results (minutes)', false, false, '1440'),
-('max_search_results', '100', 'integer', 'business', 'Maximum results returned from search', false, false, '100');
-
--- System Settings (runtime state)
--- These reference the first Denver franchisee and store for default app state
-INSERT INTO app_config (config_key, config_value, config_type, category, description, is_sensitive, is_required, default_value) VALUES
-('current_franchisee_id', 'c2c5af5a-53a5-4d28-8218-3675c0942ead', 'string', 'system', 'Currently selected franchisee ID', false, false, ''),
-('current_store_id', 'c14a9f57-2ed2-4e30-9834-98614465ddbb', 'string', 'system', 'Currently selected store location ID', false, false, '');
-
-
--- ============================================================================
--- SEED DATA: Industries
--- ============================================================================
-
-INSERT INTO industries (name, naics_code, catering_potential_score, typical_order_size, peak_seasons) VALUES
-('Corporate Offices', '551114', 9, '$500-$2000', ARRAY['Q4', 'Holiday Season']),
-('Technology Companies', '541512', 9, '$800-$3000', ARRAY['Q4', 'Summer']),
-('Healthcare Facilities', '621111', 8, '$300-$1500', ARRAY['Year-round']),
-('Law Firms', '541110', 8, '$400-$1500', ARRAY['Q4']),
-('Financial Services', '523110', 8, '$600-$2500', ARRAY['Q1', 'Q4']),
-('Educational Institutions', '611310', 7, '$200-$1000', ARRAY['Fall', 'Spring']),
-('Manufacturing Plants', '332710', 7, '$400-$1200', ARRAY['Year-round']),
-('Government Agencies', '921110', 6, '$300-$1000', ARRAY['Q3', 'Q4']),
-('Retail Stores', '452210', 5, '$150-$500', ARRAY['Holiday Season']),
-('Restaurants', '722511', 3, '$100-$300', ARRAY['Off-peak catering']);
-
-
--- ============================================================================
--- SEED DATA: Sample Tags
--- ============================================================================
-
-INSERT INTO tags (name, color, description) VALUES
-('hot-lead', '#e74c3c', 'High priority prospect requiring immediate attention'),
-('decision-maker-contact', '#27ae60', 'Has direct contact with decision maker'),
-('large-events', '#3498db', 'Known for hosting large events'),
-('recurring-potential', '#9b59b6', 'Potential for recurring orders'),
-('competitor-customer', '#f39c12', 'Currently using competitor services'),
-('referral', '#1abc9c', 'Came through referral'),
-('needs-follow-up', '#e67e22', 'Requires follow-up action'),
-('price-sensitive', '#95a5a6', 'Budget-conscious prospect');
-
-
--- ============================================================================
--- SEED DATA: Regions
--- ============================================================================
-
-INSERT INTO regions (id, name, code, country_code, timezone) VALUES
-('a1000000-0000-0000-0000-000000000001'::uuid, 'Western Region', 'WEST', 'US', 'America/Los_Angeles'),
-('a1000000-0000-0000-0000-000000000002'::uuid, 'Central Region', 'CENTRAL', 'US', 'America/Chicago'),
-('a1000000-0000-0000-0000-000000000003'::uuid, 'Eastern Region', 'EAST', 'US', 'America/New_York'),
-('a1000000-0000-0000-0000-000000000004'::uuid, 'Southern Region', 'SOUTH', 'US', 'America/Chicago');
-
-
--- ============================================================================
--- SEED DATA: Territories (using simple lat/lng instead of PostGIS)
--- ============================================================================
-
-INSERT INTO territories (id, region_id, name, code, description, center_latitude, center_longitude, radius_miles, is_active) VALUES
--- Western Region
-('b1000000-0000-0000-0000-000000000001'::uuid, 'a1000000-0000-0000-0000-000000000001'::uuid,
- 'San Francisco Metro', 'SF-METRO', 'San Francisco Bay Area territory',
- 37.7749, -122.4194, 25.0, true),
-('b1000000-0000-0000-0000-000000000002'::uuid, 'a1000000-0000-0000-0000-000000000001'::uuid,
- 'Los Angeles Downtown', 'LA-DT', 'Downtown Los Angeles territory',
- 34.0522, -118.2437, 15.0, true),
-('b1000000-0000-0000-0000-000000000003'::uuid, 'a1000000-0000-0000-0000-000000000001'::uuid,
- 'Seattle Metro', 'SEA-METRO', 'Greater Seattle area',
- 47.6062, -122.3321, 20.0, true),
-
--- Central Region
-('b1000000-0000-0000-0000-000000000004'::uuid, 'a1000000-0000-0000-0000-000000000002'::uuid,
- 'Denver Metro', 'DEN-METRO', 'Denver metropolitan area',
- 39.7392, -104.9903, 20.0, true),
-('b1000000-0000-0000-0000-000000000005'::uuid, 'a1000000-0000-0000-0000-000000000002'::uuid,
- 'Chicago Loop', 'CHI-LOOP', 'Chicago downtown and surrounding areas',
- 41.8781, -87.6298, 15.0, true),
-('b1000000-0000-0000-0000-000000000006'::uuid, 'a1000000-0000-0000-0000-000000000002'::uuid,
- 'Austin Metro', 'AUS-METRO', 'Austin Texas metropolitan area',
- 30.2672, -97.7431, 18.0, true),
-
--- Eastern Region
-('b1000000-0000-0000-0000-000000000007'::uuid, 'a1000000-0000-0000-0000-000000000003'::uuid,
- 'New York City', 'NYC', 'New York City five boroughs',
- 40.7128, -74.0060, 15.0, true),
-('b1000000-0000-0000-0000-000000000008'::uuid, 'a1000000-0000-0000-0000-000000000003'::uuid,
- 'Boston Metro', 'BOS-METRO', 'Greater Boston area',
- 42.3601, -71.0589, 18.0, true),
-
--- Southern Region
-('b1000000-0000-0000-0000-000000000009'::uuid, 'a1000000-0000-0000-0000-000000000004'::uuid,
- 'Atlanta Metro', 'ATL-METRO', 'Atlanta metropolitan area',
- 33.7490, -84.3880, 22.0, true),
-('b1000000-0000-0000-0000-000000000010'::uuid, 'a1000000-0000-0000-0000-000000000004'::uuid,
- 'Miami Metro', 'MIA-METRO', 'Miami-Dade area',
- 25.7617, -80.1918, 20.0, true);
-
-
--- ============================================================================
--- SEED DATA: Franchisees
--- ============================================================================
-
-INSERT INTO franchisees (id, business_name, dba_name, franchise_number, owner_first_name, owner_last_name,
-                         email, phone, address_line1, city, state_province, postal_code,
-                         latitude, longitude, start_date, is_active) VALUES
-('c1000000-0000-0000-0000-000000000001'::uuid,
- 'Rocky Mountain Catering LLC', 'Mountain Fresh Catering', 'FRA-001',
- 'John', 'Smith', 'john.smith@rmcatering.com', '(303) 555-0101',
- '1600 California St', 'Denver', 'CO', '80202',
- 39.7456, -104.9885, '2022-01-15', true),
-
-('c1000000-0000-0000-0000-000000000002'::uuid,
- 'Bay Area Gourmet Inc', 'SF Gourmet Catering', 'FRA-002',
- 'Sarah', 'Johnson', 'sarah@sfgourmet.com', '(415) 555-0202',
- '555 Market St', 'San Francisco', 'CA', '94105',
- 37.7909, -122.3998, '2021-06-01', true),
-
-('c1000000-0000-0000-0000-000000000003'::uuid,
- 'Windy City Eats LLC', 'Chicago Corporate Catering', 'FRA-003',
- 'Michael', 'Davis', 'mdavis@windycityeats.com', '(312) 555-0303',
- '233 S Wacker Dr', 'Chicago', 'IL', '60606',
- 41.8789, -87.6359, '2020-09-01', true),
-
--- Default franchisee referenced by current_franchisee_id in app_config
-('c2c5af5a-53a5-4d28-8218-3675c0942ead'::uuid,
- 'Pittsburgh Catering Co', '', 'FRA-004',
- 'Mike', '', '', '',
- '1687 Washington Road', 'Pittsburgh', 'PA', '15228',
- 40.3732, -80.0432, CURRENT_DATE, true);
-
-
--- ============================================================================
--- SEED DATA: Franchisee Territory Assignments
--- ============================================================================
-
-INSERT INTO franchisee_territories (franchisee_id, territory_id, is_primary, assigned_date) VALUES
-('c1000000-0000-0000-0000-000000000001'::uuid, 'b1000000-0000-0000-0000-000000000004'::uuid, true, '2022-01-15'),
-('c1000000-0000-0000-0000-000000000002'::uuid, 'b1000000-0000-0000-0000-000000000001'::uuid, true, '2021-06-01'),
-('c1000000-0000-0000-0000-000000000003'::uuid, 'b1000000-0000-0000-0000-000000000005'::uuid, true, '2020-09-01');
-
-
--- ============================================================================
--- SEED DATA: Store Locations
--- ============================================================================
-
-INSERT INTO store_locations (id, franchisee_id, store_name, store_code, address_line1, city, state_province,
-                             postal_code, latitude, longitude, geocode_source, geocoded_at,
-                             default_search_radius_miles, phone, is_active, is_primary) VALUES
-('d1000000-0000-0000-0000-000000000001'::uuid, 'c1000000-0000-0000-0000-000000000001'::uuid,
- 'Downtown Denver Store', 'DEN-001', '1600 California St', 'Denver', 'CO', '80202',
- 39.7456, -104.9885, 'nominatim', CURRENT_TIMESTAMP, 10.0, '(303) 555-0101', true, true),
-
-('d1000000-0000-0000-0000-000000000002'::uuid, 'c1000000-0000-0000-0000-000000000002'::uuid,
- 'Financial District Store', 'SF-001', '555 Market St', 'San Francisco', 'CA', '94105',
- 37.7909, -122.3998, 'nominatim', CURRENT_TIMESTAMP, 8.0, '(415) 555-0202', true, true),
-
-('d1000000-0000-0000-0000-000000000003'::uuid, 'c1000000-0000-0000-0000-000000000003'::uuid,
- 'Willis Tower Store', 'CHI-001', '233 S Wacker Dr', 'Chicago', 'IL', '60606',
- 41.8789, -87.6359, 'nominatim', CURRENT_TIMESTAMP, 12.0, '(312) 555-0303', true, true),
-
--- Default store location referenced by current_store_id in app_config
-('c14a9f57-2ed2-4e30-9834-98614465ddbb'::uuid, 'c2c5af5a-53a5-4d28-8218-3675c0942ead'::uuid,
- 'Pittsburgh Store', 'PIT-001', '1687 Washington Road', 'Pittsburgh', 'PA', '15228',
- 40.3732, -80.0432, 'nominatim', CURRENT_TIMESTAMP, 25.0, '', true, true);
-
-
--- ============================================================================
--- SEED DATA: Sample Prospects
--- ============================================================================
-
-INSERT INTO prospects (id, territory_id, franchisee_id, business_name, business_type,
-                       employee_count, employee_count_range, address_line1, city, state_province,
-                       postal_code, latitude, longitude, primary_phone, website,
-                       status, data_source, is_verified) VALUES
--- Denver Prospects
-('e1000000-0000-0000-0000-000000000001'::uuid,
- 'b1000000-0000-0000-0000-000000000004'::uuid, 'c1000000-0000-0000-0000-000000000001'::uuid,
- 'TechStart Colorado', 'Technology Company', 150, 'medium',
- '1801 California St', 'Denver', 'CO', '80202',
- 39.7489, -104.9878, '(303) 555-1001', 'https://techstartco.example.com', 'new', 'openstreetmap', true),
-
-('e1000000-0000-0000-0000-000000000002'::uuid,
- 'b1000000-0000-0000-0000-000000000004'::uuid, 'c1000000-0000-0000-0000-000000000001'::uuid,
- 'Colorado Healthcare Partners', 'Healthcare Facility', 320, 'large',
- '1635 Aurora Ct', 'Denver', 'CO', '80045',
- 39.7456, -104.8372, '(303) 555-1002', 'https://cohealthpartners.example.com', 'contacted', 'openstreetmap', true),
-
-('e1000000-0000-0000-0000-000000000003'::uuid,
- 'b1000000-0000-0000-0000-000000000004'::uuid, 'c1000000-0000-0000-0000-000000000001'::uuid,
- 'Mile High Law Group', 'Law Firm', 85, 'medium',
- '1700 Broadway', 'Denver', 'CO', '80290',
- 39.7436, -104.9872, '(303) 555-1003', 'https://milehighlaw.example.com', 'qualified', 'openstreetmap', true),
-
--- San Francisco Prospects
-('e1000000-0000-0000-0000-000000000004'::uuid,
- 'b1000000-0000-0000-0000-000000000001'::uuid, 'c1000000-0000-0000-0000-000000000002'::uuid,
- 'Bay Innovations Inc', 'Technology Company', 280, 'large',
- '101 California St', 'San Francisco', 'CA', '94111',
- 37.7929, -122.3984, '(415) 555-2001', 'https://bayinnovations.example.com', 'new', 'openstreetmap', true),
-
-('e1000000-0000-0000-0000-000000000005'::uuid,
- 'b1000000-0000-0000-0000-000000000001'::uuid, 'c1000000-0000-0000-0000-000000000002'::uuid,
- 'Pacific Financial Advisors', 'Financial Services', 120, 'medium',
- '425 Market St', 'San Francisco', 'CA', '94105',
- 37.7912, -122.3985, '(415) 555-2002', 'https://pacificfa.example.com', 'proposal_sent', 'openstreetmap', true),
-
--- Chicago Prospects
-('e1000000-0000-0000-0000-000000000006'::uuid,
- 'b1000000-0000-0000-0000-000000000005'::uuid, 'c1000000-0000-0000-0000-000000000003'::uuid,
- 'Midwest Corporate Holdings', 'Corporate Office', 450, 'large',
- '311 S Wacker Dr', 'Chicago', 'IL', '60606',
- 41.8776, -87.6363, '(312) 555-3001', 'https://midwestcorp.example.com', 'new', 'openstreetmap', true),
-
-('e1000000-0000-0000-0000-000000000007'::uuid,
- 'b1000000-0000-0000-0000-000000000005'::uuid, 'c1000000-0000-0000-0000-000000000003'::uuid,
- 'Chicago Medical Center', 'Healthcare Facility', 890, 'enterprise',
- '710 N Lake Shore Dr', 'Chicago', 'IL', '60611',
- 41.8953, -87.6171, '(312) 555-3002', 'https://chicagomedical.example.com', 'qualified', 'openstreetmap', true);
-
-
--- ============================================================================
--- SEED DATA: Prospect Scores
--- ============================================================================
-
-INSERT INTO prospect_scores (prospect_id, total_score, score_grade, fit_score, engagement_score,
-                            catering_potential_score, proximity_score, score_source, model_version, confidence) VALUES
-('e1000000-0000-0000-0000-000000000001'::uuid, 82, 'B', 85, 75, 88, 90, 'ai_model', '1.0.0', 0.85),
-('e1000000-0000-0000-0000-000000000002'::uuid, 91, 'A', 95, 88, 92, 85, 'ai_model', '1.0.0', 0.92),
-('e1000000-0000-0000-0000-000000000003'::uuid, 78, 'B', 80, 72, 82, 88, 'ai_model', '1.0.0', 0.78),
-('e1000000-0000-0000-0000-000000000004'::uuid, 88, 'B', 90, 82, 90, 85, 'ai_model', '1.0.0', 0.88),
-('e1000000-0000-0000-0000-000000000005'::uuid, 75, 'B', 78, 70, 80, 82, 'ai_model', '1.0.0', 0.75),
-('e1000000-0000-0000-0000-000000000006'::uuid, 94, 'A', 96, 90, 95, 92, 'ai_model', '1.0.0', 0.94),
-('e1000000-0000-0000-0000-000000000007'::uuid, 96, 'A', 98, 92, 98, 88, 'ai_model', '1.0.0', 0.96);
-
-
--- ============================================================================
--- SEED DATA: Territory Demographics
--- ============================================================================
-
-INSERT INTO territory_demographics (territory_id, total_population, population_density, median_age,
-                                   total_households, median_household_income, total_businesses,
-                                   total_employees, business_density, data_year, data_source) VALUES
-('b1000000-0000-0000-0000-000000000004'::uuid, 716492, 4521.3, 34.5, 305678, 85432.00,
- 42350, 528900, 267.8, 2024, 'US Census Bureau'),
-('b1000000-0000-0000-0000-000000000001'::uuid, 873965, 18634.2, 38.2, 352890, 126750.00,
- 68420, 892340, 1458.6, 2024, 'US Census Bureau'),
-('b1000000-0000-0000-0000-000000000005'::uuid, 2693976, 11841.8, 35.8, 1087650, 78650.00,
- 125680, 1892450, 552.4, 2024, 'US Census Bureau');
-
-
--- ============================================================================
--- HELPER FUNCTIONS FOR APILOGICSERVER
+-- COMPANY TYPES TABLE
 -- ============================================================================
 
 -- ---------------------------------------------------------------------------
--- Function: Get app config value by key
+-- Company Types: Classification of companies using the FranchiseAI platform
 -- ---------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION get_app_config(p_key VARCHAR)
-RETURNS TEXT AS $$
-DECLARE
-    v_value TEXT;
-BEGIN
-    SELECT config_value INTO v_value
-    FROM app_config
-    WHERE config_key = p_key;
+CREATE TABLE company_types (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
 
-    IF v_value IS NULL THEN
-        SELECT default_value INTO v_value
-        FROM app_config
-        WHERE config_key = p_key;
-    END IF;
+    -- Type identification
+    code VARCHAR(50) NOT NULL UNIQUE,           -- e.g., 'franchise', 'manufacturing', 'real_estate'
+    name VARCHAR(100) NOT NULL,                  -- Display name
+    description TEXT,                            -- Full description
 
-    RETURN v_value;
-END;
-$$ LANGUAGE plpgsql;
+    -- Industry classification
+    naics_prefix VARCHAR(4),                     -- NAICS code prefix for this type
 
-COMMENT ON FUNCTION get_app_config IS 'Get application configuration value by key, returns default if null';
+    -- Platform configuration
+    default_search_radius_miles DECIMAL(6, 2) DEFAULT 10.0,
+    default_prospect_industries TEXT[],          -- Suggested industries to target
 
--- ---------------------------------------------------------------------------
--- Function: Set app config value
--- ---------------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION set_app_config(p_key VARCHAR, p_value TEXT)
-RETURNS BOOLEAN AS $$
-BEGIN
-    UPDATE app_config
-    SET config_value = p_value,
-        updated_at = CURRENT_TIMESTAMP
-    WHERE config_key = p_key;
+    -- Status
+    is_active BOOLEAN DEFAULT true,
 
-    RETURN FOUND;
-END;
-$$ LANGUAGE plpgsql;
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
 
-COMMENT ON FUNCTION set_app_config IS 'Set application configuration value by key';
+CREATE INDEX idx_company_types_code ON company_types(code);
+CREATE INDEX idx_company_types_active ON company_types(is_active) WHERE is_active = true;
+
+CREATE TRIGGER update_company_types_updated_at BEFORE UPDATE ON company_types
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+COMMENT ON TABLE company_types IS 'Classification of companies/franchises using the FranchiseAI platform';
+
+-- Add company_type reference to franchisees table
+ALTER TABLE franchisees ADD COLUMN IF NOT EXISTS company_type_id UUID REFERENCES company_types(id);
+CREATE INDEX IF NOT EXISTS idx_franchisees_company_type ON franchisees(company_type_id);
 
 
 -- ============================================================================
--- SEED DATA: Default Users
+-- END OF SCHEMA
 -- ============================================================================
--- NOTE: Password hash is for 'admin123' using SHA-256 (for development only)
--- In production, use bcrypt or Argon2 with proper salting
-
-INSERT INTO users (id, email, password_hash, first_name, last_name, role, franchisee_id, is_active, is_verified) VALUES
--- Admin user (password: admin123)
-('f1000000-0000-0000-0000-000000000001'::uuid,
- 'admin@franchiseai.com',
- '240be518fabd2724ddb6f04eeb9d5b59',  -- MD5 hash of 'admin123' (dev only)
- 'System', 'Administrator', 'admin', NULL, true, true),
-
--- Pittsburgh franchisee user (password: mike123)
-('f1000000-0000-0000-0000-000000000002'::uuid,
- 'mike@pittsburghcatering.com',
- 'e99a18c428cb38d5f260853678922e03',  -- MD5 hash of 'mike123' (dev only)
- 'Mike', 'Owner', 'franchisee',
- 'c2c5af5a-53a5-4d28-8218-3675c0942ead'::uuid, true, true);
-
-
--- ============================================================================
--- SEED DATA: Default Scoring Rules
--- ============================================================================
-
--- Penalty rules (negative adjustments for missing/incomplete data)
-INSERT INTO scoring_rules (rule_id, name, description, is_penalty, enabled, default_points, current_points, min_points, max_points) VALUES
-('no_address', 'Missing Address', 'Prospects without addresses are harder to contact and verify', true, true, -10, -10, -25, 0),
-('no_employees', 'Missing Employee Count', 'Unknown employee count makes catering potential harder to estimate', true, true, -3, -3, -15, 0),
-('no_contact', 'Missing Contact Info', 'No phone or email makes outreach difficult', true, true, -5, -5, -20, 0);
-
--- Bonus rules (positive adjustments for quality indicators)
-INSERT INTO scoring_rules (rule_id, name, description, is_penalty, enabled, default_points, current_points, min_points, max_points) VALUES
-('verified', 'Verified Business', 'Business has been verified through data sources', false, true, 5, 5, 0, 15),
-('bbb_accredited', 'BBB Accredited', 'Business is accredited by the Better Business Bureau', false, true, 10, 10, 0, 20),
-('high_rating', 'High Google Rating', 'Business has 4.5+ star Google rating', false, true, 5, 5, 0, 15),
-('conference_room', 'Has Conference Room', 'Business has conference facilities - good for catering', false, true, 5, 5, 0, 15),
-('event_space', 'Has Event Space', 'Business has dedicated event space', false, true, 7, 7, 0, 20),
-('large_company', 'Large Company (100+ employees)', 'Larger companies have more catering opportunities', false, true, 8, 8, 0, 20);
-
+-- All seed data should be in seed_data.sql
