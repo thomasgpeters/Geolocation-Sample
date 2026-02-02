@@ -363,8 +363,8 @@ void FranchiseApp::setupUI() {
     workArea_ = contentArea_->addWidget(std::make_unique<Wt::WContainerWidget>());
     workArea_->setStyleClass("work-area");
 
-    // Toast notification container (fixed position, top-right)
-    toastContainer_ = mainContainer_->addWidget(std::make_unique<Wt::WContainerWidget>());
+    // Toast notification container (fixed position overlay, added to root for independent positioning)
+    toastContainer_ = root()->addWidget(std::make_unique<Wt::WContainerWidget>());
     toastContainer_->setStyleClass("toast-container");
 }
 

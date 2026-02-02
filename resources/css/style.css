@@ -4429,18 +4429,24 @@ html, body {
 
 /* ==================== Toast Notifications ==================== */
 .toast-container {
-    position: fixed;
-    top: 80px;
-    right: 20px;
+    position: fixed !important;
+    top: 80px !important;
+    right: 20px !important;
+    left: auto !important;
+    bottom: auto !important;
+    width: auto !important;
+    height: auto !important;
     z-index: 10000;
     display: flex;
     flex-direction: column;
     gap: 12px;
     pointer-events: none;
     max-width: 380px;
+    background: transparent !important;
 }
 
 .toast {
+    position: relative;
     background: var(--bg-card);
     border-radius: var(--border-radius-lg);
     box-shadow: var(--shadow-lg), 0 0 0 1px rgba(0, 0, 0, 0.05);
@@ -4450,6 +4456,7 @@ html, body {
     transform: translateX(0);
     transition: opacity 0.3s ease, transform 0.3s ease;
     border-left: 4px solid var(--success-color);
+    overflow: hidden;
 }
 
 .toast.toast-enter {
