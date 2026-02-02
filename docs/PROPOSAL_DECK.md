@@ -103,6 +103,7 @@ style: |
 | **Demographics Overlay** | See income, population density, competition density |
 | **Prospect Management** | Save, tag, and track outreach status |
 | **Territory Mapping** | Visualize coverage and identify gaps |
+| **Non-Blocking Workflow** | Add prospects via toast notifications—no modal dialogs interrupting your flow |
 
 ### Open Source Foundation
 - No vendor lock-in

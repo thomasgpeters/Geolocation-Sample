@@ -547,6 +547,213 @@ SavedProspectDTO SavedProspectDTO::fromJson(const std::string& json) {
 }
 
 // ============================================================================
+// ProspectDTO implementation
+// ============================================================================
+
+std::string ProspectDTO::toJson() const {
+    std::ostringstream json;
+    // JSON:API format for ApiLogicServer
+    json << "{\"data\": {\"attributes\": {";
+
+    // Required field
+    json << "\"business_name\": \"" << businessName << "\"";
+
+    // Foreign keys
+    if (!territoryId.empty()) {
+        json << ", \"territory_id\": \"" << territoryId << "\"";
+    }
+    if (!franchiseeId.empty()) {
+        json << ", \"franchisee_id\": \"" << franchiseeId << "\"";
+    }
+    if (!assignedToUserId.empty()) {
+        json << ", \"assigned_to_user_id\": \"" << assignedToUserId << "\"";
+    }
+    if (!industryId.empty()) {
+        json << ", \"industry_id\": \"" << industryId << "\"";
+    }
+    if (!duplicateOfId.empty()) {
+        json << ", \"duplicate_of_id\": \"" << duplicateOfId << "\"";
+    }
+
+    // Business details
+    if (!dbaName.empty()) {
+        json << ", \"dba_name\": \"" << dbaName << "\"";
+    }
+    if (!legalName.empty()) {
+        json << ", \"legal_name\": \"" << legalName << "\"";
+    }
+    if (!industryNaics.empty()) {
+        json << ", \"industry_naics\": \"" << industryNaics << "\"";
+    }
+    if (!businessType.empty()) {
+        json << ", \"business_type\": \"" << businessType << "\"";
+    }
+
+    json << ", \"employee_count\": " << employeeCount;
+
+    if (!employeeCountRange.empty()) {
+        json << ", \"employee_count_range\": \"" << employeeCountRange << "\"";
+    }
+
+    json << ", \"annual_revenue\": " << std::fixed << std::setprecision(2) << annualRevenue;
+    json << ", \"year_established\": " << yearEstablished;
+
+    // Address
+    if (!addressLine1.empty()) {
+        json << ", \"address_line1\": \"" << addressLine1 << "\"";
+    }
+    if (!addressLine2.empty()) {
+        json << ", \"address_line2\": \"" << addressLine2 << "\"";
+    }
+    if (!city.empty()) {
+        json << ", \"city\": \"" << city << "\"";
+    }
+    if (!stateProvince.empty()) {
+        json << ", \"state_province\": \"" << stateProvince << "\"";
+    }
+    if (!postalCode.empty()) {
+        json << ", \"postal_code\": \"" << postalCode << "\"";
+    }
+    json << ", \"country_code\": \"" << countryCode << "\"";
+
+    // Geolocation
+    json << ", \"latitude\": " << std::fixed << std::setprecision(8) << latitude;
+    json << ", \"longitude\": " << std::fixed << std::setprecision(8) << longitude;
+    if (!geocodeAccuracy.empty()) {
+        json << ", \"geocode_accuracy\": \"" << geocodeAccuracy << "\"";
+    }
+
+    // Contact info
+    if (!primaryPhone.empty()) {
+        json << ", \"primary_phone\": \"" << primaryPhone << "\"";
+    }
+    if (!secondaryPhone.empty()) {
+        json << ", \"secondary_phone\": \"" << secondaryPhone << "\"";
+    }
+    if (!email.empty()) {
+        json << ", \"email\": \"" << email << "\"";
+    }
+    if (!website.empty()) {
+        json << ", \"website\": \"" << website << "\"";
+    }
+    if (!linkedinUrl.empty()) {
+        json << ", \"linkedin_url\": \"" << linkedinUrl << "\"";
+    }
+    if (!facebookUrl.empty()) {
+        json << ", \"facebook_url\": \"" << facebookUrl << "\"";
+    }
+
+    // Status
+    json << ", \"status\": \"" << status << "\"";
+    if (!statusChangedAt.empty()) {
+        json << ", \"status_changed_at\": \"" << statusChangedAt << "\"";
+    }
+
+    // Data source
+    if (!dataSource.empty()) {
+        json << ", \"data_source\": \"" << dataSource << "\"";
+    }
+    if (!sourceRecordId.empty()) {
+        json << ", \"source_record_id\": \"" << sourceRecordId << "\"";
+    }
+
+    // Flags
+    json << ", \"is_verified\": " << (isVerified ? "true" : "false");
+    json << ", \"is_duplicate\": " << (isDuplicate ? "true" : "false");
+    json << ", \"do_not_contact\": " << (doNotContact ? "true" : "false");
+
+    json << "}";  // End attributes
+    json << ", \"type\": \"Prospect\"";
+
+    if (!id.empty()) {
+        json << ", \"id\": \"" << id << "\"";
+    }
+
+    json << "}}";  // End data and root
+
+    return json.str();
+}
+
+ProspectDTO ProspectDTO::fromJson(const std::string& json) {
+    ProspectDTO dto;
+
+    dto.id = extractJsonString(json, "id");
+    dto.territoryId = extractJsonString(json, "territory_id");
+    dto.franchiseeId = extractJsonString(json, "franchisee_id");
+    dto.assignedToUserId = extractJsonString(json, "assigned_to_user_id");
+    dto.businessName = extractJsonString(json, "business_name");
+    dto.dbaName = extractJsonString(json, "dba_name");
+    dto.legalName = extractJsonString(json, "legal_name");
+    dto.industryId = extractJsonString(json, "industry_id");
+    dto.industryNaics = extractJsonString(json, "industry_naics");
+    dto.businessType = extractJsonString(json, "business_type");
+
+    std::string empStr = extractJsonString(json, "employee_count");
+    if (!empStr.empty()) {
+        try { dto.employeeCount = std::stoi(empStr); } catch (...) {}
+    }
+    dto.employeeCountRange = extractJsonString(json, "employee_count_range");
+
+    std::string revStr = extractJsonString(json, "annual_revenue");
+    if (!revStr.empty()) {
+        try { dto.annualRevenue = std::stod(revStr); } catch (...) {}
+    }
+
+    std::string yearStr = extractJsonString(json, "year_established");
+    if (!yearStr.empty()) {
+        try { dto.yearEstablished = std::stoi(yearStr); } catch (...) {}
+    }
+
+    dto.addressLine1 = extractJsonString(json, "address_line1");
+    dto.addressLine2 = extractJsonString(json, "address_line2");
+    dto.city = extractJsonString(json, "city");
+    dto.stateProvince = extractJsonString(json, "state_province");
+    dto.postalCode = extractJsonString(json, "postal_code");
+    dto.countryCode = extractJsonString(json, "country_code");
+    if (dto.countryCode.empty()) dto.countryCode = "US";
+
+    std::string latStr = extractJsonString(json, "latitude");
+    std::string lngStr = extractJsonString(json, "longitude");
+    if (!latStr.empty()) {
+        try { dto.latitude = std::stod(latStr); } catch (...) {}
+    }
+    if (!lngStr.empty()) {
+        try { dto.longitude = std::stod(lngStr); } catch (...) {}
+    }
+    dto.geocodeAccuracy = extractJsonString(json, "geocode_accuracy");
+
+    dto.primaryPhone = extractJsonString(json, "primary_phone");
+    dto.secondaryPhone = extractJsonString(json, "secondary_phone");
+    dto.email = extractJsonString(json, "email");
+    dto.website = extractJsonString(json, "website");
+    dto.linkedinUrl = extractJsonString(json, "linkedin_url");
+    dto.facebookUrl = extractJsonString(json, "facebook_url");
+
+    dto.status = extractJsonString(json, "status");
+    if (dto.status.empty()) dto.status = "new";
+    dto.statusChangedAt = extractJsonString(json, "status_changed_at");
+
+    dto.dataSource = extractJsonString(json, "data_source");
+    dto.sourceRecordId = extractJsonString(json, "source_record_id");
+
+    std::string verifiedStr = extractJsonString(json, "is_verified");
+    dto.isVerified = (verifiedStr == "true" || verifiedStr == "1");
+
+    std::string duplicateStr = extractJsonString(json, "is_duplicate");
+    dto.isDuplicate = (duplicateStr == "true" || duplicateStr == "1");
+
+    dto.duplicateOfId = extractJsonString(json, "duplicate_of_id");
+
+    std::string dncStr = extractJsonString(json, "do_not_contact");
+    dto.doNotContact = (dncStr == "true" || dncStr == "1");
+
+    dto.createdAt = extractJsonString(json, "created_at");
+    dto.updatedAt = extractJsonString(json, "updated_at");
+
+    return dto;
+}
+
+// ============================================================================
 // ApiLogicServerClient implementation
 // ============================================================================
 
@@ -1094,6 +1301,92 @@ ApiResponse ApiLogicServerClient::getProspectsForFranchisee(const std::string& f
 
     std::cout << "  [ALS] Getting prospects for franchisee: " << franchiseeId << std::endl;
     return httpGet(url);
+}
+
+ApiResponse ApiLogicServerClient::saveProspect(const ProspectDTO& prospect) {
+    ProspectDTO dto = prospect;
+    if (dto.id.empty()) {
+        // Create new record - POST to collection endpoint
+        dto.id = generateUUID();
+        std::string json = dto.toJson();
+        std::cout << "  [ALS] Creating new Prospect with generated UUID: " << dto.id << std::endl;
+        return httpPost("/Prospect", json);
+    } else {
+        // Update existing record - PATCH to resource endpoint
+        std::string json = dto.toJson();
+        std::cout << "  [ALS] Updating existing Prospect: " << dto.id << std::endl;
+        return httpPatch("/Prospect/" + dto.id, json);
+    }
+}
+
+ApiResponse ApiLogicServerClient::getProspect(const std::string& id) {
+    if (id.empty()) {
+        ApiResponse response;
+        response.success = false;
+        response.statusCode = 400;
+        response.errorMessage = "Prospect ID cannot be empty";
+        return response;
+    }
+    return httpGet("/Prospect/" + id);
+}
+
+ApiResponse ApiLogicServerClient::deleteProspect(const std::string& id) {
+    if (id.empty()) {
+        ApiResponse response;
+        response.success = false;
+        response.statusCode = 400;
+        response.errorMessage = "Prospect ID cannot be empty";
+        return response;
+    }
+    return httpDelete("/Prospect/" + id);
+}
+
+std::vector<ProspectDTO> ApiLogicServerClient::parseProspects(const ApiResponse& response) {
+    std::vector<ProspectDTO> prospects;
+
+    if (!response.success || response.body.empty()) {
+        return prospects;
+    }
+
+    const std::string& json = response.body;
+
+    // Find the array start
+    size_t arrayStart = json.find('[');
+    if (arrayStart == std::string::npos) {
+        // Single object?
+        if (json.find('{') != std::string::npos) {
+            prospects.push_back(ProspectDTO::fromJson(json));
+        }
+        return prospects;
+    }
+
+    // Parse array of objects
+    size_t pos = arrayStart + 1;
+    int braceCount = 0;
+    size_t objStart = std::string::npos;
+
+    while (pos < json.length()) {
+        char c = json[pos];
+
+        if (c == '{') {
+            if (braceCount == 0) {
+                objStart = pos;
+            }
+            braceCount++;
+        } else if (c == '}') {
+            braceCount--;
+            if (braceCount == 0 && objStart != std::string::npos) {
+                std::string objJson = json.substr(objStart, pos - objStart + 1);
+                prospects.push_back(ProspectDTO::fromJson(objJson));
+                objStart = std::string::npos;
+            }
+        } else if (c == ']' && braceCount == 0) {
+            break;
+        }
+        pos++;
+    }
+
+    return prospects;
 }
 
 ApiResponse ApiLogicServerClient::getSavedProspect(const std::string& id) {

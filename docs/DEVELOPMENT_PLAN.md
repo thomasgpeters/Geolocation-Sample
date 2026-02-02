@@ -122,6 +122,21 @@ This document outlines the development roadmap for each interface in the Franchi
 - [ ] List view vs. card view toggle
 - [ ] Bulk select for adding multiple prospects
 - [ ] Export to CSV/Excel directly from results
+- [ ] Duplicate prospect detection - grey out "Add to Prospects" button if business name + address already exists in My Prospects for the current franchisee
+  - **Dependencies**: Requires unique key strategy for Prospect table (name + address composite) or client-side lookup against existing prospects
+  - **Implementation options**:
+    1. Client-side: Query `getProspectsForFranchisee()` and compare before enabling button
+    2. Database: Add unique constraint on `(franchisee_id, business_name, address)` to Prospect table
+- [ ] Non-blocking "Add to Prospects" confirmation - replace modal dialog with floating toast notification
+  - **Current**: Modal dialog blocks interaction until dismissed
+  - **Proposed**: Floating bubble/toast showing prospect name + AI analysis summary
+  - **Behavior**:
+    - Appears in corner (bottom-right or top-right) when prospect is added
+    - Shows business name, score badge, and brief AI analysis excerpt
+    - Auto-fades after 6 seconds
+    - Multiple toasts stack if adding prospects quickly
+    - Optional "View" link to jump to My Prospects
+  - **Benefits**: Users can continue browsing/adding prospects without mouse interruption
 
 #### Phase 4: Map Integration (Priority: Medium)
 - [ ] Split view with map showing result locations
