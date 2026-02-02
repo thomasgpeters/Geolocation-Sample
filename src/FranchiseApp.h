@@ -127,6 +127,13 @@ private:
     void loadScoringRulesFromALS();
     bool saveScoringRulesToALS();
 
+    // ApiLogicServer integration - Saved Prospects
+    void loadProspectsFromALS();
+    bool saveProspectToALS(const Models::SearchResultItem& item);
+    bool deleteProspectFromALS(const std::string& prospectId);
+    Services::SavedProspectDTO prospectItemToDTO(const Models::SearchResultItem& item);
+    Models::SearchResultItem dtoToProspectItem(const Services::SavedProspectDTO& dto);
+
     // Cached list of available stores (for selector)
     std::vector<Services::StoreLocationDTO> availableStores_;
 

@@ -374,6 +374,179 @@ ScoringRuleDTO ScoringRuleDTO::fromJson(const std::string& json) {
 }
 
 // ============================================================================
+// SavedProspectDTO implementation
+// ============================================================================
+
+std::string SavedProspectDTO::toJson() const {
+    std::ostringstream json;
+    // Wrap in JSON:API format for ApiLogicServer
+    json << "{\"data\": {\"attributes\": {";
+    json << "\"business_name\": \"" << businessName << "\"";
+
+    if (!storeLocationId.empty()) {
+        json << ", \"store_location_id\": \"" << storeLocationId << "\"";
+    }
+    if (!businessCategory.empty()) {
+        json << ", \"business_category\": \"" << businessCategory << "\"";
+    }
+    if (!addressLine1.empty()) {
+        json << ", \"address_line1\": \"" << addressLine1 << "\"";
+    }
+    if (!addressLine2.empty()) {
+        json << ", \"address_line2\": \"" << addressLine2 << "\"";
+    }
+    if (!city.empty()) {
+        json << ", \"city\": \"" << city << "\"";
+    }
+    if (!stateProvince.empty()) {
+        json << ", \"state_province\": \"" << stateProvince << "\"";
+    }
+    if (!postalCode.empty()) {
+        json << ", \"postal_code\": \"" << postalCode << "\"";
+    }
+    json << ", \"country_code\": \"" << countryCode << "\"";
+
+    if (latitude != 0.0 || longitude != 0.0) {
+        json << ", \"latitude\": " << latitude;
+        json << ", \"longitude\": " << longitude;
+    }
+
+    if (!phone.empty()) {
+        json << ", \"phone\": \"" << phone << "\"";
+    }
+    if (!email.empty()) {
+        json << ", \"email\": \"" << email << "\"";
+    }
+    if (!website.empty()) {
+        json << ", \"website\": \"" << website << "\"";
+    }
+
+    json << ", \"employee_count\": " << employeeCount;
+    json << ", \"catering_potential_score\": " << cateringPotentialScore;
+    json << ", \"relevance_score\": " << relevanceScore;
+    json << ", \"distance_miles\": " << distanceMiles;
+
+    if (!aiSummary.empty()) {
+        // Escape quotes in AI summary
+        std::string escapedSummary;
+        for (char c : aiSummary) {
+            if (c == '"') escapedSummary += "\\\"";
+            else if (c == '\n') escapedSummary += "\\n";
+            else if (c == '\r') escapedSummary += "\\r";
+            else escapedSummary += c;
+        }
+        json << ", \"ai_summary\": \"" << escapedSummary << "\"";
+    }
+    if (!matchReason.empty()) {
+        std::string escapedReason;
+        for (char c : matchReason) {
+            if (c == '"') escapedReason += "\\\"";
+            else if (c == '\n') escapedReason += "\\n";
+            else escapedReason += c;
+        }
+        json << ", \"match_reason\": \"" << escapedReason << "\"";
+    }
+    if (!keyHighlights.empty()) {
+        json << ", \"key_highlights\": \"" << keyHighlights << "\"";
+    }
+    if (!recommendedActions.empty()) {
+        json << ", \"recommended_actions\": \"" << recommendedActions << "\"";
+    }
+    if (!dataSource.empty()) {
+        json << ", \"data_source\": \"" << dataSource << "\"";
+    }
+    if (!savedAt.empty()) {
+        json << ", \"saved_at\": \"" << savedAt << "\"";
+    }
+
+    json << ", \"is_contacted\": " << (isContacted ? "true" : "false");
+    json << ", \"is_converted\": " << (isConverted ? "true" : "false");
+
+    if (!notes.empty()) {
+        std::string escapedNotes;
+        for (char c : notes) {
+            if (c == '"') escapedNotes += "\\\"";
+            else if (c == '\n') escapedNotes += "\\n";
+            else escapedNotes += c;
+        }
+        json << ", \"notes\": \"" << escapedNotes << "\"";
+    }
+
+    json << "}, \"type\": \"SavedProspect\"";
+    if (!id.empty()) {
+        json << ", \"id\": \"" << id << "\"";
+    }
+    json << "}}";
+    return json.str();
+}
+
+SavedProspectDTO SavedProspectDTO::fromJson(const std::string& json) {
+    SavedProspectDTO dto;
+
+    dto.id = extractJsonString(json, "id");
+    dto.storeLocationId = extractJsonString(json, "store_location_id");
+    dto.businessName = extractJsonString(json, "business_name");
+    dto.businessCategory = extractJsonString(json, "business_category");
+    dto.addressLine1 = extractJsonString(json, "address_line1");
+    dto.addressLine2 = extractJsonString(json, "address_line2");
+    dto.city = extractJsonString(json, "city");
+    dto.stateProvince = extractJsonString(json, "state_province");
+    dto.postalCode = extractJsonString(json, "postal_code");
+    dto.countryCode = extractJsonString(json, "country_code");
+    if (dto.countryCode.empty()) dto.countryCode = "US";
+
+    std::string latStr = extractJsonString(json, "latitude");
+    std::string lngStr = extractJsonString(json, "longitude");
+    if (!latStr.empty()) {
+        try { dto.latitude = std::stod(latStr); } catch (...) {}
+    }
+    if (!lngStr.empty()) {
+        try { dto.longitude = std::stod(lngStr); } catch (...) {}
+    }
+
+    dto.phone = extractJsonString(json, "phone");
+    dto.email = extractJsonString(json, "email");
+    dto.website = extractJsonString(json, "website");
+
+    std::string empStr = extractJsonString(json, "employee_count");
+    if (!empStr.empty()) {
+        try { dto.employeeCount = std::stoi(empStr); } catch (...) {}
+    }
+
+    std::string scoreStr = extractJsonString(json, "catering_potential_score");
+    if (!scoreStr.empty()) {
+        try { dto.cateringPotentialScore = std::stoi(scoreStr); } catch (...) {}
+    }
+
+    std::string relStr = extractJsonString(json, "relevance_score");
+    if (!relStr.empty()) {
+        try { dto.relevanceScore = std::stod(relStr); } catch (...) {}
+    }
+
+    std::string distStr = extractJsonString(json, "distance_miles");
+    if (!distStr.empty()) {
+        try { dto.distanceMiles = std::stod(distStr); } catch (...) {}
+    }
+
+    dto.aiSummary = extractJsonString(json, "ai_summary");
+    dto.matchReason = extractJsonString(json, "match_reason");
+    dto.keyHighlights = extractJsonString(json, "key_highlights");
+    dto.recommendedActions = extractJsonString(json, "recommended_actions");
+    dto.dataSource = extractJsonString(json, "data_source");
+    dto.savedAt = extractJsonString(json, "saved_at");
+
+    std::string contactedStr = extractJsonString(json, "is_contacted");
+    dto.isContacted = (contactedStr == "true" || contactedStr == "1");
+
+    std::string convertedStr = extractJsonString(json, "is_converted");
+    dto.isConverted = (convertedStr == "true" || convertedStr == "1");
+
+    dto.notes = extractJsonString(json, "notes");
+
+    return dto;
+}
+
+// ============================================================================
 // ApiLogicServerClient implementation
 // ============================================================================
 
@@ -870,6 +1043,105 @@ std::vector<ScoringRuleDTO> ApiLogicServerClient::parseScoringRules(const ApiRes
     }
 
     return rules;
+}
+
+// ============================================================================
+// Saved Prospect API Operations
+// ============================================================================
+
+ApiResponse ApiLogicServerClient::saveProspect(const SavedProspectDTO& prospect) {
+    if (prospect.id.empty()) {
+        // Create new record - generate UUID client-side
+        SavedProspectDTO newProspect = prospect;
+        newProspect.id = generateUUID();
+        std::string json = newProspect.toJson();
+
+        std::cout << "  [ALS] Creating new SavedProspect with generated UUID: " << newProspect.id << std::endl;
+        return httpPost("/SavedProspect", json);
+    } else {
+        // Update existing record
+        std::string json = prospect.toJson();
+        std::cout << "  [ALS] Updating existing SavedProspect: " << prospect.id << std::endl;
+        return httpPatch("/SavedProspect/" + prospect.id, json);
+    }
+}
+
+ApiResponse ApiLogicServerClient::getProspectsForStore(const std::string& storeLocationId) {
+    if (storeLocationId.empty()) {
+        // Get all prospects
+        return httpGet("/SavedProspect");
+    }
+    return httpGet("/SavedProspect?filter[store_location_id]=" + storeLocationId);
+}
+
+ApiResponse ApiLogicServerClient::getSavedProspect(const std::string& id) {
+    if (id.empty()) {
+        ApiResponse response;
+        response.success = false;
+        response.statusCode = 400;
+        response.errorMessage = "Saved prospect ID cannot be empty";
+        return response;
+    }
+    return httpGet("/SavedProspect/" + id);
+}
+
+ApiResponse ApiLogicServerClient::deleteSavedProspect(const std::string& id) {
+    if (id.empty()) {
+        ApiResponse response;
+        response.success = false;
+        response.statusCode = 400;
+        response.errorMessage = "Saved prospect ID cannot be empty";
+        return response;
+    }
+    return httpDelete("/SavedProspect/" + id);
+}
+
+std::vector<SavedProspectDTO> ApiLogicServerClient::parseSavedProspects(const ApiResponse& response) {
+    std::vector<SavedProspectDTO> prospects;
+
+    if (!response.success || response.body.empty()) {
+        return prospects;
+    }
+
+    const std::string& json = response.body;
+
+    // Find the array start
+    size_t arrayStart = json.find('[');
+    if (arrayStart == std::string::npos) {
+        // Single object?
+        if (json.find('{') != std::string::npos) {
+            prospects.push_back(SavedProspectDTO::fromJson(json));
+        }
+        return prospects;
+    }
+
+    // Parse array of objects
+    size_t pos = arrayStart + 1;
+    int braceCount = 0;
+    size_t objStart = std::string::npos;
+
+    while (pos < json.length()) {
+        char c = json[pos];
+
+        if (c == '{') {
+            if (braceCount == 0) {
+                objStart = pos;
+            }
+            braceCount++;
+        } else if (c == '}') {
+            braceCount--;
+            if (braceCount == 0 && objStart != std::string::npos) {
+                std::string objJson = json.substr(objStart, pos - objStart + 1);
+                prospects.push_back(SavedProspectDTO::fromJson(objJson));
+                objStart = std::string::npos;
+            }
+        } else if (c == ']' && braceCount == 0) {
+            break;
+        }
+        pos++;
+    }
+
+    return prospects;
 }
 
 bool ApiLogicServerClient::isAvailable() {
