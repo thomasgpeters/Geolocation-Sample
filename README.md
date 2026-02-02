@@ -483,8 +483,31 @@ View and manage saved prospects with AI-powered analysis.
   - **Green (70%+)**: High catering potential
   - **Yellow (40-69%)**: Medium potential
   - **Red (<40%)**: Lower potential
-- **Remove**: Delete prospects from your saved list
+- **Remove**: Delete prospects from your saved list (also removes from database)
 - **Find More**: Quick link to return to AI Search
+
+#### Prospect-Franchisee Linking
+Saved prospects are **linked to the current franchisee/store location**:
+
+**How It Works:**
+1. When you save a prospect, it's linked to your current store via `store_location_id`
+2. Prospects are persisted to ApiLogicServer (PostgreSQL database)
+3. When you switch to a different store, prospects are reloaded for that store
+4. Each franchisee sees only their own saved prospects
+
+**Data Persistence:**
+- **SavedProspectDTO** stores full business details, scores, and AI analysis
+- Prospects survive application restarts
+- Delete action removes from both in-memory list and database
+
+**Synchronization Flow:**
+```
+Add to Prospects → saveProspectToALS() → POST /api/SavedProspect
+                                              ↓
+Switch Store → selectStoreById() → loadProspectsFromALS()
+                                              ↓
+                                   GET /api/SavedProspect?filter[store_location_id]=...
+```
 
 #### AI Analysis Workflow
 AI analysis is performed **on-demand** when you add a prospect:
@@ -574,9 +597,17 @@ Configure your franchise store details and contact information.
 
 **Store Information:**
 - **Store Name**: Your franchise location name (e.g., "Vocelli Pizza - Downtown")
-- **Store Address**: Full address used as the center point for prospect searches (geocoded automatically)
+- **Street Address**: Street address line (e.g., "123 Main St")
+- **City**: City name (e.g., "Denver")
+- **State**: State abbreviation (e.g., "CO")
+- **Zip Code**: Postal code (e.g., "80202")
 - **Owner/Manager Name**: Contact person for the franchise
 - **Store Phone**: Business contact number
+
+**Address Handling:**
+- Separate fields for Street, City, State, and Zip ensure accurate data storage
+- Full address is automatically assembled for geocoding (e.g., "123 Main St, Denver, CO 80202")
+- Individual fields are persisted to ApiLogicServer for proper database storage
 
 **Synchronization:**
 When a store is selected or saved:
@@ -584,6 +615,7 @@ When a store is selected or saved:
 - Sidebar popover updates with full contact details (address, phone, email)
 - AI Search uses the store location as the default search center
 - Open Street Map centers on the store location
+- All three views display the same formatted address via `getFullAddress()`
 
 #### Tab 2: Marketing
 Configure your target market preferences for AI Search. These settings are automatically applied to all searches.
@@ -846,14 +878,26 @@ The application maintains a single `franchisee_` member variable that is synchro
 - Details auto-update when franchisee data changes
 
 **AI Search Page:**
-- Uses `franchisee_.address` as default search location
+- Uses `franchisee_.getFullAddress()` as default search location
 - Uses `franchisee_.searchCriteria` for business types and employee ranges
 - Shows franchisee badge with "Change" button to navigate to Settings
 
 **Open Street Map Page:**
 - Centers map on `franchisee_.location` coordinates
 - Uses `franchisee_.searchCriteria.radiusMiles` for default search radius
+- Location input shows `franchisee_.getFullAddress()` (full formatted address)
 - Shows red pin marker at franchisee location with popup details
+
+**Location Synchronization:**
+When the franchisee location changes (Settings save, store selection, or app startup):
+- `currentSearchLocation_` is updated with the full formatted address
+- `currentSearchArea_` is updated with the franchisee's search area
+- All three views (Settings, AI Search, Open Street Map) display consistent location
+
+**getFullAddress() Method:**
+Returns a properly formatted address string combining:
+- Street address + City + State + Zip Code
+- Example: "123 Main St, Denver, CO 80202"
 
 **Synchronization Flow:**
 ```
@@ -861,6 +905,9 @@ Settings Save → franchisee_ updated → updateHeaderWithFranchisee()
                                             ↓
                                     sidebar_->setUserInfo()
                                     sidebar_->setFranchiseDetails()
+                                            ↓
+                              currentSearchLocation_ = getFullAddress()
+                              currentSearchArea_ = createSearchArea()
                                             ↓
                             All views read from franchisee_ on render
 ```
@@ -937,6 +984,62 @@ alsClient->saveStoreLocation(dto);
 // Load from dropdown selection
 selectStoreById(selectedId);
 // Loads store data and saves to current_store_id AppConfig
+```
+
+### Saved Prospect Management
+
+Saved prospects are linked to store locations and persist to the database.
+
+**SavedProspectDTO Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | UUID | Unique identifier (auto-generated for new) |
+| `storeLocationId` | UUID | Link to parent store location |
+| `businessName` | string | Prospect business name |
+| `businessCategory` | string | Business type/category |
+| `addressLine1/2` | string | Business address |
+| `city/stateProvince/postalCode` | string | Location details |
+| `latitude/longitude` | double | Geocoded coordinates |
+| `phone/email/website` | string | Contact information |
+| `employeeCount` | int | Number of employees |
+| `cateringPotentialScore` | int | Calculated catering score |
+| `relevanceScore` | double | Search relevance score |
+| `distanceMiles` | double | Distance from franchisee |
+| `aiSummary` | string | AI-generated analysis summary |
+| `matchReason` | string | Why this prospect matches criteria |
+| `keyHighlights` | string | Pipe-separated list of highlights |
+| `recommendedActions` | string | Pipe-separated list of actions |
+| `dataSource` | string | Where the data came from (OpenStreetMap, etc.) |
+| `savedAt` | string | ISO timestamp when saved |
+| `isContacted` | bool | Has been contacted |
+| `isConverted` | bool | Has converted to customer |
+| `notes` | string | User notes |
+
+**API Operations:**
+```cpp
+// Save new prospect (UUID auto-generated)
+SavedProspectDTO dto = prospectItemToDTO(item);
+dto.storeLocationId = currentStoreLocationId_;
+alsClient->saveProspect(dto);
+// POST /api/SavedProspect
+
+// Load prospects for current store
+auto response = alsClient->getProspectsForStore(currentStoreLocationId_);
+// GET /api/SavedProspect?filter[store_location_id]=...
+
+// Delete prospect
+alsClient->deleteSavedProspect(prospectId);
+// DELETE /api/SavedProspect/{id}
+```
+
+**Prospect Loading Flow:**
+```
+App Startup → loadStoreLocationFromALS() → loadProspectsFromALS()
+                                                    ↓
+Store Switch → selectStoreById() → loadProspectsFromALS()
+                                                    ↓
+                              savedProspects_ populated with store's prospects
 ```
 
 ### Client-Side UUID Generation
