@@ -364,10 +364,12 @@ A color-coded legend in the Hot Prospects header helps users quickly understand 
 
 ### AI Search
 Main search interface with:
-- Location input (city, state, ZIP code)
+- **Single location input**: Enter any address, city, or location description (e.g., "Denver, CO" or "123 Main St, Pittsburgh, PA")
 - Search radius slider
 - Minimum catering score filter
 - Advanced sorting options (relevance, catering potential, distance, employee count, rating)
+
+**Simplified Address Entry**: The AI Search uses a single text field for location input, allowing flexible address formats. City, State, and Zip fields have been moved to Settings for store configuration only.
 
 **Note**: Business type filters and data source selection have been moved to **Settings > Marketing** tab for centralized configuration. These preferences are automatically applied to all searches.
 
@@ -397,32 +399,15 @@ Search results now appear **instantly** while score optimization happens in the 
 - **Transparency**: Clear indication when scoring is still in progress
 
 #### Configurable Scoring Engine
-Franchisees can customize how prospects are scored through the Settings page:
+Franchisees can customize how prospects are scored through the Settings page. The scoring engine applies penalty and bonus rules to calculate a final catering potential score for each prospect.
 
-**Penalty Rules** (subtract from score):
+**Key Features:**
+- **Penalty Rules**: Subtract points for negative indicators (missing data, poor ratings)
+- **Bonus Rules**: Add points for positive indicators (verified businesses, high ratings)
+- **Customizable**: Adjust point values with sliders, enable/disable rules with checkboxes
+- **Persistent**: Rules are saved to PostgreSQL via ApiLogicServer and applied automatically
 
-| Rule | Default | Description |
-|------|---------|-------------|
-| Missing Address | -10 | No street address available |
-| Missing Employee Count | -3 | Unknown organization size |
-| Missing Contact Info | -5 | No phone or email available |
-
-**Bonus Rules** (add to score):
-
-| Rule | Default | Description |
-|------|---------|-------------|
-| Verified Business | +5 | Confirmed accurate information |
-| BBB Accredited | +10 | Better Business Bureau accredited |
-| High Rating | +5 | 4+ star customer rating |
-| Has Conference Room | +5 | Indicates catering opportunity |
-| Has Event Space | +7 | High catering potential |
-| Large Company | +8 | 100+ employees |
-
-**Settings UI Controls:**
-- Sliders to adjust point values (-20 to +20)
-- Checkboxes to enable/disable individual rules
-- Rules persist to PostgreSQL via ApiLogicServer
-- Applied automatically to all searches
+For a complete list of available scoring rules and configuration options, see [Settings > Tab 5: Scoring Rules](#tab-5-scoring-rules).
 
 #### Performance Optimizations
 - **Bounding box queries**: Uses bbox instead of radius `around:` queries (5-10x faster)
@@ -597,12 +582,17 @@ Configure your franchise store details and contact information.
 
 **Store Information:**
 - **Store Name**: Your franchise location name (e.g., "Vocelli Pizza - Downtown")
-- **Street Address**: Street address line (e.g., "123 Main St")
+- **Street Address**: Street address line with optional suite/apt number (e.g., "123 Main St, Suite 200")
 - **City**: City name (e.g., "Denver")
-- **State**: State abbreviation (e.g., "CO")
+- **State**: State dropdown with full state names displayed (stores state code, e.g., "Colorado" → "CO")
 - **Zip Code**: Postal code (e.g., "80202")
 - **Owner/Manager Name**: Contact person for the franchise
 - **Store Phone**: Business contact number
+
+**Address Layout:**
+- Street Address occupies its own full-width row for longer addresses with suite/apartment numbers
+- City, State, and Zip are displayed on a second row in a standard address format
+- State uses a dropdown with all 50 US states showing full names (displays "California" but stores "CA")
 
 **Address Handling:**
 - Separate fields for Street, City, State, and Zip ensure accurate data storage
@@ -665,25 +655,40 @@ Configure API keys for business data providers.
 #### Tab 5: Scoring Rules
 Customize how prospects are scored to match your business priorities.
 
-**Penalty Rules:**
-Adjust point deductions for missing or incomplete data:
-- **Missing Address** (default -10): No street address available
-- **Missing Employee Count** (default -3): Unknown organization size
-- **Missing Contact Info** (default -5): No phone or email
+**Two-Panel Layout:**
+The Scoring Rules tab uses a side-by-side GridBag layout with two distinct panels:
 
-**Bonus Rules:**
+| Panel | Header Icon | Description |
+|-------|-------------|-------------|
+| **Penalties** | ↓ (white down arrow in red circle) | Rules that subtract points for negative indicators |
+| **Bonuses** | ↑ (white up arrow in green circle) | Rules that add points for positive indicators |
+
+**Penalty Rules (Left Panel):**
+Adjust point deductions for missing or incomplete data:
+- **Missing Address** (default -15): No street address available
+- **Missing Phone Number** (default -10): No phone number listed
+- **Missing Website** (default -5): No website listed
+- **Potentially Closed** (default -25): Business shows signs of being inactive
+- **Incomplete Hours** (default -5): Business hours not fully listed
+- **Few Reviews** (default -8): Very few customer reviews
+- **Poor Rating** (default -12): Below average customer rating
+
+**Bonus Rules (Right Panel):**
 Adjust point bonuses for desirable attributes:
-- **Verified Business** (default +5): Confirmed accurate information
-- **BBB Accredited** (default +10): Better Business Bureau accredited
-- **High Rating** (default +5): 4+ star customer rating
-- **Has Conference Room** (default +5): Indicates catering opportunity
-- **Has Event Space** (default +7): High catering potential
-- **Large Company** (default +8): 100+ employees
+- **Verified Business** (default +10): Confirmed accurate information
+- **Complete Profile** (default +8): All contact information listed
+- **Many Reviews** (default +12): Substantial number of reviews
+- **Excellent Rating** (default +15): Above average customer rating
+- **Established Business** (default +10): Operating for multiple years
+- **Active Online Presence** (default +7): Actively maintains online profiles
+- **Ideal Employee Count** (default +10): Matches target employee range
+- **Target Industry** (default +15): Operates in preferred industry category
 
 **Controls:**
-- **Sliders**: Drag to adjust point values from -20 to +20
+- **Sliders**: Drag to adjust point values (-50 to 0 for penalties, 0 to +50 for bonuses)
 - **Checkboxes**: Enable or disable individual rules
 - **Persistence**: Rules are saved to PostgreSQL via ApiLogicServer and persist across sessions
+- **Taglines**: Each rule displays its description below the rule name
 
 #### Saving Settings
 - Click **"Save All Settings"** to save changes across all tabs
@@ -1042,9 +1047,9 @@ Store Switch → selectStoreById() → loadProspectsFromALS()
                               savedProspects_ populated with store's prospects
 ```
 
-### API Request Pattern (PATCH Upsert)
+### API Request Pattern (POST/PATCH)
 
-All save operations use a **PATCH upsert pattern** with client-generated UUIDs:
+Save operations use **POST for creating new records** and **PATCH for updating existing records** with client-generated UUIDs:
 
 ```cpp
 // All save methods follow this pattern:
@@ -1052,25 +1057,32 @@ ApiResponse saveFranchisee(const FranchiseeDTO& franchisee) {
     FranchiseeDTO dto = franchisee;
     if (dto.id.empty()) {
         dto.id = generateUUID();  // Client-side UUID generation
+        std::string json = dto.toJson();
+        return httpPost("/Franchisee", json);  // POST for new records
+    } else {
+        std::string json = dto.toJson();
+        return httpPatch("/Franchisee/" + dto.id, json);  // PATCH for updates
     }
-    return httpPatch("/Franchisee/" + dto.id, dto.toJson());
 }
 ```
 
-**Why PATCH instead of POST?**
-- ApiLogicServer expects client-generated UUIDs
-- PATCH with ID in URL works for both create and update (upsert)
-- Avoids 405 Method Not Allowed errors from POST endpoints
-- Consistent pattern across all entity types
+**HTTP Methods:**
+- **POST** to collection endpoint (`/Franchisee`) for creating new records
+- **PATCH** to resource endpoint (`/Franchisee/{id}`) for updating existing records
+- Client generates UUID before POST to ensure the client knows the ID immediately
 
 **Affected Endpoints:**
 
-| Method | Endpoint | Operation |
-|--------|----------|-----------|
-| `PATCH` | `/Franchisee/{id}` | Create or update franchisee |
-| `PATCH` | `/StoreLocation/{id}` | Create or update store location |
-| `PATCH` | `/ScoringRules/{id}` | Create or update scoring rule |
-| `PATCH` | `/SavedProspect/{id}` | Create or update saved prospect |
+| Operation | Method | Endpoint |
+|-----------|--------|----------|
+| Create franchisee | `POST` | `/Franchisee` |
+| Update franchisee | `PATCH` | `/Franchisee/{id}` |
+| Create store location | `POST` | `/StoreLocation` |
+| Update store location | `PATCH` | `/StoreLocation/{id}` |
+| Create scoring rule | `POST` | `/ScoringRule` |
+| Update scoring rule | `PATCH` | `/ScoringRule/{id}` |
+| Create saved prospect | `POST` | `/SavedProspect` |
+| Update saved prospect | `PATCH` | `/SavedProspect/{id}` |
 
 ### Client-Side UUID Generation
 
@@ -1127,13 +1139,13 @@ export API_LOGIC_SERVER_ENDPOINT="http://localhost:5657/api"
 
 ### Scoring Rules API
 
-The Scoring Rules system allows franchisees to customize prospect scoring. Rules are stored in the database and accessed via the `/ScoringRules` API endpoint.
+The Scoring Rules system allows franchisees to customize prospect scoring. Rules are stored in the database and accessed via the `/ScoringRule` API endpoint.
 
 **Naming Convention:**
 | Layer | Name | Notes |
 |-------|------|-------|
-| API Endpoint | `/ScoringRules` | PascalCase for JSON:API |
-| JSON Type | `"type": "ScoringRules"` | Matches endpoint name |
+| API Endpoint | `/ScoringRule` | Singular PascalCase for JSON:API |
+| JSON Type | `"type": "ScoringRule"` | Matches endpoint name |
 | Database Table | `scoring_rules` | snake_case for PostgreSQL |
 
 **ScoringRuleDTO Fields:**
@@ -1155,26 +1167,31 @@ The Scoring Rules system allows franchisees to customize prospect scoring. Rules
 **API Operations:**
 
 ```cpp
-// Save scoring rule (create or update)
+// Create scoring rule (new)
 ScoringRuleDTO rule;
 rule.ruleId = "no_address";
 rule.name = "Missing Address";
 rule.isPenalty = true;
 rule.currentPoints = -15;
 alsClient->saveScoringRule(rule);
-// PATCH /api/ScoringRules/{id}
+// POST /api/ScoringRule (for new records)
+
+// Update existing scoring rule
+rule.id = "existing-uuid";
+alsClient->saveScoringRule(rule);
+// PATCH /api/ScoringRule/{id} (for updates)
 
 // Get all rules
 auto response = alsClient->getScoringRules();
-// GET /api/ScoringRules
+// GET /api/ScoringRule
 
 // Get rules for specific franchisee
 auto response = alsClient->getScoringRulesForFranchisee(franchiseeId);
-// GET /api/ScoringRules?filter[franchisee_id]=...
+// GET /api/ScoringRule?filter[franchisee_id]=...
 
 // Delete rule
 alsClient->deleteScoringRule(ruleId);
-// DELETE /api/ScoringRules/{id}
+// DELETE /api/ScoringRule/{id}
 ```
 
 **Database Schema (PostgreSQL):**
@@ -1196,7 +1213,7 @@ CREATE TABLE scoring_rules (
     updated_at          TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_scoring_rules_franchisee
-        FOREIGN KEY (franchisee_id) REFERENCES franchisee(id) ON DELETE CASCADE,
+        FOREIGN KEY (franchisee_id) REFERENCES franchisees(id) ON DELETE CASCADE,
     CONSTRAINT uq_scoring_rules_rule_franchisee
         UNIQUE (rule_id, franchisee_id)
 );

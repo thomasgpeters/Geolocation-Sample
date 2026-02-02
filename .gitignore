@@ -34,3 +34,11 @@ resources/webkit-transitions.css
 # Configuration files with API keys (keep the sample)
 config/app_config.json
 !config/app_config.sample.json
+
+# Node.js dependencies (for docs/slides generation)
+docs/node_modules/
+node_modules/
+
+# Generated slide files (regenerate with ./docs/generate-slides.sh)
+docs/PROPOSAL_DECK.pdf
+docs/PROPOSAL_DECK.pptx

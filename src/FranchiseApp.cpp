@@ -2666,18 +2666,18 @@ void FranchiseApp::showSettingsPage() {
     nameInput->setMargin(5, Wt::Side::Top);
     nameInput->setHidden(selectedIndex != 0);  // Hide if existing store selected
 
-    // Store Address
+    // Store Address - full width row
     auto addressGroup = franchiseeFormGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
-    addressGroup->setStyleClass("form-group");
+    addressGroup->setStyleClass("form-group full-width");
     addressGroup->addWidget(std::make_unique<Wt::WText>("Street Address"))->setStyleClass("form-label");
     auto addressInput = addressGroup->addWidget(std::make_unique<Wt::WLineEdit>());
-    addressInput->setPlaceholderText("e.g., 123 Main St");
+    addressInput->setPlaceholderText("e.g., 123 Main St, Suite 200");
     addressInput->setStyleClass("form-control");
     if (franchisee_.isConfigured) addressInput->setText(franchisee_.address);
 
-    // City, State, Zip in a row
+    // City, State, Zip on second row
     auto locationRow = franchiseeFormGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
-    locationRow->setStyleClass("form-row");
+    locationRow->setStyleClass("form-row address-row");
 
     // City
     auto cityGroup = locationRow->addWidget(std::make_unique<Wt::WContainerWidget>());
@@ -2688,14 +2688,52 @@ void FranchiseApp::showSettingsPage() {
     cityInput->setStyleClass("form-control");
     if (franchisee_.isConfigured) cityInput->setText(franchisee_.location.city);
 
-    // State
+    // State dropdown with full names (stores state codes)
     auto stateGroup = locationRow->addWidget(std::make_unique<Wt::WContainerWidget>());
     stateGroup->setStyleClass("form-group form-group-state");
     stateGroup->addWidget(std::make_unique<Wt::WText>("State"))->setStyleClass("form-label");
-    auto stateInput = stateGroup->addWidget(std::make_unique<Wt::WLineEdit>());
-    stateInput->setPlaceholderText("e.g., CO");
-    stateInput->setStyleClass("form-control");
-    if (franchisee_.isConfigured) stateInput->setText(franchisee_.location.state);
+    auto stateCombo = stateGroup->addWidget(std::make_unique<Wt::WComboBox>());
+    stateCombo->setStyleClass("form-control");
+
+    // State names and codes - display name but store code
+    std::vector<std::pair<std::string, std::string>> states = {
+        {"Select State", ""}, {"Alabama", "AL"}, {"Alaska", "AK"}, {"Arizona", "AZ"},
+        {"Arkansas", "AR"}, {"California", "CA"}, {"Colorado", "CO"}, {"Connecticut", "CT"},
+        {"Delaware", "DE"}, {"Florida", "FL"}, {"Georgia", "GA"}, {"Hawaii", "HI"},
+        {"Idaho", "ID"}, {"Illinois", "IL"}, {"Indiana", "IN"}, {"Iowa", "IA"},
+        {"Kansas", "KS"}, {"Kentucky", "KY"}, {"Louisiana", "LA"}, {"Maine", "ME"},
+        {"Maryland", "MD"}, {"Massachusetts", "MA"}, {"Michigan", "MI"}, {"Minnesota", "MN"},
+        {"Mississippi", "MS"}, {"Missouri", "MO"}, {"Montana", "MT"}, {"Nebraska", "NE"},
+        {"Nevada", "NV"}, {"New Hampshire", "NH"}, {"New Jersey", "NJ"}, {"New Mexico", "NM"},
+        {"New York", "NY"}, {"North Carolina", "NC"}, {"North Dakota", "ND"}, {"Ohio", "OH"},
+        {"Oklahoma", "OK"}, {"Oregon", "OR"}, {"Pennsylvania", "PA"}, {"Rhode Island", "RI"},
+        {"South Carolina", "SC"}, {"South Dakota", "SD"}, {"Tennessee", "TN"}, {"Texas", "TX"},
+        {"Utah", "UT"}, {"Vermont", "VT"}, {"Virginia", "VA"}, {"Washington", "WA"},
+        {"West Virginia", "WV"}, {"Wisconsin", "WI"}, {"Wyoming", "WY"}
+    };
+
+    for (const auto& s : states) {
+        stateCombo->addItem(s.first);
+    }
+
+    // Helper lambda to get state code from combo selection
+    auto getStateCode = [states](int idx) -> std::string {
+        if (idx >= 0 && idx < static_cast<int>(states.size())) return states[idx].second;
+        return "";
+    };
+
+    // Helper lambda to find index by state code
+    auto findStateIndex = [states](const std::string& code) -> int {
+        for (size_t i = 0; i < states.size(); ++i) {
+            if (states[i].second == code) return static_cast<int>(i);
+        }
+        return 0;
+    };
+
+    // Set initial value if configured
+    if (franchisee_.isConfigured && !franchisee_.location.state.empty()) {
+        stateCombo->setCurrentIndex(findStateIndex(franchisee_.location.state));
+    }
 
     // Zip Code
     auto zipGroup = locationRow->addWidget(std::make_unique<Wt::WContainerWidget>());
@@ -2725,7 +2763,7 @@ void FranchiseApp::showSettingsPage() {
     if (franchisee_.isConfigured) phoneInput->setText(franchisee_.phone);
 
     // Handle store selection change
-    storeCombo->changed().connect([this, storeCombo, nameInput, addressInput, cityInput, stateInput, zipInput, ownerInput, phoneInput] {
+    storeCombo->changed().connect([this, storeCombo, nameInput, addressInput, cityInput, stateCombo, findStateIndex, zipInput, ownerInput, phoneInput] {
         int idx = storeCombo->currentIndex();
         if (idx == 0) {
             // New Store - show name input and clear fields
@@ -2734,7 +2772,7 @@ void FranchiseApp::showSettingsPage() {
             nameInput->setText("");
             addressInput->setText("");
             cityInput->setText("");
-            stateInput->setText("");
+            stateCombo->setCurrentIndex(0);
             zipInput->setText("");
             ownerInput->setText("");
             phoneInput->setText("");
@@ -2747,7 +2785,7 @@ void FranchiseApp::showSettingsPage() {
             // Update form fields with separate address components
             addressInput->setText(store.addressLine1);
             cityInput->setText(store.city);
-            stateInput->setText(store.stateProvince);
+            stateCombo->setCurrentIndex(findStateIndex(store.stateProvince));
             zipInput->setText(store.postalCode);
             ownerInput->setText(franchisee_.ownerName);
             phoneInput->setText(store.phone);
@@ -3287,7 +3325,7 @@ void FranchiseApp::showSettingsPage() {
     statusMessage->setHidden(true);
 
     // Connect save button - saves ALL tabs
-    saveBtn->clicked().connect([this, saveBtn, storeCombo, nameInput, addressInput, cityInput, stateInput, zipInput,
+    saveBtn->clicked().connect([this, saveBtn, storeCombo, nameInput, addressInput, cityInput, stateCombo, getStateCode, zipInput,
                                 ownerInput, phoneInput, radiusInput,
                                 sizeCombo, typeCheckboxes, openaiInput, modelSelect, geminiInput,
                                 googleInput, bbbInput, censusInput, logoUrlInput, statusMessage, aiStatus,
@@ -3311,7 +3349,7 @@ void FranchiseApp::showSettingsPage() {
         // Get address components
         std::string streetAddress = addressInput->text().toUTF8();
         std::string city = cityInput->text().toUTF8();
-        std::string state = stateInput->text().toUTF8();
+        std::string state = getStateCode(stateCombo->currentIndex());
         std::string zipCode = zipInput->text().toUTF8();
 
         // Build full address for geocoding

@@ -1,3 +1,40 @@
+---
+marp: true
+theme: default
+paginate: true
+backgroundColor: #fff
+style: |
+  section {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  h1 {
+    color: #2563eb;
+  }
+  h2 {
+    color: #1e40af;
+  }
+  h3 {
+    color: #3b82f6;
+  }
+  table {
+    font-size: 0.85em;
+  }
+  blockquote {
+    border-left: 4px solid #3b82f6;
+    padding-left: 1em;
+    color: #4b5563;
+    font-style: italic;
+  }
+  code {
+    background-color: #f3f4f6;
+    padding: 0.2em 0.4em;
+    border-radius: 4px;
+  }
+  pre {
+    font-size: 0.7em;
+  }
+---
+
 # FranchiseAI: Intelligent Prospect Discovery Platform
 
 ## Proposal Presentation
@@ -171,6 +208,144 @@
 | $200,000 (Year 1) | $2.88M - $5.25M value | **14x - 26x** |
 
 **Payback Period: 4-6 weeks after deployment**
+
+---
+
+## Slide 7: The Value of AI in Marketing
+
+### Why AI is Transforming Marketing Operations
+
+**The Marketing Challenge:**
+- Customer expectations for personalization are at an all-time high
+- Data volumes have exploded beyond human processing capacity
+- Competition for attention requires faster, smarter outreach
+- Manual processes can't scale with business growth
+
+**AI Delivers Measurable Marketing Value:**
+
+| Capability | Traditional Approach | AI-Powered Approach | Value Gain |
+|------------|---------------------|---------------------|------------|
+| **Lead Qualification** | Manual review, 5-10 min/lead | Instant scoring | 95% time savings |
+| **Market Research** | Days of analyst work | Real-time insights | Hours → Minutes |
+| **Personalization** | Basic segmentation | 1:1 dynamic content | 3x engagement |
+| **Prospect Discovery** | Limited by human bandwidth | Comprehensive coverage | 90%+ market visibility |
+
+**Business Impact Statistics:**
+- **64%** of marketing leaders say AI is critical to their strategy (Salesforce)
+- **40%** improvement in sales productivity with AI tools (McKinsey)
+- **50%** reduction in customer acquisition costs (Harvard Business Review)
+- **3x** faster time-to-insight for market analysis
+
+> *"AI doesn't replace marketers—it amplifies their impact by handling the data work so they can focus on strategy and relationships."*
+
+---
+
+## Slide 8: AI Types Overview
+
+### Understanding the AI Landscape for Marketing Applications
+
+| AI Type | What It Does | Marketing Application |
+|---------|--------------|----------------------|
+| **Semantic Search** | Understands meaning and context, not just keywords | Natural language queries: "Find tech companies that might need catering" |
+| **Predictive Analytics** | Forecasts outcomes based on historical patterns | Lead scoring, churn prediction, demand forecasting |
+| **Large Language Models (LLMs)** | Generates and understands human-like text | Content creation, conversation AI, document analysis |
+| **Generative AI** | Creates new content (text, images, code) | Personalized outreach, creative assets, proposals |
+
+### How These AI Types Work Together
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    USER QUERY                                   │
+│        "Find restaurants near downtown for catering"            │
+└─────────────────────────┬───────────────────────────────────────┘
+                          ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  SEMANTIC SEARCH                                                │
+│  • Understands "restaurants" includes cafes, bistros, eateries  │
+│  • Interprets "downtown" as geographic center                   │
+│  • Recognizes "catering" as business intent                     │
+└─────────────────────────┬───────────────────────────────────────┘
+                          ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  PREDICTIVE ANALYTICS                                           │
+│  • Scores each prospect on likelihood to convert                │
+│  • Applies penalty/bonus rules based on data quality            │
+│  • Ranks results by catering potential                          │
+└─────────────────────────┬───────────────────────────────────────┘
+                          ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  LLM / GENERATIVE AI                                            │
+│  • Generates prospect analysis summaries                        │
+│  • Creates personalized outreach recommendations                │
+│  • Explains why each prospect is a good fit                     │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Key Differentiator: Agentic AI
+Modern AI systems combine multiple AI types into **autonomous agents** that can:
+- Break down complex tasks into steps
+- Use multiple tools and data sources
+- Learn from feedback and improve over time
+
+---
+
+## Slide 9: AI Integration in FranchiseAI Platform
+
+### How We Incorporate AI Across the Platform
+
+**1. Semantic Search Engine**
+| Feature | Implementation | User Benefit |
+|---------|---------------|--------------|
+| Natural Language Queries | Query understanding with intent extraction | Search like you speak |
+| Context-Aware Results | Business type mapping from OSM tags | Finds related businesses automatically |
+| Location Intelligence | Geocoding with fallback chain | Works with any address format |
+
+**2. Predictive Lead Scoring**
+| Component | How It Works | Customization |
+|-----------|-------------|---------------|
+| **Penalty Rules** | Deduct points for missing data (address, phone, reviews) | Configurable -50 to 0 points |
+| **Bonus Rules** | Add points for quality signals (verified, high ratings) | Configurable 0 to +50 points |
+| **Real-Time Scoring** | Scores calculated instantly as results load | Applied to every search |
+| **Background Optimization** | Progressive score refinement after initial display | Non-blocking UX |
+
+**3. LLM-Powered Analysis (OpenAI GPT-4o / Google Gemini)**
+| Capability | What It Does | When It Runs |
+|------------|--------------|--------------|
+| Prospect Analysis | Deep-dive assessment of catering potential | On-demand when saving prospects |
+| Key Highlights | Extracts top 3-5 selling points | With prospect save |
+| Recommended Actions | Suggests specific outreach strategies | With prospect save |
+| Match Reasoning | Explains why prospect fits your criteria | With prospect save |
+
+**4. Multi-Source Data Aggregation**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      FRANCHISEAI                                │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
+│  │ OpenStreet  │  │   Google    │  │    BBB      │             │
+│  │    Map      │  │   Places    │  │   Data      │             │
+│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘             │
+│         │                │                │                     │
+│         └────────────────┼────────────────┘                     │
+│                          ▼                                      │
+│              ┌───────────────────────┐                          │
+│              │   AI Fusion Engine    │                          │
+│              │  • Entity Resolution  │                          │
+│              │  • Deduplication      │                          │
+│              │  • Data Enrichment    │                          │
+│              └───────────┬───────────┘                          │
+│                          ▼                                      │
+│              ┌───────────────────────┐                          │
+│              │   Scored & Ranked     │                          │
+│              │      Prospects        │                          │
+│              └───────────────────────┘                          │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**AI Configuration Options:**
+- **AI Provider**: Choose between OpenAI GPT-4o or Google Gemini
+- **Scoring Rules**: Full control over penalty and bonus weights
+- **Analysis Depth**: On-demand analysis conserves API costs
 
 ---
 

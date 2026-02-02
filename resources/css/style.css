@@ -2428,13 +2428,22 @@ html, body {
     margin-bottom: 0;
 }
 
+/* Address layout - City, State, Zip row */
+.form-row.address-row {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 16px;
+    margin-top: 0;
+}
+
 .form-group-city {
     flex: 2;
+    min-width: 150px;
 }
 
 .form-group-state {
-    flex: 1;
-    min-width: 80px;
+    flex: 1.5;
+    min-width: 160px;
 }
 
 .form-group-zip {

@@ -1,0 +1,18 @@
+{
+  "name": "franchiseai-docs",
+  "version": "1.0.0",
+  "description": "FranchiseAI documentation and presentation tools",
+  "scripts": {
+    "slides:pdf": "marp PROPOSAL_DECK.md --pdf --allow-local-files",
+    "slides:pptx": "marp PROPOSAL_DECK.md --pptx --allow-local-files",
+    "slides:html": "marp PROPOSAL_DECK.md --html --allow-local-files",
+    "slides:watch": "marp PROPOSAL_DECK.md --watch --server",
+    "slides:all": "npm run slides:pdf && npm run slides:pptx && npm run slides:html"
+  },
+  "devDependencies": {
+    "@marp-team/marp-cli": "^3.4.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
