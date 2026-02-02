@@ -494,6 +494,23 @@ Switch Store → selectStoreById() → loadProspectsFromALS()
                                    GET /api/SavedProspect?filter[store_location_id]=...
 ```
 
+#### Non-Blocking Add to Prospects Workflow
+When adding prospects, FranchiseAI uses a **non-blocking toast notification** system:
+
+**How It Works:**
+1. Click "+ Add to Prospects" on any search result
+2. A floating toast notification appears in the corner showing:
+   - Business name and score badge
+   - Brief AI analysis excerpt
+   - Optional "View" link to My Prospects
+3. Toast auto-fades after 6 seconds
+4. Multiple toasts stack if adding prospects rapidly
+
+**Benefits:**
+- **Uninterrupted Flow**: Continue browsing and adding prospects without modal dialogs blocking interaction
+- **Visual Confirmation**: Clear feedback that prospect was saved successfully
+- **Efficient Bulk Discovery**: Add multiple prospects in quick succession without clicking "OK" repeatedly
+
 #### AI Analysis Workflow
 AI analysis is performed **on-demand** when you add a prospect:
 1. Search results use fast local scoring (instant results)
