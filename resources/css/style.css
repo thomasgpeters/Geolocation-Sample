@@ -1908,15 +1908,11 @@ html, body {
 .scoring-panel {
     border-radius: 12px;
     padding: 20px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
 }
 
-/* Penalties panel - red theme */
-.scoring-panel.penalties {
-    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-    border: 1px solid #fecaca;
-}
-
+/* Penalties panel - subtle styling, colored header only */
 .scoring-panel.penalties .panel-header {
     color: #991b1b;
     border-bottom: 2px solid #f87171;
@@ -1927,12 +1923,7 @@ html, body {
     color: white;
 }
 
-/* Bonuses panel - green theme */
-.scoring-panel.bonuses {
-    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-    border: 1px solid #bbf7d0;
-}
-
+/* Bonuses panel - subtle styling, colored header only */
 .scoring-panel.bonuses .panel-header {
     color: #166534;
     border-bottom: 2px solid #4ade80;
@@ -2031,10 +2022,56 @@ html, body {
     padding: 4px 0;
 }
 
+/* Wt Slider styling */
 .scoring-slider {
     width: 100%;
+    min-width: 120px;
 }
 
+.scoring-slider .Wt-slider {
+    width: 100% !important;
+    height: 20px;
+}
+
+.scoring-slider .Wt-slider-bg {
+    background: #e5e7eb;
+    height: 6px;
+    border-radius: 3px;
+    margin-top: 7px;
+}
+
+.scoring-slider .Wt-slider-fg {
+    height: 6px;
+    border-radius: 3px;
+}
+
+.scoring-panel.penalties .scoring-slider .Wt-slider-fg {
+    background: #fca5a5;
+}
+
+.scoring-panel.bonuses .scoring-slider .Wt-slider-fg {
+    background: #86efac;
+}
+
+.scoring-slider .Wt-slider-handle {
+    width: 18px !important;
+    height: 18px !important;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    margin-top: -6px;
+}
+
+.scoring-panel.penalties .scoring-slider .Wt-slider-handle {
+    background: #dc2626;
+}
+
+.scoring-panel.bonuses .scoring-slider .Wt-slider-handle {
+    background: #059669;
+}
+
+/* Fallback for native input range (if used) */
 .scoring-slider input[type="range"] {
     width: 100%;
     height: 6px;
@@ -2046,24 +2083,24 @@ html, body {
 
 .scoring-panel.penalties .scoring-slider input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     background: #dc2626;
     border-radius: 50%;
     cursor: pointer;
     border: 2px solid white;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
 
 .scoring-panel.bonuses .scoring-slider input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 16px;
-    height: 16px;
+    width: 18px;
+    height: 18px;
     background: #059669;
     border-radius: 50%;
     cursor: pointer;
     border: 2px solid white;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
 
 /* Points value cell */
