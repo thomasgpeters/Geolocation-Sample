@@ -633,10 +633,16 @@ void FranchiseApp::onAddToProspects(const std::string& id) {
             // Create a copy for saving
             Models::SearchResultItem prospectItem = item;
 
-            // Perform AI analysis for this specific prospect
+            // Show toast IMMEDIATELY (non-blocking feedback)
+            showToast(item.getTitle(), "Added to My Prospects - analyzing...", item.overallScore);
+
+            // Force UI update so toast appears before blocking operations
+            processEvents();
+
+            // Perform AI analysis for this specific prospect (may take a few seconds)
             analyzeProspect(prospectItem);
 
-            // Save to ApiLogicServer first (persists to database)
+            // Save to ApiLogicServer (persists to database)
             bool savedToServer = saveProspectToALS(prospectItem);
             if (!savedToServer) {
                 std::cerr << "  [App] Warning: Prospect saved locally but failed to persist to server" << std::endl;
@@ -644,19 +650,6 @@ void FranchiseApp::onAddToProspects(const std::string& id) {
 
             // Add to saved prospects (in-memory)
             savedProspects_.push_back(prospectItem);
-
-            // Show toast confirmation with AI summary excerpt if available
-            std::string toastMessage = "Added to My Prospects";
-            if (!prospectItem.aiSummary.empty()) {
-                // Truncate AI summary for toast display
-                std::string excerpt = prospectItem.aiSummary.substr(0, 120);
-                if (prospectItem.aiSummary.length() > 120) {
-                    excerpt += "...";
-                }
-                toastMessage = excerpt;
-            }
-
-            showToast(item.getTitle(), toastMessage, prospectItem.overallScore);
             break;
         }
     }
