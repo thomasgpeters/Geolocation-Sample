@@ -3227,11 +3227,13 @@ void FranchiseApp::showSettingsPage() {
         // Slider cell
         auto sliderCell = ruleRow->addWidget(std::make_unique<Wt::WContainerWidget>());
         sliderCell->setStyleClass("cell-slider");
-        auto slider = sliderCell->addWidget(std::make_unique<Wt::WSlider>());
+        auto slider = sliderCell->addWidget(std::make_unique<Wt::WSlider>(Wt::Orientation::Horizontal));
+        slider->setNativeControl(true);
         slider->setMinimum(rule->minPoints);
         slider->setMaximum(rule->maxPoints);
         slider->setValue(rule->currentPoints);
         slider->setStyleClass("scoring-slider");
+        slider->resize(Wt::WLength::Auto, 24);
         penaltySliders.push_back({rule->id, slider});
 
         // Points cell
@@ -3294,11 +3296,13 @@ void FranchiseApp::showSettingsPage() {
         // Slider cell
         auto sliderCell = ruleRow->addWidget(std::make_unique<Wt::WContainerWidget>());
         sliderCell->setStyleClass("cell-slider");
-        auto slider = sliderCell->addWidget(std::make_unique<Wt::WSlider>());
+        auto slider = sliderCell->addWidget(std::make_unique<Wt::WSlider>(Wt::Orientation::Horizontal));
+        slider->setNativeControl(true);
         slider->setMinimum(rule->minPoints);
         slider->setMaximum(rule->maxPoints);
         slider->setValue(rule->currentPoints);
         slider->setStyleClass("scoring-slider");
+        slider->resize(Wt::WLength::Auto, 24);
         bonusSliders.push_back({rule->id, slider});
 
         // Points cell
