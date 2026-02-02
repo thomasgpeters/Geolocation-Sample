@@ -181,6 +181,11 @@ private:
 
     // Helper to perform AI analysis on a single prospect
     void analyzeProspect(Models::SearchResultItem& item);
+
+    // Toast notification system
+    void showToast(const std::string& title, const std::string& message,
+                   int score = -1, int durationMs = 6000);
+    Wt::WContainerWidget* toastContainer_ = nullptr;
 };
 
 /**
