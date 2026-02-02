@@ -3465,8 +3465,41 @@ void FranchiseApp::loadStoreLocationFromALS() {
                 franchisee_.phone = loc.phone;
                 franchisee_.email = loc.email;
                 franchisee_.isConfigured = true;
+
+                // Load search criteria
+                franchisee_.searchCriteria.radiusMiles = loc.defaultSearchRadiusMiles;
+                franchisee_.searchCriteria.minEmployees = loc.minEmployees;
+                franchisee_.searchCriteria.maxEmployees = loc.maxEmployees;
+                franchisee_.searchCriteria.includeOpenStreetMap = loc.includeOpenStreetMap;
+                franchisee_.searchCriteria.includeGooglePlaces = loc.includeGooglePlaces;
+                franchisee_.searchCriteria.includeBBB = loc.includeBBB;
+
+                // Parse business types from comma-separated string
+                if (!loc.targetBusinessTypes.empty()) {
+                    franchisee_.searchCriteria.clearBusinessTypes();
+                    std::string types = loc.targetBusinessTypes;
+                    size_t pos = 0;
+                    while ((pos = types.find(',')) != std::string::npos || !types.empty()) {
+                        std::string token;
+                        if (pos != std::string::npos) {
+                            token = types.substr(0, pos);
+                            types.erase(0, pos + 1);
+                        } else {
+                            token = types;
+                            types.clear();
+                        }
+                        try {
+                            int typeInt = std::stoi(token);
+                            franchisee_.searchCriteria.addBusinessType(static_cast<Models::BusinessType>(typeInt));
+                        } catch (...) {}
+                    }
+                }
+
                 std::cout << "  [App] Store location loaded successfully: " << loc.storeName
                           << " at " << loc.latitude << ", " << loc.longitude << std::endl;
+                std::cout << "  [App] Search criteria loaded: minEmp=" << franchisee_.searchCriteria.minEmployees
+                          << ", maxEmp=" << franchisee_.searchCriteria.maxEmployees
+                          << ", types=" << franchisee_.searchCriteria.businessTypes.size() << std::endl;
                 return;
             }
         } else {
@@ -3501,6 +3534,25 @@ bool FranchiseApp::saveStoreLocationToALS() {
     dto.geocodeSource = "nominatim";
     dto.isPrimary = true;
     dto.isActive = true;
+
+    // Search criteria
+    dto.minEmployees = franchisee_.searchCriteria.minEmployees;
+    dto.maxEmployees = franchisee_.searchCriteria.maxEmployees;
+    dto.includeOpenStreetMap = franchisee_.searchCriteria.includeOpenStreetMap;
+    dto.includeGooglePlaces = franchisee_.searchCriteria.includeGooglePlaces;
+    dto.includeBBB = franchisee_.searchCriteria.includeBBB;
+
+    // Convert business types to comma-separated string
+    std::string types;
+    for (const auto& bt : franchisee_.searchCriteria.businessTypes) {
+        if (!types.empty()) types += ",";
+        types += std::to_string(static_cast<int>(bt));
+    }
+    dto.targetBusinessTypes = types;
+
+    std::cout << "  [App] Saving search criteria: minEmp=" << dto.minEmployees
+              << ", maxEmp=" << dto.maxEmployees
+              << ", types=" << dto.targetBusinessTypes << std::endl;
 
     auto response = alsClient_->saveStoreLocation(dto);
 
@@ -3580,6 +3632,35 @@ void FranchiseApp::selectStoreById(const std::string& storeId) {
         franchisee_.email = selectedStore.email;
         franchisee_.isConfigured = true;
 
+        // Load search criteria from selected store
+        franchisee_.searchCriteria.radiusMiles = selectedStore.defaultSearchRadiusMiles;
+        franchisee_.searchCriteria.minEmployees = selectedStore.minEmployees;
+        franchisee_.searchCriteria.maxEmployees = selectedStore.maxEmployees;
+        franchisee_.searchCriteria.includeOpenStreetMap = selectedStore.includeOpenStreetMap;
+        franchisee_.searchCriteria.includeGooglePlaces = selectedStore.includeGooglePlaces;
+        franchisee_.searchCriteria.includeBBB = selectedStore.includeBBB;
+
+        // Parse business types from comma-separated string
+        if (!selectedStore.targetBusinessTypes.empty()) {
+            franchisee_.searchCriteria.clearBusinessTypes();
+            std::string types = selectedStore.targetBusinessTypes;
+            size_t pos = 0;
+            while ((pos = types.find(',')) != std::string::npos || !types.empty()) {
+                std::string token;
+                if (pos != std::string::npos) {
+                    token = types.substr(0, pos);
+                    types.erase(0, pos + 1);
+                } else {
+                    token = types;
+                    types.clear();
+                }
+                try {
+                    int typeInt = std::stoi(token);
+                    franchisee_.searchCriteria.addBusinessType(static_cast<Models::BusinessType>(typeInt));
+                } catch (...) {}
+            }
+        }
+
         // Save as current store
         alsClient_->setAppConfigValue("current_store_id", storeId);
 
@@ -3588,6 +3669,8 @@ void FranchiseApp::selectStoreById(const std::string& storeId) {
 
         std::cout << "  [App] Selected store: " << selectedStore.storeName
                   << " at " << selectedStore.city << ", " << selectedStore.stateProvince << std::endl;
+        std::cout << "  [App] Search criteria loaded: minEmp=" << franchisee_.searchCriteria.minEmployees
+                  << ", maxEmp=" << franchisee_.searchCriteria.maxEmployees << std::endl;
     }
 }
 

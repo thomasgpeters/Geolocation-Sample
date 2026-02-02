@@ -46,6 +46,14 @@ struct StoreLocationDTO {
     bool isActive = true;
     bool isPrimary = false;
 
+    // Search criteria (persisted to database)
+    std::string targetBusinessTypes;  // Comma-separated list of business type IDs
+    int minEmployees = 0;
+    int maxEmployees = 100000;
+    bool includeOpenStreetMap = true;
+    bool includeGooglePlaces = false;
+    bool includeBBB = false;
+
     // Convert from Franchisee model
     static StoreLocationDTO fromFranchisee(const Models::Franchisee& f) {
         StoreLocationDTO dto;
@@ -61,6 +69,22 @@ struct StoreLocationDTO {
         dto.email = f.email;
         dto.geocodeSource = "nominatim";
         dto.isPrimary = true;
+
+        // Search criteria
+        dto.minEmployees = f.searchCriteria.minEmployees;
+        dto.maxEmployees = f.searchCriteria.maxEmployees;
+        dto.includeOpenStreetMap = f.searchCriteria.includeOpenStreetMap;
+        dto.includeGooglePlaces = f.searchCriteria.includeGooglePlaces;
+        dto.includeBBB = f.searchCriteria.includeBBB;
+
+        // Convert business types to comma-separated string
+        std::string types;
+        for (const auto& bt : f.searchCriteria.businessTypes) {
+            if (!types.empty()) types += ",";
+            types += std::to_string(static_cast<int>(bt));
+        }
+        dto.targetBusinessTypes = types;
+
         return dto;
     }
 
@@ -75,10 +99,41 @@ struct StoreLocationDTO {
         f.location.postalCode = postalCode;
         f.location.latitude = latitude;
         f.location.longitude = longitude;
+        f.location.isValid = true;
         f.defaultSearchRadiusMiles = defaultSearchRadiusMiles;
         f.phone = phone;
         f.email = email;
         f.isConfigured = true;
+
+        // Search criteria
+        f.searchCriteria.radiusMiles = defaultSearchRadiusMiles;
+        f.searchCriteria.minEmployees = minEmployees;
+        f.searchCriteria.maxEmployees = maxEmployees;
+        f.searchCriteria.includeOpenStreetMap = includeOpenStreetMap;
+        f.searchCriteria.includeGooglePlaces = includeGooglePlaces;
+        f.searchCriteria.includeBBB = includeBBB;
+
+        // Parse business types from comma-separated string
+        if (!targetBusinessTypes.empty()) {
+            f.searchCriteria.clearBusinessTypes();
+            std::string types = targetBusinessTypes;
+            size_t pos = 0;
+            while ((pos = types.find(',')) != std::string::npos || !types.empty()) {
+                std::string token;
+                if (pos != std::string::npos) {
+                    token = types.substr(0, pos);
+                    types.erase(0, pos + 1);
+                } else {
+                    token = types;
+                    types.clear();
+                }
+                try {
+                    int typeInt = std::stoi(token);
+                    f.searchCriteria.addBusinessType(static_cast<Models::BusinessType>(typeInt));
+                } catch (...) {}
+            }
+        }
+
         return f;
     }
 

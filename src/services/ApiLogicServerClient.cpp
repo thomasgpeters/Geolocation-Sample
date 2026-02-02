@@ -89,6 +89,16 @@ std::string StoreLocationDTO::toJson() const {
     json << ", \"is_active\": " << (isActive ? "true" : "false");
     json << ", \"is_primary\": " << (isPrimary ? "true" : "false");
 
+    // Search criteria
+    if (!targetBusinessTypes.empty()) {
+        json << ", \"target_business_types\": \"" << targetBusinessTypes << "\"";
+    }
+    json << ", \"min_employees\": " << minEmployees;
+    json << ", \"max_employees\": " << maxEmployees;
+    json << ", \"include_openstreetmap\": " << (includeOpenStreetMap ? "true" : "false");
+    json << ", \"include_google_places\": " << (includeGooglePlaces ? "true" : "false");
+    json << ", \"include_bbb\": " << (includeBBB ? "true" : "false");
+
     json << "}, \"type\": \"StoreLocation\"";  // Close attributes, add type
     if (!id.empty()) {
         json << ", \"id\": \"" << id << "\"";
@@ -171,6 +181,28 @@ StoreLocationDTO StoreLocationDTO::fromJson(const std::string& json) {
 
     std::string primaryStr = extractJsonString(json, "is_primary");
     dto.isPrimary = (primaryStr == "true" || primaryStr == "1");
+
+    // Search criteria
+    dto.targetBusinessTypes = extractJsonString(json, "target_business_types");
+
+    std::string minEmpStr = extractJsonString(json, "min_employees");
+    if (!minEmpStr.empty()) {
+        try { dto.minEmployees = std::stoi(minEmpStr); } catch (...) {}
+    }
+
+    std::string maxEmpStr = extractJsonString(json, "max_employees");
+    if (!maxEmpStr.empty()) {
+        try { dto.maxEmployees = std::stoi(maxEmpStr); } catch (...) {}
+    }
+
+    std::string osmStr = extractJsonString(json, "include_openstreetmap");
+    dto.includeOpenStreetMap = (osmStr.empty() || osmStr == "true" || osmStr == "1");
+
+    std::string googleStr = extractJsonString(json, "include_google_places");
+    dto.includeGooglePlaces = (googleStr == "true" || googleStr == "1");
+
+    std::string bbbStr = extractJsonString(json, "include_bbb");
+    dto.includeBBB = (bbbStr == "true" || bbbStr == "1");
 
     return dto;
 }
