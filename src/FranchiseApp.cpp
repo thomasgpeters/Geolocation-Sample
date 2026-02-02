@@ -2953,7 +2953,7 @@ void FranchiseApp::showSettingsPage() {
     auto penaltiesHeader = penaltiesPanel->addWidget(std::make_unique<Wt::WContainerWidget>());
     penaltiesHeader->setStyleClass("panel-header");
 
-    auto penaltyIcon = penaltiesHeader->addWidget(std::make_unique<Wt::WText>("-"));
+    auto penaltyIcon = penaltiesHeader->addWidget(std::make_unique<Wt::WText>("↓"));
     penaltyIcon->setStyleClass("panel-icon");
 
     auto penaltyTitleContainer = penaltiesHeader->addWidget(std::make_unique<Wt::WContainerWidget>());
@@ -3020,7 +3020,7 @@ void FranchiseApp::showSettingsPage() {
     auto bonusesHeader = bonusesPanel->addWidget(std::make_unique<Wt::WContainerWidget>());
     bonusesHeader->setStyleClass("panel-header");
 
-    auto bonusIcon = bonusesHeader->addWidget(std::make_unique<Wt::WText>("+"));
+    auto bonusIcon = bonusesHeader->addWidget(std::make_unique<Wt::WText>("↑"));
     bonusIcon->setStyleClass("panel-icon");
 
     auto bonusTitleContainer = bonusesHeader->addWidget(std::make_unique<Wt::WContainerWidget>());
