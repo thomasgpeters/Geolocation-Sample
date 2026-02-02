@@ -238,6 +238,57 @@ struct SavedProspectDTO {
 };
 
 /**
+ * @brief Data transfer object for Prospect entity (Franchisee's prospect list)
+ */
+struct ProspectDTO {
+    std::string id;                    // UUID (client-generated for new records)
+    std::string territoryId;           // FK to territory
+    std::string franchiseeId;          // FK to franchisee
+    std::string assignedToUserId;      // FK to user
+    std::string businessName;
+    std::string dbaName;               // "Doing Business As" name
+    std::string legalName;
+    std::string industryId;            // FK to industry
+    std::string industryNaics;         // NAICS code
+    std::string businessType;
+    int employeeCount = 0;
+    std::string employeeCountRange;    // e.g., "1-50", "51-200"
+    double annualRevenue = 0.0;
+    int yearEstablished = 0;
+    std::string addressLine1;
+    std::string addressLine2;
+    std::string city;
+    std::string stateProvince;
+    std::string postalCode;
+    std::string countryCode = "US";
+    double latitude = 0.0;
+    double longitude = 0.0;
+    std::string geocodeAccuracy;
+    std::string primaryPhone;
+    std::string secondaryPhone;
+    std::string email;
+    std::string website;
+    std::string linkedinUrl;
+    std::string facebookUrl;
+    std::string status = "new";        // new, contacted, qualified, converted, etc.
+    std::string statusChangedAt;
+    std::string dataSource;            // e.g., "OpenStreetMap", "GooglePlaces"
+    std::string sourceRecordId;        // Original ID from data source
+    bool isVerified = false;
+    bool isDuplicate = false;
+    std::string duplicateOfId;
+    bool doNotContact = false;
+    std::string createdAt;
+    std::string updatedAt;
+
+    // Convert to JSON string for API (JSON:API format)
+    std::string toJson() const;
+
+    // Parse from JSON response
+    static ProspectDTO fromJson(const std::string& json);
+};
+
+/**
  * @brief API response wrapper
  */
 struct ApiResponse {
@@ -401,6 +452,34 @@ public:
      * @return API response with list of prospects
      */
     ApiResponse getProspectsForFranchisee(const std::string& franchiseeId, int offset = 0, int limit = 50);
+
+    /**
+     * @brief Save a prospect (create new or update existing)
+     * @param prospect Prospect data
+     * @return API response
+     */
+    ApiResponse saveProspect(const ProspectDTO& prospect);
+
+    /**
+     * @brief Get a specific prospect by ID
+     * @param id UUID of the prospect
+     * @return API response with prospect data
+     */
+    ApiResponse getProspect(const std::string& id);
+
+    /**
+     * @brief Delete a prospect
+     * @param id UUID of the prospect
+     * @return API response
+     */
+    ApiResponse deleteProspect(const std::string& id);
+
+    /**
+     * @brief Parse prospects from API response
+     * @param response API response containing JSON array
+     * @return Vector of prospect DTOs
+     */
+    static std::vector<ProspectDTO> parseProspects(const ApiResponse& response);
 
     /**
      * @brief Get a specific saved prospect by ID
