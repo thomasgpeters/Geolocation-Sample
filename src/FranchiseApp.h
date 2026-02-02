@@ -4,6 +4,7 @@
 #include <Wt/WApplication.h>
 #include <Wt/WContainerWidget.h>
 #include <memory>
+#include <map>
 #include "widgets/Sidebar.h"
 #include "widgets/Navigation.h"
 #include "widgets/SearchPanel.h"
@@ -126,6 +127,9 @@ private:
     // ApiLogicServer integration - Scoring Rules
     void loadScoringRulesFromALS();
     bool saveScoringRulesToALS();
+
+    // Mapping of ruleId -> database UUID for scoring rules
+    std::map<std::string, std::string> scoringRuleDbIds_;
 
     // ApiLogicServer integration - Saved Prospects
     void loadProspectsFromALS();
