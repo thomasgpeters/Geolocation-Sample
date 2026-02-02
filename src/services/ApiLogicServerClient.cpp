@@ -755,20 +755,17 @@ ApiResponse ApiLogicServerClient::httpDelete(const std::string& path) {
 }
 
 ApiResponse ApiLogicServerClient::saveStoreLocation(const StoreLocationDTO& location) {
-    if (location.id.empty()) {
-        // Create new record - generate UUID client-side
-        StoreLocationDTO newLocation = location;
-        newLocation.id = generateUUID();
-        std::string json = newLocation.toJson();
-
-        std::cout << "  [ALS] Creating new StoreLocation with generated UUID: " << newLocation.id << std::endl;
-        return httpPost("/StoreLocation", json);
+    // Always use PATCH with ID in URL (upsert pattern)
+    // ApiLogicServer expects client-generated UUIDs
+    StoreLocationDTO dto = location;
+    if (dto.id.empty()) {
+        dto.id = generateUUID();
+        std::cout << "  [ALS] Creating new StoreLocation with generated UUID: " << dto.id << std::endl;
     } else {
-        // Update existing record (from dropdown selection)
-        std::string json = location.toJson();
-        std::cout << "  [ALS] Updating existing StoreLocation: " << location.id << std::endl;
-        return httpPatch("/StoreLocation/" + location.id, json);
+        std::cout << "  [ALS] Updating existing StoreLocation: " << dto.id << std::endl;
     }
+    std::string json = dto.toJson();
+    return httpPatch("/StoreLocation/" + dto.id, json);
 }
 
 ApiResponse ApiLogicServerClient::getStoreLocations() {
@@ -852,20 +849,17 @@ std::vector<StoreLocationDTO> ApiLogicServerClient::parseStoreLocations(const Ap
 // ============================================================================
 
 ApiResponse ApiLogicServerClient::saveFranchisee(const FranchiseeDTO& franchisee) {
-    if (franchisee.id.empty()) {
-        // Create new record - generate UUID client-side
-        FranchiseeDTO newFranchisee = franchisee;
-        newFranchisee.id = generateUUID();
-        std::string json = newFranchisee.toJson();
-
-        std::cout << "  [ALS] Creating new Franchisee with generated UUID: " << newFranchisee.id << std::endl;
-        return httpPost("/Franchisee", json);
+    // Always use PATCH with ID in URL (upsert pattern)
+    // ApiLogicServer expects client-generated UUIDs
+    FranchiseeDTO dto = franchisee;
+    if (dto.id.empty()) {
+        dto.id = generateUUID();
+        std::cout << "  [ALS] Creating new Franchisee with generated UUID: " << dto.id << std::endl;
     } else {
-        // Update existing record
-        std::string json = franchisee.toJson();
-        std::cout << "  [ALS] Updating existing Franchisee: " << franchisee.id << std::endl;
-        return httpPatch("/Franchisee/" + franchisee.id, json);
+        std::cout << "  [ALS] Updating existing Franchisee: " << dto.id << std::endl;
     }
+    std::string json = dto.toJson();
+    return httpPatch("/Franchisee/" + dto.id, json);
 }
 
 ApiResponse ApiLogicServerClient::getFranchisees() {
@@ -947,20 +941,17 @@ std::vector<FranchiseeDTO> ApiLogicServerClient::parseFranchisees(const ApiRespo
 // ============================================================================
 
 ApiResponse ApiLogicServerClient::saveScoringRule(const ScoringRuleDTO& rule) {
-    if (rule.id.empty()) {
-        // Create new record - generate UUID client-side
-        ScoringRuleDTO newRule = rule;
-        newRule.id = generateUUID();
-        std::string json = newRule.toJson();
-
-        std::cout << "  [ALS] Creating new ScoringRule with generated UUID: " << newRule.id << std::endl;
-        return httpPost("/scoring_rules", json);
+    // Always use PATCH with ID in URL (upsert pattern)
+    // ApiLogicServer expects client-generated UUIDs
+    ScoringRuleDTO dto = rule;
+    if (dto.id.empty()) {
+        dto.id = generateUUID();
+        std::cout << "  [ALS] Creating new ScoringRule with generated UUID: " << dto.id << std::endl;
     } else {
-        // Update existing record
-        std::string json = rule.toJson();
-        std::cout << "  [ALS] Updating existing ScoringRule: " << rule.id << std::endl;
-        return httpPatch("/scoring_rules/" + rule.id, json);
+        std::cout << "  [ALS] Updating existing ScoringRule: " << dto.id << std::endl;
     }
+    std::string json = dto.toJson();
+    return httpPatch("/scoring_rules/" + dto.id, json);
 }
 
 ApiResponse ApiLogicServerClient::getScoringRules() {
@@ -1050,20 +1041,17 @@ std::vector<ScoringRuleDTO> ApiLogicServerClient::parseScoringRules(const ApiRes
 // ============================================================================
 
 ApiResponse ApiLogicServerClient::saveProspect(const SavedProspectDTO& prospect) {
-    if (prospect.id.empty()) {
-        // Create new record - generate UUID client-side
-        SavedProspectDTO newProspect = prospect;
-        newProspect.id = generateUUID();
-        std::string json = newProspect.toJson();
-
-        std::cout << "  [ALS] Creating new SavedProspect with generated UUID: " << newProspect.id << std::endl;
-        return httpPost("/SavedProspect", json);
+    // Always use PATCH with ID in URL (upsert pattern)
+    // ApiLogicServer expects client-generated UUIDs
+    SavedProspectDTO dto = prospect;
+    if (dto.id.empty()) {
+        dto.id = generateUUID();
+        std::cout << "  [ALS] Creating new SavedProspect with generated UUID: " << dto.id << std::endl;
     } else {
-        // Update existing record
-        std::string json = prospect.toJson();
-        std::cout << "  [ALS] Updating existing SavedProspect: " << prospect.id << std::endl;
-        return httpPatch("/SavedProspect/" + prospect.id, json);
+        std::cout << "  [ALS] Updating existing SavedProspect: " << dto.id << std::endl;
     }
+    std::string json = dto.toJson();
+    return httpPatch("/SavedProspect/" + dto.id, json);
 }
 
 ApiResponse ApiLogicServerClient::getProspectsForStore(const std::string& storeLocationId) {
