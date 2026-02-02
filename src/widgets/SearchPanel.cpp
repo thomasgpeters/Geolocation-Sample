@@ -42,7 +42,7 @@ void SearchPanel::createLocationSection() {
     auto sectionTitle = section->addWidget(std::make_unique<Wt::WText>("📍 Location"));
     sectionTitle->setStyleClass("section-title");
 
-    // Location input - full width row
+    // Location input - full width row (single address field)
     auto locationGroup = section->addWidget(std::make_unique<Wt::WContainerWidget>());
     locationGroup->setStyleClass("form-group location-input-group");
 
@@ -51,58 +51,7 @@ void SearchPanel::createLocationSection() {
 
     locationInput_ = locationGroup->addWidget(std::make_unique<Wt::WLineEdit>());
     locationInput_->setStyleClass("form-input location-input");
-    locationInput_->setPlaceholderText("Enter city, state or address...");
-
-    // City, State, ZIP row (in that order)
-    auto addressRow = section->addWidget(std::make_unique<Wt::WContainerWidget>());
-    addressRow->setStyleClass("form-row");
-
-    auto cityGroup = addressRow->addWidget(std::make_unique<Wt::WContainerWidget>());
-    cityGroup->setStyleClass("form-group");
-
-    auto cityLabel = cityGroup->addWidget(std::make_unique<Wt::WText>("City"));
-    cityLabel->setStyleClass("form-label");
-
-    cityInput_ = cityGroup->addWidget(std::make_unique<Wt::WLineEdit>());
-    cityInput_->setStyleClass("form-input");
-    cityInput_->setPlaceholderText("City name");
-
-    auto stateGroup = addressRow->addWidget(std::make_unique<Wt::WContainerWidget>());
-    stateGroup->setStyleClass("form-group");
-
-    auto stateLabel = stateGroup->addWidget(std::make_unique<Wt::WText>("State"));
-    stateLabel->setStyleClass("form-label");
-
-    stateCombo_ = stateGroup->addWidget(std::make_unique<Wt::WComboBox>());
-    stateCombo_->setStyleClass("form-select");
-    stateCombo_->addItem("Select State");
-    stateCombo_->addItem("AL"); stateCombo_->addItem("AK"); stateCombo_->addItem("AZ");
-    stateCombo_->addItem("AR"); stateCombo_->addItem("CA"); stateCombo_->addItem("CO");
-    stateCombo_->addItem("CT"); stateCombo_->addItem("DE"); stateCombo_->addItem("FL");
-    stateCombo_->addItem("GA"); stateCombo_->addItem("HI"); stateCombo_->addItem("ID");
-    stateCombo_->addItem("IL"); stateCombo_->addItem("IN"); stateCombo_->addItem("IA");
-    stateCombo_->addItem("KS"); stateCombo_->addItem("KY"); stateCombo_->addItem("LA");
-    stateCombo_->addItem("ME"); stateCombo_->addItem("MD"); stateCombo_->addItem("MA");
-    stateCombo_->addItem("MI"); stateCombo_->addItem("MN"); stateCombo_->addItem("MS");
-    stateCombo_->addItem("MO"); stateCombo_->addItem("MT"); stateCombo_->addItem("NE");
-    stateCombo_->addItem("NV"); stateCombo_->addItem("NH"); stateCombo_->addItem("NJ");
-    stateCombo_->addItem("NM"); stateCombo_->addItem("NY"); stateCombo_->addItem("NC");
-    stateCombo_->addItem("ND"); stateCombo_->addItem("OH"); stateCombo_->addItem("OK");
-    stateCombo_->addItem("OR"); stateCombo_->addItem("PA"); stateCombo_->addItem("RI");
-    stateCombo_->addItem("SC"); stateCombo_->addItem("SD"); stateCombo_->addItem("TN");
-    stateCombo_->addItem("TX"); stateCombo_->addItem("UT"); stateCombo_->addItem("VT");
-    stateCombo_->addItem("VA"); stateCombo_->addItem("WA"); stateCombo_->addItem("WV");
-    stateCombo_->addItem("WI"); stateCombo_->addItem("WY");
-
-    auto zipGroup = addressRow->addWidget(std::make_unique<Wt::WContainerWidget>());
-    zipGroup->setStyleClass("form-group");
-
-    auto zipLabel = zipGroup->addWidget(std::make_unique<Wt::WText>("ZIP Code"));
-    zipLabel->setStyleClass("form-label");
-
-    zipCodeInput_ = zipGroup->addWidget(std::make_unique<Wt::WLineEdit>());
-    zipCodeInput_->setStyleClass("form-input");
-    zipCodeInput_->setPlaceholderText("e.g., 62701");
+    locationInput_->setPlaceholderText("Enter full address (e.g., 123 Main St, Pittsburgh, PA 15213)");
 
     // Radius slider
     auto radiusGroup = section->addWidget(std::make_unique<Wt::WContainerWidget>());
@@ -245,11 +194,6 @@ Models::SearchQuery SearchPanel::getSearchQuery() const {
     Models::SearchQuery query;
 
     if (locationInput_) query.location = locationInput_->text().toUTF8();
-    if (zipCodeInput_) query.zipCode = zipCodeInput_->text().toUTF8();
-    if (cityInput_) query.city = cityInput_->text().toUTF8();
-    if (stateCombo_ && stateCombo_->currentIndex() > 0) {
-        query.state = stateCombo_->currentText().toUTF8();
-    }
     if (keywordsInput_) query.keywords = keywordsInput_->text().toUTF8();
     if (radiusSlider_) query.radiusMiles = radiusSlider_->value();
     if (minScoreSlider_) query.minCateringScore = minScoreSlider_->value();
@@ -273,8 +217,6 @@ Models::SearchQuery SearchPanel::getSearchQuery() const {
 
 void SearchPanel::setSearchQuery(const Models::SearchQuery& query) {
     if (locationInput_) locationInput_->setText(query.location);
-    if (zipCodeInput_) zipCodeInput_->setText(query.zipCode);
-    if (cityInput_) cityInput_->setText(query.city);
     if (keywordsInput_) keywordsInput_->setText(query.keywords);
     if (radiusSlider_) {
         radiusSlider_->setValue(static_cast<int>(query.radiusMiles));
@@ -289,9 +231,6 @@ void SearchPanel::setSearchQuery(const Models::SearchQuery& query) {
 
 void SearchPanel::clearForm() {
     if (locationInput_) locationInput_->setText("");
-    if (zipCodeInput_) zipCodeInput_->setText("");
-    if (cityInput_) cityInput_->setText("");
-    if (stateCombo_) stateCombo_->setCurrentIndex(0);
     if (keywordsInput_) keywordsInput_->setText("");
     if (radiusSlider_) {
         radiusSlider_->setValue(25);

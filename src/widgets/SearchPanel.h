@@ -80,9 +80,6 @@ private:
 
     // UI components
     Wt::WLineEdit* locationInput_ = nullptr;
-    Wt::WLineEdit* zipCodeInput_ = nullptr;
-    Wt::WLineEdit* cityInput_ = nullptr;
-    Wt::WComboBox* stateCombo_ = nullptr;
     Wt::WLineEdit* keywordsInput_ = nullptr;
     Wt::WSlider* radiusSlider_ = nullptr;
     Wt::WText* radiusLabel_ = nullptr;
