@@ -125,6 +125,30 @@ struct Franchisee {
     }
 
     /**
+     * @brief Get full formatted address for display and geocoding
+     * Combines street address, city, state, and zip code
+     */
+    std::string getFullAddress() const {
+        std::string fullAddr;
+        if (!address.empty()) {
+            fullAddr = address;
+        }
+        if (!location.city.empty()) {
+            if (!fullAddr.empty()) fullAddr += ", ";
+            fullAddr += location.city;
+        }
+        if (!location.state.empty()) {
+            if (!fullAddr.empty()) fullAddr += ", ";
+            fullAddr += location.state;
+        }
+        if (!location.postalCode.empty()) {
+            if (!fullAddr.empty()) fullAddr += " ";
+            fullAddr += location.postalCode;
+        }
+        return fullAddr;
+    }
+
+    /**
      * @brief Create a search area centered on this franchisee
      */
     SearchArea createSearchArea() const {
