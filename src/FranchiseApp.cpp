@@ -1342,6 +1342,11 @@ void FranchiseApp::showAISearchPage() {
     resultsDisplay_->viewDetailsRequested().connect(this, &FranchiseApp::onViewDetails);
     resultsDisplay_->addToProspectsRequested().connect(this, &FranchiseApp::onAddToProspects);
     resultsDisplay_->exportRequested().connect(this, &FranchiseApp::onExportResults);
+
+    // Restore previous search results if they exist
+    if (hasActiveSearch_ && !lastResults_.items.empty()) {
+        resultsDisplay_->showResults(lastResults_);
+    }
 }
 
 void FranchiseApp::showProspectsPage() {
