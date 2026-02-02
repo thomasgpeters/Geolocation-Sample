@@ -8,6 +8,7 @@ This folder contains all technical and user documentation for the FranchiseAI Pr
 
 | Document | Description |
 |----------|-------------|
+| [RELEASE_NOTES_v2.md](RELEASE_NOTES_v2.md) | **NEW** - Version 2.0 release notes covering Hot Prospects, Scoring Engine, and performance improvements |
 | [USER_GUIDE.md](USER_GUIDE.md) | End-user guide for franchise owners - how to use the application to find catering prospects |
 | [FUNCTIONAL_DOC.md](FUNCTIONAL_DOC.md) | Functional specification detailing all features, workflows, and business logic |
 | [UI_GUIDE.md](UI_GUIDE.md) | UI/UX design guide with component specifications, styling guidelines, and layout patterns |
@@ -37,6 +38,7 @@ This folder contains all technical and user documentation for the FranchiseAI Pr
 
 ## Quick Links
 
+- **What's New**: See [RELEASE_NOTES_v2.md](RELEASE_NOTES_v2.md) for v2.0 features and improvements
 - **Getting Started**: See [USER_GUIDE.md](USER_GUIDE.md) for application usage
 - **API Performance**: See [PERFORMANCE_OPTIMIZATION.md](PERFORMANCE_OPTIMIZATION.md) for optimization details
 - **Development**: See [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) for roadmap and priorities
