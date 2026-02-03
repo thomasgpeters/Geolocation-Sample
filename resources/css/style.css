@@ -3921,61 +3921,137 @@ input[type="range"].scoring-slider::before {
     min-width: 60px;
 }
 
-.score-item .score-label {
-    font-size: 10px;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 2px;
-}
-
-.score-item .score-value {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--text-primary);
-}
-
-.score-item.ai-score .score-value {
-    color: #6366f1;
-}
-
-.score-item.optimized-score .score-value {
-    color: #059669;
-}
-
-.score-item.score-delta .score-value {
-    font-size: 14px;
-}
-
-.score-item.score-delta.positive .score-value {
-    color: #059669;
-}
-
-.score-item.score-delta.negative .score-value {
-    color: #dc2626;
-}
-
-/* Recommended Actions Section */
-.prospect-recommended-actions {
+/* New Score Display Section */
+.prospect-score-display {
+    display: flex;
+    align-items: center;
+    gap: 20px;
     margin-bottom: 12px;
-    padding: 10px 12px;
-    background-color: #fffbeb;
-    border: 1px solid #fde68a;
+    padding: 12px;
+    background: linear-gradient(to bottom, #f8fafc, #fff);
+    border: 1px solid #e2e8f0;
     border-radius: var(--border-radius);
 }
 
+.optimized-score-container,
+.ai-score-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.score-display-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 500;
+}
+
+.score-display-label.ai-label {
+    color: #9ca3af;
+}
+
+/* Optimized Score Bubble */
+.score-bubble {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    height: 44px;
+    padding: 0 12px;
+    border-radius: 22px;
+    font-size: 18px;
+    font-weight: 700;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.score-bubble.score-high {
+    background: linear-gradient(135deg, #10b981, #059669);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+}
+
+.score-bubble.score-medium {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+}
+
+.score-bubble.score-low {
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    box-shadow: 0 2px 8px rgba(249, 115, 22, 0.4);
+}
+
+.score-bubble.score-very-low {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+}
+
+/* AI Score (grey text) */
+.ai-score-value {
+    font-size: 16px;
+    font-weight: 600;
+    color: #9ca3af;
+}
+
+/* Recommended Actions Section (Collapsible) */
+.prospect-recommended-actions {
+    margin-bottom: 12px;
+    background-color: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+}
+
+.recommended-actions-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s ease;
+}
+
+.recommended-actions-header:hover {
+    background-color: #fef3c7;
+}
+
+.toggle-triangle {
+    font-size: 10px;
+    color: #92400e;
+    transition: transform 0.2s ease;
+}
+
 .recommended-actions-label {
-    display: block;
     font-size: 12px;
     font-weight: 600;
     color: #92400e;
-    margin-bottom: 8px;
+    margin: 0;
+}
+
+.actions-count {
+    font-size: 11px;
+    color: #b45309;
+    font-weight: 500;
 }
 
 .recommended-actions-list {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    padding: 0 12px 12px 28px;
+    transition: max-height 0.3s ease, opacity 0.2s ease, padding 0.3s ease;
+    max-height: 500px;
+    opacity: 1;
+}
+
+.recommended-actions-list.collapsed {
+    max-height: 0;
+    opacity: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    overflow: hidden;
 }
 
 .recommended-action-item {
