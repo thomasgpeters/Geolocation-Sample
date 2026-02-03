@@ -301,6 +301,15 @@ CREATE TABLE prospects (
     duplicate_of_id UUID REFERENCES prospects(id),
     do_not_contact BOOLEAN DEFAULT false,
 
+    -- AI Scoring and Analysis fields (for My Prospects display)
+    ai_score INTEGER CHECK (ai_score BETWEEN 0 AND 100),           -- Original AI-derived score
+    optimized_score INTEGER CHECK (optimized_score BETWEEN 0 AND 100),  -- Score after scoring rules applied
+    relevance_score DECIMAL(5, 4) CHECK (relevance_score BETWEEN 0 AND 1),  -- AI relevance score (0.0-1.0)
+    ai_summary TEXT,                                               -- AI-generated summary text
+    key_highlights TEXT,                                           -- Pipe-separated list of highlights
+    recommended_actions TEXT,                                       -- Pipe-separated list of actions
+    data_sources TEXT,                                              -- Comma-separated list of data sources
+
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -312,6 +321,7 @@ CREATE INDEX idx_prospects_industry ON prospects(industry_id);
 CREATE INDEX idx_prospects_postal_code ON prospects(postal_code);
 CREATE INDEX idx_prospects_created ON prospects(created_at DESC);
 CREATE INDEX idx_prospects_business_name ON prospects USING gin(to_tsvector('english', business_name));
+CREATE INDEX idx_prospects_optimized_score ON prospects(optimized_score DESC) WHERE optimized_score IS NOT NULL;
 
 COMMENT ON TABLE prospects IS 'Prospective catering clients with full business details';
 
