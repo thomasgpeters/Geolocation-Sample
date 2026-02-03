@@ -281,6 +281,15 @@ struct ProspectDTO {
     std::string createdAt;
     std::string updatedAt;
 
+    // AI and scoring fields (for My Prospects display)
+    int aiScore = 0;                   // Original AI-derived score (0-100)
+    int optimizedScore = 0;            // Score after scoring rules applied (0-100)
+    std::string aiSummary;             // AI-generated summary text
+    std::string keyHighlights;         // Comma-separated list of highlights
+    std::string recommendedActions;    // Comma-separated list of actions
+    double relevanceScore = 0.0;       // AI relevance score (0.0-1.0)
+    std::string dataSources;           // Comma-separated list of data sources
+
     // Convert to JSON string for API (JSON:API format)
     std::string toJson() const;
 
