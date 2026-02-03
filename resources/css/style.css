@@ -5362,4 +5362,29 @@ input[type="range"].scoring-slider::before {
 
 .toast.toast-info::after {
     background: var(--info-color);
+    animation: none;  /* No progress animation for search toast */
+    width: 100%;
+}
+
+/* Search toast icon */
+.toast-icon {
+    font-size: 18px;
+    margin-right: 8px;
+}
+
+/* Animated spinner for search toast */
+.toast-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #e5e7eb;
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: toast-spin 0.8s linear infinite;
+    margin-left: auto;
+}
+
+@keyframes toast-spin {
+    to {
+        transform: rotate(360deg);
+    }
 }

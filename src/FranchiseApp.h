@@ -201,6 +201,11 @@ private:
     void showToast(const std::string& title, const std::string& message,
                    int score = -1, int durationMs = 6000);
     Wt::WContainerWidget* toastContainer_ = nullptr;
+
+    // Search progress toast
+    void showSearchToast();
+    void hideSearchToast();
+    Wt::WContainerWidget* searchToast_ = nullptr;
 };
 
 /**
