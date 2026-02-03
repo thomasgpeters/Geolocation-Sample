@@ -66,10 +66,12 @@ void SearchPanel::createLocationSection() {
     radiusLabel_ = radiusLabelContainer->addWidget(std::make_unique<Wt::WText>("25 miles"));
     radiusLabel_->setStyleClass("form-value");
 
-    radiusSlider_ = radiusGroup->addWidget(std::make_unique<Wt::WSlider>());
+    radiusSlider_ = radiusGroup->addWidget(std::make_unique<Wt::WSlider>(Wt::Orientation::Horizontal));
+    radiusSlider_->setNativeControl(true);
     radiusSlider_->setStyleClass("form-slider");
     radiusSlider_->setRange(5, 100);
     radiusSlider_->setValue(25);
+    radiusSlider_->resize(Wt::WLength::Auto, 24);
     radiusSlider_->valueChanged().connect([this] {
         radiusLabel_->setText(std::to_string(radiusSlider_->value()) + " miles");
     });
@@ -116,10 +118,12 @@ void SearchPanel::createFiltersSection() {
     minScoreLabel_ = scoreLabelContainer->addWidget(std::make_unique<Wt::WText>("0"));
     minScoreLabel_->setStyleClass("form-value");
 
-    minScoreSlider_ = scoreGroup->addWidget(std::make_unique<Wt::WSlider>());
+    minScoreSlider_ = scoreGroup->addWidget(std::make_unique<Wt::WSlider>(Wt::Orientation::Horizontal));
+    minScoreSlider_->setNativeControl(true);
     minScoreSlider_->setStyleClass("form-slider");
     minScoreSlider_->setRange(0, 80);
     minScoreSlider_->setValue(0);
+    minScoreSlider_->resize(Wt::WLength::Auto, 24);
     minScoreSlider_->valueChanged().connect([this] {
         minScoreLabel_->setText(std::to_string(minScoreSlider_->value()));
     });

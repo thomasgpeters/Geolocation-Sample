@@ -3227,11 +3227,13 @@ void FranchiseApp::showSettingsPage() {
         // Slider cell
         auto sliderCell = ruleRow->addWidget(std::make_unique<Wt::WContainerWidget>());
         sliderCell->setStyleClass("cell-slider");
-        auto slider = sliderCell->addWidget(std::make_unique<Wt::WSlider>());
+        auto slider = sliderCell->addWidget(std::make_unique<Wt::WSlider>(Wt::Orientation::Horizontal));
+        slider->setNativeControl(true);
         slider->setMinimum(rule->minPoints);
         slider->setMaximum(rule->maxPoints);
         slider->setValue(rule->currentPoints);
         slider->setStyleClass("scoring-slider");
+        slider->resize(Wt::WLength::Auto, 24);
         penaltySliders.push_back({rule->id, slider});
 
         // Points cell
@@ -3294,11 +3296,13 @@ void FranchiseApp::showSettingsPage() {
         // Slider cell
         auto sliderCell = ruleRow->addWidget(std::make_unique<Wt::WContainerWidget>());
         sliderCell->setStyleClass("cell-slider");
-        auto slider = sliderCell->addWidget(std::make_unique<Wt::WSlider>());
+        auto slider = sliderCell->addWidget(std::make_unique<Wt::WSlider>(Wt::Orientation::Horizontal));
+        slider->setNativeControl(true);
         slider->setMinimum(rule->minPoints);
         slider->setMaximum(rule->maxPoints);
         slider->setValue(rule->currentPoints);
         slider->setStyleClass("scoring-slider");
+        slider->resize(Wt::WLength::Auto, 24);
         bonusSliders.push_back({rule->id, slider});
 
         // Points cell
@@ -4305,21 +4309,22 @@ bool FranchiseApp::saveScoringRulesToALS() {
 // ============================================================================
 
 void FranchiseApp::loadProspectsFromALS() {
-    if (currentStoreLocationId_.empty()) {
-        std::cout << "  [App] Cannot load prospects - no store location selected" << std::endl;
+    if (currentFranchiseeId_.empty()) {
+        std::cout << "  [App] Cannot load prospects - no franchisee selected" << std::endl;
         savedProspects_.clear();
         return;
     }
 
-    std::cout << "  [App] Loading prospects for store: " << currentStoreLocationId_ << std::endl;
+    std::cout << "  [App] Loading prospects for franchisee: " << currentFranchiseeId_ << std::endl;
 
-    auto response = alsClient_->getProspectsForStore(currentStoreLocationId_);
+    // Use the Franchisee/{id}/ProspectList endpoint
+    auto response = alsClient_->getProspectsForFranchisee(currentFranchiseeId_);
     if (!response.success) {
         std::cerr << "  [App] Failed to load prospects: " << response.errorMessage << std::endl;
         return;
     }
 
-    auto prospectDTOs = Services::ApiLogicServerClient::parseSavedProspects(response);
+    auto prospectDTOs = Services::ApiLogicServerClient::parseProspects(response);
     savedProspects_.clear();
 
     for (const auto& dto : prospectDTOs) {
@@ -4330,22 +4335,18 @@ void FranchiseApp::loadProspectsFromALS() {
 }
 
 bool FranchiseApp::saveProspectToALS(const Models::SearchResultItem& item) {
-    if (currentStoreLocationId_.empty()) {
-        std::cerr << "  [App] Cannot save prospect - no store location selected" << std::endl;
+    if (currentFranchiseeId_.empty()) {
+        std::cerr << "  [App] Cannot save prospect - no franchisee selected" << std::endl;
         return false;
     }
 
-    Services::SavedProspectDTO dto = prospectItemToDTO(item);
-    dto.storeLocationId = currentStoreLocationId_;
+    Services::ProspectDTO dto = prospectItemToDTO(item);
+    dto.franchiseeId = currentFranchiseeId_;
 
-    // Generate ISO timestamp for saved_at
-    auto now = std::chrono::system_clock::now();
-    auto time_t_now = std::chrono::system_clock::to_time_t(now);
-    std::tm tm_now;
-    gmtime_r(&time_t_now, &tm_now);
-    char buffer[30];
-    std::strftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%SZ", &tm_now);
-    dto.savedAt = buffer;
+    // Set status for new prospects
+    if (dto.status.empty()) {
+        dto.status = "new";
+    }
 
     auto response = alsClient_->saveProspect(dto);
     if (!response.success) {
@@ -4362,7 +4363,7 @@ bool FranchiseApp::deleteProspectFromALS(const std::string& prospectId) {
         return false;
     }
 
-    auto response = alsClient_->deleteSavedProspect(prospectId);
+    auto response = alsClient_->deleteProspect(prospectId);
     if (!response.success) {
         std::cerr << "  [App] Failed to delete prospect: " << response.errorMessage << std::endl;
         return false;
@@ -4372,109 +4373,53 @@ bool FranchiseApp::deleteProspectFromALS(const std::string& prospectId) {
     return true;
 }
 
-Services::SavedProspectDTO FranchiseApp::prospectItemToDTO(const Models::SearchResultItem& item) {
-    Services::SavedProspectDTO dto;
+Services::ProspectDTO FranchiseApp::prospectItemToDTO(const Models::SearchResultItem& item) {
+    Services::ProspectDTO dto;
 
     // Copy ID if available (for updates)
     dto.id = item.id;
 
     if (item.business) {
         dto.businessName = item.business->name;
-        dto.businessCategory = item.business->category;
+        dto.businessType = item.business->category;
         dto.addressLine1 = item.business->address.street1;
         dto.addressLine2 = item.business->address.street2;
         dto.city = item.business->address.city;
         dto.stateProvince = item.business->address.state;
         dto.postalCode = item.business->address.zipCode;
-        dto.countryCode = item.business->address.country;
+        dto.countryCode = item.business->address.country.empty() ? "US" : item.business->address.country;
         dto.latitude = item.business->address.latitude;
         dto.longitude = item.business->address.longitude;
-        dto.phone = item.business->contact.primaryPhone;
+        dto.primaryPhone = item.business->contact.primaryPhone;
         dto.email = item.business->contact.email;
         dto.website = item.business->contact.website;
         dto.employeeCount = item.business->employeeCount;
-        dto.cateringPotentialScore = item.business->cateringPotentialScore;
         dto.dataSource = Models::dataSourceToString(item.business->source);
+
+        // Map employee count to range
+        if (dto.employeeCount <= 10) dto.employeeCountRange = "1-10";
+        else if (dto.employeeCount <= 50) dto.employeeCountRange = "11-50";
+        else if (dto.employeeCount <= 200) dto.employeeCountRange = "51-200";
+        else if (dto.employeeCount <= 500) dto.employeeCountRange = "201-500";
+        else dto.employeeCountRange = "500+";
     }
 
-    dto.relevanceScore = item.relevanceScore;
-    dto.distanceMiles = item.distanceMiles;
-    dto.aiSummary = item.aiSummary;
-    dto.matchReason = item.matchReason;
-
-    // Convert highlights to comma-separated string
-    std::string highlights;
-    for (const auto& h : item.keyHighlights) {
-        if (!highlights.empty()) highlights += "|";
-        highlights += h;
-    }
-    dto.keyHighlights = highlights;
-
-    // Convert actions to comma-separated string
-    std::string actions;
-    for (const auto& a : item.recommendedActions) {
-        if (!actions.empty()) actions += "|";
-        actions += a;
-    }
-    dto.recommendedActions = actions;
+    dto.status = "new";
 
     return dto;
 }
 
-Models::SearchResultItem FranchiseApp::dtoToProspectItem(const Services::SavedProspectDTO& dto) {
+Models::SearchResultItem FranchiseApp::dtoToProspectItem(const Services::ProspectDTO& dto) {
     Models::SearchResultItem item;
 
     item.id = dto.id;
     item.resultType = Models::SearchResultType::BUSINESS;
-    item.relevanceScore = dto.relevanceScore;
-    item.overallScore = dto.cateringPotentialScore;
-    item.distanceMiles = dto.distanceMiles;
-    item.aiSummary = dto.aiSummary;
-    item.matchReason = dto.matchReason;
-
-    // Parse highlights from pipe-separated string
-    if (!dto.keyHighlights.empty()) {
-        std::string highlights = dto.keyHighlights;
-        size_t pos = 0;
-        while ((pos = highlights.find('|')) != std::string::npos || !highlights.empty()) {
-            std::string token;
-            if (pos != std::string::npos) {
-                token = highlights.substr(0, pos);
-                highlights.erase(0, pos + 1);
-            } else {
-                token = highlights;
-                highlights.clear();
-            }
-            if (!token.empty()) {
-                item.keyHighlights.push_back(token);
-            }
-        }
-    }
-
-    // Parse actions from pipe-separated string
-    if (!dto.recommendedActions.empty()) {
-        std::string actions = dto.recommendedActions;
-        size_t pos = 0;
-        while ((pos = actions.find('|')) != std::string::npos || !actions.empty()) {
-            std::string token;
-            if (pos != std::string::npos) {
-                token = actions.substr(0, pos);
-                actions.erase(0, pos + 1);
-            } else {
-                token = actions;
-                actions.clear();
-            }
-            if (!token.empty()) {
-                item.recommendedActions.push_back(token);
-            }
-        }
-    }
 
     // Create business info
     auto business = std::make_shared<Models::BusinessInfo>();
     business->id = dto.id;
     business->name = dto.businessName;
-    business->category = dto.businessCategory;
+    business->category = dto.businessType;
     business->address.street1 = dto.addressLine1;
     business->address.street2 = dto.addressLine2;
     business->address.city = dto.city;
@@ -4483,18 +4428,19 @@ Models::SearchResultItem FranchiseApp::dtoToProspectItem(const Services::SavedPr
     business->address.country = dto.countryCode;
     business->address.latitude = dto.latitude;
     business->address.longitude = dto.longitude;
-    business->contact.primaryPhone = dto.phone;
+    business->contact.primaryPhone = dto.primaryPhone;
+    business->contact.secondaryPhone = dto.secondaryPhone;
     business->contact.email = dto.email;
     business->contact.website = dto.website;
     business->employeeCount = dto.employeeCount;
-    business->cateringPotentialScore = dto.cateringPotentialScore;
+    business->yearEstablished = dto.yearEstablished;
 
     // Parse data source
     if (dto.dataSource == "OpenStreetMap") {
         business->source = Models::DataSource::OPENSTREETMAP;
-    } else if (dto.dataSource == "Google My Business") {
+    } else if (dto.dataSource == "Google My Business" || dto.dataSource == "GooglePlaces") {
         business->source = Models::DataSource::GOOGLE_MY_BUSINESS;
-    } else if (dto.dataSource == "Better Business Bureau") {
+    } else if (dto.dataSource == "Better Business Bureau" || dto.dataSource == "BBB") {
         business->source = Models::DataSource::BBB;
     } else {
         business->source = Models::DataSource::IMPORTED;

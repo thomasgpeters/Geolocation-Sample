@@ -1105,6 +1105,52 @@ html, body {
     margin-top: 4px;
 }
 
+/* Native input range styling for form sliders */
+.form-slider input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+}
+
+.form-slider input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    background: var(--primary-color);
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.form-slider input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    background: var(--primary-color);
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.form-slider input[type="range"]::-webkit-slider-runnable-track {
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 3px;
+}
+
+.form-slider input[type="range"]::-moz-range-track {
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 3px;
+}
+
 /* Slider group - clean container for full-width sliders */
 .slider-group {
     margin-bottom: 14px;
