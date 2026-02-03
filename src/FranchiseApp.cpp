@@ -1629,29 +1629,55 @@ void FranchiseApp::showProspectsPage() {
             const auto& prospect = savedProspects_[i];
 
             auto card = prospectsList->addWidget(std::make_unique<Wt::WContainerWidget>());
-            card->setStyleClass("prospect-card");
+            card->setStyleClass("prospect-card prospect-card-two-column");
 
-            // Card header with name and score
-            auto cardHeader = card->addWidget(std::make_unique<Wt::WContainerWidget>());
+            // Two-column layout: left for main content, right for actions/scores
+            auto cardBody = card->addWidget(std::make_unique<Wt::WContainerWidget>());
+            cardBody->setStyleClass("prospect-card-body");
+
+            auto leftColumn = cardBody->addWidget(std::make_unique<Wt::WContainerWidget>());
+            leftColumn->setStyleClass("prospect-left-column");
+
+            auto rightColumn = cardBody->addWidget(std::make_unique<Wt::WContainerWidget>());
+            rightColumn->setStyleClass("prospect-right-column");
+
+            // === LEFT COLUMN: Icon, name, info ===
+            // Card header with icon and name
+            auto cardHeader = leftColumn->addWidget(std::make_unique<Wt::WContainerWidget>());
             cardHeader->setStyleClass("prospect-card-header");
+
+            // Business type icon (greyscale)
+            std::string businessIcon = "🏢"; // Default: Corporate Office
+            if (prospect.business) {
+                switch (prospect.business->type) {
+                    case Models::BusinessType::CORPORATE_OFFICE: businessIcon = "🏢"; break;
+                    case Models::BusinessType::WAREHOUSE: businessIcon = "🏭"; break;
+                    case Models::BusinessType::CONFERENCE_CENTER: businessIcon = "🏛️"; break;
+                    case Models::BusinessType::HOTEL: businessIcon = "🏨"; break;
+                    case Models::BusinessType::COWORKING_SPACE: businessIcon = "💼"; break;
+                    case Models::BusinessType::MEDICAL_FACILITY: businessIcon = "🏥"; break;
+                    case Models::BusinessType::EDUCATIONAL_INSTITUTION: businessIcon = "🎓"; break;
+                    case Models::BusinessType::GOVERNMENT_OFFICE: businessIcon = "🏛️"; break;
+                    case Models::BusinessType::MANUFACTURING: businessIcon = "⚙️"; break;
+                    case Models::BusinessType::TECH_COMPANY: businessIcon = "💻"; break;
+                    case Models::BusinessType::FINANCIAL_SERVICES: businessIcon = "🏦"; break;
+                    case Models::BusinessType::LAW_FIRM: businessIcon = "⚖️"; break;
+                    case Models::BusinessType::NONPROFIT: businessIcon = "❤️"; break;
+                    default: businessIcon = "🏢"; break;
+                }
+            }
+
+            auto iconContainer = cardHeader->addWidget(std::make_unique<Wt::WContainerWidget>());
+            iconContainer->setStyleClass("prospect-type-icon");
+            auto icon = iconContainer->addWidget(std::make_unique<Wt::WText>(businessIcon));
+            icon->setStyleClass("type-icon-emoji");
 
             auto nameText = cardHeader->addWidget(std::make_unique<Wt::WText>(prospect.getTitle()));
             nameText->setStyleClass("prospect-name");
 
-            // Score badge
-            std::string scoreClass = "prospect-score";
-            if (prospect.overallScore >= 70) scoreClass += " score-high";
-            else if (prospect.overallScore >= 40) scoreClass += " score-medium";
-            else scoreClass += " score-low";
-
-            auto scoreText = cardHeader->addWidget(std::make_unique<Wt::WText>(
-                std::to_string(prospect.overallScore) + "%"
-            ));
-            scoreText->setStyleClass(scoreClass);
-
             // Business info
             if (prospect.business) {
-                auto infoContainer = card->addWidget(std::make_unique<Wt::WContainerWidget>());
+                auto infoContainer = leftColumn->addWidget(std::make_unique<Wt::WContainerWidget>());
                 infoContainer->setStyleClass("prospect-info");
 
                 std::string fullAddress = prospect.business->address.getFullAddress();
@@ -1663,7 +1689,7 @@ void FranchiseApp::showProspectsPage() {
                 }
 
                 // Stat badges container
-                auto statsContainer = card->addWidget(std::make_unique<Wt::WContainerWidget>());
+                auto statsContainer = leftColumn->addWidget(std::make_unique<Wt::WContainerWidget>());
                 statsContainer->setStyleClass("prospect-stats");
 
                 // Business type badge
@@ -1727,7 +1753,7 @@ void FranchiseApp::showProspectsPage() {
 
                 // Data Source bubbles
                 if (!prospect.sources.empty()) {
-                    auto sourcesContainer = card->addWidget(std::make_unique<Wt::WContainerWidget>());
+                    auto sourcesContainer = leftColumn->addWidget(std::make_unique<Wt::WContainerWidget>());
                     sourcesContainer->setStyleClass("prospect-sources");
 
                     auto sourcesLabel = sourcesContainer->addWidget(std::make_unique<Wt::WText>("Data Sources: "));
@@ -1741,7 +1767,7 @@ void FranchiseApp::showProspectsPage() {
                     }
                 } else if (prospect.business && prospect.business->source != Models::DataSource::IMPORTED) {
                     // Show single source from business if no multi-source list
-                    auto sourcesContainer = card->addWidget(std::make_unique<Wt::WContainerWidget>());
+                    auto sourcesContainer = leftColumn->addWidget(std::make_unique<Wt::WContainerWidget>());
                     sourcesContainer->setStyleClass("prospect-sources");
 
                     auto sourcesLabel = sourcesContainer->addWidget(std::make_unique<Wt::WText>("Data Source: "));
@@ -1754,11 +1780,13 @@ void FranchiseApp::showProspectsPage() {
                 }
             }
 
-            // Score display section (Optimized Score bubble + AI Score text)
-            auto scoreDisplayContainer = card->addWidget(std::make_unique<Wt::WContainerWidget>());
-            scoreDisplayContainer->setStyleClass("prospect-score-display");
+            // === RIGHT COLUMN: Scores (Mac-style) + Recommended Actions ===
 
-            // Optimized Score as colored bubble
+            // Score display section (Mac app icon style - score on top, label below, centered)
+            auto scoreDisplayContainer = rightColumn->addWidget(std::make_unique<Wt::WContainerWidget>());
+            scoreDisplayContainer->setStyleClass("prospect-score-display mac-style");
+
+            // Optimized Score as colored bubble (Mac app icon style)
             int optimizedScore = prospect.overallScore;
             std::string scoreBubbleClass = "score-bubble";
             if (optimizedScore >= 80) {
@@ -1772,30 +1800,66 @@ void FranchiseApp::showProspectsPage() {
             }
 
             auto optimizedContainer = scoreDisplayContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
-            optimizedContainer->setStyleClass("optimized-score-container");
-
-            auto optLabel = optimizedContainer->addWidget(std::make_unique<Wt::WText>("Optimized Score"));
-            optLabel->setStyleClass("score-display-label");
+            optimizedContainer->setStyleClass("score-icon-container");
 
             auto optBubble = optimizedContainer->addWidget(std::make_unique<Wt::WText>(std::to_string(optimizedScore)));
             optBubble->setStyleClass(scoreBubbleClass);
 
-            // AI Score as grey text (if available)
+            auto optLabel = optimizedContainer->addWidget(std::make_unique<Wt::WText>("Optimized"));
+            optLabel->setStyleClass("score-icon-label");
+
+            // AI Score (Mac app icon style)
             if (prospect.aiConfidenceScore > 0 || prospect.relevanceScore > 0) {
                 auto aiContainer = scoreDisplayContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
-                aiContainer->setStyleClass("ai-score-container");
-
-                auto aiLabel = aiContainer->addWidget(std::make_unique<Wt::WText>("AI Score"));
-                aiLabel->setStyleClass("score-display-label ai-label");
+                aiContainer->setStyleClass("score-icon-container ai-score");
 
                 int aiScoreValue = static_cast<int>((prospect.aiConfidenceScore > 0 ? prospect.aiConfidenceScore : prospect.relevanceScore) * 100);
                 auto aiValue = aiContainer->addWidget(std::make_unique<Wt::WText>(std::to_string(aiScoreValue)));
                 aiValue->setStyleClass("ai-score-value");
+
+                auto aiLabel = aiContainer->addWidget(std::make_unique<Wt::WText>("AI Score"));
+                aiLabel->setStyleClass("score-icon-label ai-label");
             }
 
-            // AI Summary (if available)
+            // AI Expand button with popover info
+            auto expandBtnContainer = scoreDisplayContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
+            expandBtnContainer->setStyleClass("ai-expand-container");
+
+            auto expandBtn = expandBtnContainer->addWidget(std::make_unique<Wt::WPushButton>("⚡"));
+            expandBtn->setStyleClass("ai-expand-btn");
+            expandBtn->setToolTip("Expand with AI Engine");
+
+            // Popover container (hidden by default)
+            auto popoverContainer = expandBtnContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
+            popoverContainer->setStyleClass("ai-popover hidden");
+
+            auto popoverTitle = popoverContainer->addWidget(std::make_unique<Wt::WText>("AI Engine"));
+            popoverTitle->setStyleClass("popover-title");
+
+            auto popoverDesc = popoverContainer->addWidget(std::make_unique<Wt::WText>(
+                "Expand prospect data with AI-powered analysis"
+            ));
+            popoverDesc->setStyleClass("popover-desc");
+
+            auto analyzeBtn = popoverContainer->addWidget(std::make_unique<Wt::WPushButton>("🔍 Deep Analyze"));
+            analyzeBtn->setStyleClass("btn btn-sm btn-primary popover-btn");
+
+            auto enrichBtn = popoverContainer->addWidget(std::make_unique<Wt::WPushButton>("📊 Enrich Data"));
+            enrichBtn->setStyleClass("btn btn-sm btn-secondary popover-btn");
+
+            // Toggle popover on button click
+            expandBtn->clicked().connect([popoverContainer] {
+                std::string currentClass = popoverContainer->styleClass().toUTF8();
+                if (currentClass.find("hidden") != std::string::npos) {
+                    popoverContainer->setStyleClass("ai-popover visible");
+                } else {
+                    popoverContainer->setStyleClass("ai-popover hidden");
+                }
+            });
+
+            // AI Summary (if available) - in left column
             if (!prospect.aiSummary.empty()) {
-                auto summaryContainer = card->addWidget(std::make_unique<Wt::WContainerWidget>());
+                auto summaryContainer = leftColumn->addWidget(std::make_unique<Wt::WContainerWidget>());
                 summaryContainer->setStyleClass("prospect-summary");
 
                 auto summaryLabel = summaryContainer->addWidget(std::make_unique<Wt::WText>("AI Analysis:"));
@@ -1807,9 +1871,9 @@ void FranchiseApp::showProspectsPage() {
                 summaryText->setStyleClass("summary-text");
             }
 
-            // Key highlights
+            // Key highlights - in left column
             if (!prospect.keyHighlights.empty()) {
-                auto highlightsContainer = card->addWidget(std::make_unique<Wt::WContainerWidget>());
+                auto highlightsContainer = leftColumn->addWidget(std::make_unique<Wt::WContainerWidget>());
                 highlightsContainer->setStyleClass("prospect-highlights");
 
                 for (const auto& highlight : prospect.keyHighlights) {
@@ -1820,10 +1884,10 @@ void FranchiseApp::showProspectsPage() {
                 }
             }
 
-            // Recommended actions (collapsible with triangle)
+            // Recommended actions (collapsible with triangle) - in RIGHT column
             if (!prospect.recommendedActions.empty()) {
-                auto recActionsContainer = card->addWidget(std::make_unique<Wt::WContainerWidget>());
-                recActionsContainer->setStyleClass("prospect-recommended-actions");
+                auto recActionsContainer = rightColumn->addWidget(std::make_unique<Wt::WContainerWidget>());
+                recActionsContainer->setStyleClass("prospect-recommended-actions vertical");
 
                 // Header with toggle triangle
                 auto recActionsHeader = recActionsContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
