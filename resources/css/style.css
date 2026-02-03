@@ -3653,10 +3653,16 @@ input[type="range"].scoring-slider::before {
 
 /* ==================== My Prospects Page Styles ==================== */
 .prospects-list {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
     margin-top: 20px;
+}
+
+@media (max-width: 1200px) {
+    .prospects-list {
+        grid-template-columns: 1fr;
+    }
 }
 
 .prospect-card {
@@ -3700,63 +3706,53 @@ input[type="range"].scoring-slider::before {
 
 /* Business Type Icon */
 .prospect-type-icon {
-    width: 48px;
-    height: 48px;
-    min-width: 48px;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-right: 14px;
+    margin-right: 10px;
     filter: grayscale(100%);
     opacity: 0.7;
 }
 
 .type-icon-emoji {
-    font-size: 24px;
+    font-size: 32px;
 }
 
 /* Dividing Line */
 .card-divider {
     height: 1px;
     background: var(--border-color);
-    margin: 0 24px;
+    margin: 0 20px;
 }
 
-/* Card Body - Two columns */
+/* Card Body - Single column layout */
 .prospect-card-body {
-    display: flex;
-    gap: 0;
-    padding: 0;
-}
-
-.prospect-left-column {
-    flex: 1;
-    padding: 16px 24px 20px 24px;
-    min-width: 0;
-}
-
-.prospect-right-column {
-    flex: 1;
-    padding: 16px 24px 20px 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+    padding: 16px 20px 8px 20px;
 }
 
 /* Section Headers with Icons */
 .card-section {
-    margin-bottom: 16px;
+    margin-bottom: 14px;
 }
 
 .card-section:last-child {
     margin-bottom: 0;
 }
 
+/* Data Sources section needs more top padding */
+.sources-section {
+    margin-top: 8px;
+    padding-top: 8px;
+}
+
 .section-header {
     display: flex;
     align-items: center;
     gap: 6px;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 
 .section-icon {
@@ -4317,35 +4313,27 @@ input[type="range"].scoring-slider::before {
 
 /* Recommended Actions Section (Collapsible) */
 .prospect-recommended-actions {
-    margin-bottom: 12px;
+    margin-top: 12px;
     background-color: #fffbeb;
     border: 1px solid #fde68a;
     border-radius: var(--border-radius);
     overflow: hidden;
 }
 
-/* Vertical layout for right column - keep light yellow box styling */
-.prospect-recommended-actions.vertical {
-    flex: 1;
-    margin-bottom: 0;
-    background-color: #fffbeb;
-    border: 1px solid #fde68a;
-    border-radius: var(--border-radius);
+/* Compact header when collapsed */
+.prospect-recommended-actions .recommended-actions-header {
+    padding: 8px 12px;
 }
 
-.prospect-recommended-actions.vertical .recommended-actions-header {
-    padding: 10px 12px;
-}
-
-.prospect-recommended-actions.vertical .recommended-actions-header:hover {
+.prospect-recommended-actions .recommended-actions-header:hover {
     background-color: #fef3c7;
 }
 
-.prospect-recommended-actions.vertical .recommended-actions-list {
-    padding: 0 12px 12px 28px;
+.prospect-recommended-actions .recommended-actions-list {
+    padding: 0 12px 10px 24px;
 }
 
-.prospect-recommended-actions.vertical .recommended-action-item {
+.prospect-recommended-actions .recommended-action-item {
     font-size: 13px;
     padding: 4px 0;
 }
