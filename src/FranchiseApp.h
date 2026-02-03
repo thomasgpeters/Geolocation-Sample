@@ -133,12 +133,12 @@ private:
     // Mapping of ruleId -> database UUID for scoring rules
     std::map<std::string, std::string> scoringRuleDbIds_;
 
-    // ApiLogicServer integration - Saved Prospects
+    // ApiLogicServer integration - Prospects
     void loadProspectsFromALS();
     bool saveProspectToALS(const Models::SearchResultItem& item);
     bool deleteProspectFromALS(const std::string& prospectId);
-    Services::SavedProspectDTO prospectItemToDTO(const Models::SearchResultItem& item);
-    Models::SearchResultItem dtoToProspectItem(const Services::SavedProspectDTO& dto);
+    Services::ProspectDTO prospectItemToDTO(const Models::SearchResultItem& item);
+    Models::SearchResultItem dtoToProspectItem(const Services::ProspectDTO& dto);
 
     // Cached list of available stores (for selector)
     std::vector<Services::StoreLocationDTO> availableStores_;
