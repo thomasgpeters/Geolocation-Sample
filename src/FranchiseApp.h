@@ -85,6 +85,7 @@ private:
 
     // Search handlers
     void onSearchRequested(const Models::SearchQuery& query);
+    void executeSearch(const Models::SearchQuery& query);
     void onSearchCancelled();
     void onSearchProgress(const Services::SearchProgress& progress);
     void onSearchComplete(const Models::SearchResults& results);
