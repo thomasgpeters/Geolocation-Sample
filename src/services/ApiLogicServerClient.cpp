@@ -662,6 +662,37 @@ std::string ProspectDTO::toJson() const {
     json << ", \"is_duplicate\": " << (isDuplicate ? "true" : "false");
     json << ", \"do_not_contact\": " << (doNotContact ? "true" : "false");
 
+    // AI and scoring fields
+    json << ", \"ai_score\": " << aiScore;
+    json << ", \"optimized_score\": " << optimizedScore;
+    json << ", \"relevance_score\": " << std::fixed << std::setprecision(4) << relevanceScore;
+    if (!aiSummary.empty()) {
+        // Escape special characters in JSON string
+        std::string escapedSummary = aiSummary;
+        for (size_t i = 0; i < escapedSummary.length(); ++i) {
+            if (escapedSummary[i] == '"' || escapedSummary[i] == '\\') {
+                escapedSummary.insert(i, "\\");
+                ++i;
+            } else if (escapedSummary[i] == '\n') {
+                escapedSummary.replace(i, 1, "\\n");
+                ++i;
+            } else if (escapedSummary[i] == '\r') {
+                escapedSummary.replace(i, 1, "\\r");
+                ++i;
+            }
+        }
+        json << ", \"ai_summary\": \"" << escapedSummary << "\"";
+    }
+    if (!keyHighlights.empty()) {
+        json << ", \"key_highlights\": \"" << keyHighlights << "\"";
+    }
+    if (!recommendedActions.empty()) {
+        json << ", \"recommended_actions\": \"" << recommendedActions << "\"";
+    }
+    if (!dataSources.empty()) {
+        json << ", \"data_sources\": \"" << dataSources << "\"";
+    }
+
     json << "}";  // End attributes
     json << ", \"type\": \"Prospect\"";
 
@@ -749,6 +780,24 @@ ProspectDTO ProspectDTO::fromJson(const std::string& json) {
 
     dto.createdAt = extractJsonString(json, "created_at");
     dto.updatedAt = extractJsonString(json, "updated_at");
+
+    // AI and scoring fields
+    std::string aiScoreStr = extractJsonString(json, "ai_score");
+    if (!aiScoreStr.empty()) {
+        try { dto.aiScore = std::stoi(aiScoreStr); } catch (...) {}
+    }
+    std::string optScoreStr = extractJsonString(json, "optimized_score");
+    if (!optScoreStr.empty()) {
+        try { dto.optimizedScore = std::stoi(optScoreStr); } catch (...) {}
+    }
+    std::string relScoreStr = extractJsonString(json, "relevance_score");
+    if (!relScoreStr.empty()) {
+        try { dto.relevanceScore = std::stod(relScoreStr); } catch (...) {}
+    }
+    dto.aiSummary = extractJsonString(json, "ai_summary");
+    dto.keyHighlights = extractJsonString(json, "key_highlights");
+    dto.recommendedActions = extractJsonString(json, "recommended_actions");
+    dto.dataSources = extractJsonString(json, "data_sources");
 
     return dto;
 }

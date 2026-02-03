@@ -1724,6 +1724,78 @@ void FranchiseApp::showProspectsPage() {
                     ));
                     bbbBadge->setStyleClass("stat-badge stat-verified");
                 }
+
+                // Data Source bubbles
+                if (!prospect.sources.empty()) {
+                    auto sourcesContainer = card->addWidget(std::make_unique<Wt::WContainerWidget>());
+                    sourcesContainer->setStyleClass("prospect-sources");
+
+                    auto sourcesLabel = sourcesContainer->addWidget(std::make_unique<Wt::WText>("Data Sources: "));
+                    sourcesLabel->setStyleClass("sources-label");
+
+                    for (const auto& source : prospect.sources) {
+                        auto sourceBadge = sourcesContainer->addWidget(std::make_unique<Wt::WText>(
+                            Models::dataSourceToString(source)
+                        ));
+                        sourceBadge->setStyleClass("source-badge");
+                    }
+                } else if (prospect.business && prospect.business->source != Models::DataSource::IMPORTED) {
+                    // Show single source from business if no multi-source list
+                    auto sourcesContainer = card->addWidget(std::make_unique<Wt::WContainerWidget>());
+                    sourcesContainer->setStyleClass("prospect-sources");
+
+                    auto sourcesLabel = sourcesContainer->addWidget(std::make_unique<Wt::WText>("Data Source: "));
+                    sourcesLabel->setStyleClass("sources-label");
+
+                    auto sourceBadge = sourcesContainer->addWidget(std::make_unique<Wt::WText>(
+                        Models::dataSourceToString(prospect.business->source)
+                    ));
+                    sourceBadge->setStyleClass("source-badge");
+                }
+            }
+
+            // Score comparison section (AI Score vs Optimized Score)
+            auto scoreCompareContainer = card->addWidget(std::make_unique<Wt::WContainerWidget>());
+            scoreCompareContainer->setStyleClass("prospect-score-compare");
+
+            // AI Confidence Score (if available)
+            if (prospect.aiConfidenceScore > 0 || prospect.relevanceScore > 0) {
+                auto aiScoreContainer = scoreCompareContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
+                aiScoreContainer->setStyleClass("score-item ai-score");
+
+                auto aiLabel = aiScoreContainer->addWidget(std::make_unique<Wt::WText>("AI Score"));
+                aiLabel->setStyleClass("score-label");
+
+                int aiScoreValue = static_cast<int>((prospect.aiConfidenceScore > 0 ? prospect.aiConfidenceScore : prospect.relevanceScore) * 100);
+                auto aiValue = aiScoreContainer->addWidget(std::make_unique<Wt::WText>(std::to_string(aiScoreValue)));
+                aiValue->setStyleClass("score-value");
+            }
+
+            // Optimized Score (after scoring rules applied)
+            auto optimizedScoreContainer = scoreCompareContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
+            optimizedScoreContainer->setStyleClass("score-item optimized-score");
+
+            auto optLabel = optimizedScoreContainer->addWidget(std::make_unique<Wt::WText>("Optimized"));
+            optLabel->setStyleClass("score-label");
+
+            auto optValue = optimizedScoreContainer->addWidget(std::make_unique<Wt::WText>(std::to_string(prospect.overallScore)));
+            optValue->setStyleClass("score-value");
+
+            // Score delta indicator (if AI score available)
+            if (prospect.aiConfidenceScore > 0 || prospect.relevanceScore > 0) {
+                int aiScoreValue = static_cast<int>((prospect.aiConfidenceScore > 0 ? prospect.aiConfidenceScore : prospect.relevanceScore) * 100);
+                int delta = prospect.overallScore - aiScoreValue;
+                if (delta != 0) {
+                    auto deltaContainer = scoreCompareContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
+                    deltaContainer->setStyleClass(delta > 0 ? "score-item score-delta positive" : "score-item score-delta negative");
+
+                    auto deltaLabel = deltaContainer->addWidget(std::make_unique<Wt::WText>("Rules"));
+                    deltaLabel->setStyleClass("score-label");
+
+                    std::string deltaStr = (delta > 0 ? "+" : "") + std::to_string(delta);
+                    auto deltaValue = deltaContainer->addWidget(std::make_unique<Wt::WText>(deltaStr));
+                    deltaValue->setStyleClass("score-value");
+                }
             }
 
             // AI Summary (if available)
@@ -1750,6 +1822,30 @@ void FranchiseApp::showProspectsPage() {
                         "• " + highlight
                     ));
                     highlightText->setStyleClass("highlight-item");
+                }
+            }
+
+            // Recommended actions
+            if (!prospect.recommendedActions.empty()) {
+                auto recActionsContainer = card->addWidget(std::make_unique<Wt::WContainerWidget>());
+                recActionsContainer->setStyleClass("prospect-recommended-actions");
+
+                auto recActionsLabel = recActionsContainer->addWidget(std::make_unique<Wt::WText>("Recommended Actions:"));
+                recActionsLabel->setStyleClass("recommended-actions-label");
+
+                auto recActionsList = recActionsContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
+                recActionsList->setStyleClass("recommended-actions-list");
+
+                int actionNum = 1;
+                for (const auto& action : prospect.recommendedActions) {
+                    auto actionItem = recActionsList->addWidget(std::make_unique<Wt::WContainerWidget>());
+                    actionItem->setStyleClass("recommended-action-item");
+
+                    auto actionNumber = actionItem->addWidget(std::make_unique<Wt::WText>(std::to_string(actionNum++) + ". "));
+                    actionNumber->setStyleClass("action-number");
+
+                    auto actionText = actionItem->addWidget(std::make_unique<Wt::WText>(action));
+                    actionText->setStyleClass("action-text");
                 }
             }
 
@@ -3224,10 +3320,17 @@ void FranchiseApp::showSettingsPage() {
         auto descText = nameCell->addWidget(std::make_unique<Wt::WText>(rule->description));
         descText->setStyleClass("rule-description");
 
-        // Slider cell
+        // Slider cell with range labels
         auto sliderCell = ruleRow->addWidget(std::make_unique<Wt::WContainerWidget>());
         sliderCell->setStyleClass("cell-slider");
-        auto slider = sliderCell->addWidget(std::make_unique<Wt::WSlider>(Wt::Orientation::Horizontal));
+
+        auto sliderWrapper = sliderCell->addWidget(std::make_unique<Wt::WContainerWidget>());
+        sliderWrapper->setStyleClass("slider-with-range");
+
+        auto minLabel = sliderWrapper->addWidget(std::make_unique<Wt::WText>(std::to_string(rule->minPoints)));
+        minLabel->setStyleClass("slider-range-label");
+
+        auto slider = sliderWrapper->addWidget(std::make_unique<Wt::WSlider>(Wt::Orientation::Horizontal));
         slider->setNativeControl(true);
         slider->setMinimum(rule->minPoints);
         slider->setMaximum(rule->maxPoints);
@@ -3235,6 +3338,9 @@ void FranchiseApp::showSettingsPage() {
         slider->setStyleClass("scoring-slider");
         slider->resize(Wt::WLength::Auto, 24);
         penaltySliders.push_back({rule->id, slider});
+
+        auto maxLabel = sliderWrapper->addWidget(std::make_unique<Wt::WText>(std::to_string(rule->maxPoints)));
+        maxLabel->setStyleClass("slider-range-label");
 
         // Points cell
         auto pointsCell = ruleRow->addWidget(std::make_unique<Wt::WContainerWidget>());
@@ -3293,10 +3399,17 @@ void FranchiseApp::showSettingsPage() {
         auto descText = nameCell->addWidget(std::make_unique<Wt::WText>(rule->description));
         descText->setStyleClass("rule-description");
 
-        // Slider cell
+        // Slider cell with range labels
         auto sliderCell = ruleRow->addWidget(std::make_unique<Wt::WContainerWidget>());
         sliderCell->setStyleClass("cell-slider");
-        auto slider = sliderCell->addWidget(std::make_unique<Wt::WSlider>(Wt::Orientation::Horizontal));
+
+        auto sliderWrapper = sliderCell->addWidget(std::make_unique<Wt::WContainerWidget>());
+        sliderWrapper->setStyleClass("slider-with-range");
+
+        auto minLabel = sliderWrapper->addWidget(std::make_unique<Wt::WText>(std::to_string(rule->minPoints)));
+        minLabel->setStyleClass("slider-range-label");
+
+        auto slider = sliderWrapper->addWidget(std::make_unique<Wt::WSlider>(Wt::Orientation::Horizontal));
         slider->setNativeControl(true);
         slider->setMinimum(rule->minPoints);
         slider->setMaximum(rule->maxPoints);
@@ -3304,6 +3417,9 @@ void FranchiseApp::showSettingsPage() {
         slider->setStyleClass("scoring-slider");
         slider->resize(Wt::WLength::Auto, 24);
         bonusSliders.push_back({rule->id, slider});
+
+        auto maxLabel = sliderWrapper->addWidget(std::make_unique<Wt::WText>(std::to_string(rule->maxPoints)));
+        maxLabel->setStyleClass("slider-range-label");
 
         // Points cell
         auto pointsCell = ruleRow->addWidget(std::make_unique<Wt::WContainerWidget>());
@@ -4404,6 +4520,42 @@ Services::ProspectDTO FranchiseApp::prospectItemToDTO(const Models::SearchResult
         else dto.employeeCountRange = "500+";
     }
 
+    // AI and scoring fields
+    dto.aiScore = static_cast<int>(item.aiConfidenceScore * 100);
+    dto.optimizedScore = item.overallScore;
+    dto.relevanceScore = item.relevanceScore;
+    dto.aiSummary = item.aiSummary;
+
+    // Convert key highlights to comma-separated string
+    if (!item.keyHighlights.empty()) {
+        std::string highlights;
+        for (const auto& h : item.keyHighlights) {
+            if (!highlights.empty()) highlights += "|";
+            highlights += h;
+        }
+        dto.keyHighlights = highlights;
+    }
+
+    // Convert recommended actions to comma-separated string
+    if (!item.recommendedActions.empty()) {
+        std::string actions;
+        for (const auto& a : item.recommendedActions) {
+            if (!actions.empty()) actions += "|";
+            actions += a;
+        }
+        dto.recommendedActions = actions;
+    }
+
+    // Convert data sources to comma-separated string
+    if (!item.sources.empty()) {
+        std::string sources;
+        for (const auto& s : item.sources) {
+            if (!sources.empty()) sources += ",";
+            sources += Models::dataSourceToString(s);
+        }
+        dto.dataSources = sources;
+    }
+
     dto.status = "new";
 
     return dto;
@@ -4447,6 +4599,79 @@ Models::SearchResultItem FranchiseApp::dtoToProspectItem(const Services::Prospec
     }
 
     item.business = business;
+
+    // Restore AI and scoring fields
+    item.aiConfidenceScore = dto.aiScore / 100.0;
+    item.overallScore = dto.optimizedScore;
+    item.relevanceScore = dto.relevanceScore;
+    item.aiSummary = dto.aiSummary;
+
+    // Parse key highlights from pipe-separated string
+    if (!dto.keyHighlights.empty()) {
+        std::string highlights = dto.keyHighlights;
+        size_t pos = 0;
+        while ((pos = highlights.find('|')) != std::string::npos || !highlights.empty()) {
+            std::string token;
+            if (pos != std::string::npos) {
+                token = highlights.substr(0, pos);
+                highlights.erase(0, pos + 1);
+            } else {
+                token = highlights;
+                highlights.clear();
+            }
+            if (!token.empty()) {
+                item.keyHighlights.push_back(token);
+            }
+        }
+    }
+
+    // Parse recommended actions from pipe-separated string
+    if (!dto.recommendedActions.empty()) {
+        std::string actions = dto.recommendedActions;
+        size_t pos = 0;
+        while ((pos = actions.find('|')) != std::string::npos || !actions.empty()) {
+            std::string token;
+            if (pos != std::string::npos) {
+                token = actions.substr(0, pos);
+                actions.erase(0, pos + 1);
+            } else {
+                token = actions;
+                actions.clear();
+            }
+            if (!token.empty()) {
+                item.recommendedActions.push_back(token);
+            }
+        }
+    }
+
+    // Parse data sources from comma-separated string
+    if (!dto.dataSources.empty()) {
+        std::string sources = dto.dataSources;
+        size_t pos = 0;
+        while ((pos = sources.find(',')) != std::string::npos || !sources.empty()) {
+            std::string token;
+            if (pos != std::string::npos) {
+                token = sources.substr(0, pos);
+                sources.erase(0, pos + 1);
+            } else {
+                token = sources;
+                sources.clear();
+            }
+            if (!token.empty()) {
+                if (token == "OpenStreetMap") {
+                    item.sources.push_back(Models::DataSource::OPENSTREETMAP);
+                } else if (token == "Google My Business" || token == "GooglePlaces") {
+                    item.sources.push_back(Models::DataSource::GOOGLE_MY_BUSINESS);
+                } else if (token == "Better Business Bureau" || token == "BBB") {
+                    item.sources.push_back(Models::DataSource::BBB);
+                } else if (token == "Demographics") {
+                    item.sources.push_back(Models::DataSource::DEMOGRAPHICS);
+                } else {
+                    item.sources.push_back(Models::DataSource::IMPORTED);
+                }
+            }
+        }
+    }
 
     return item;
 }
