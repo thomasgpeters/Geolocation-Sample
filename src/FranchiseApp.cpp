@@ -472,6 +472,9 @@ void FranchiseApp::onQuickSearch(const std::string& query) {
 void FranchiseApp::onSearchRequested(const Models::SearchQuery& query) {
     if (!searchService_) return;
 
+    // Show search toast notification
+    showSearchToast();
+
     // Create a modified query that includes settings from Settings > Marketing tab
     Models::SearchQuery searchQuery = query;
 
@@ -544,6 +547,9 @@ void FranchiseApp::onSearchProgress(const Services::SearchProgress& progress) {
 }
 
 void FranchiseApp::onSearchComplete(const Models::SearchResults& results) {
+    // Hide the search toast
+    hideSearchToast();
+
     lastResults_ = results;
 
     if (searchPanel_) {
@@ -876,6 +882,54 @@ void FranchiseApp::showToast(const std::string& title, const std::string& messag
             });
         }
     });
+}
+
+void FranchiseApp::showSearchToast() {
+    if (!toastContainer_) return;
+
+    // Remove any existing search toast
+    hideSearchToast();
+
+    // Create search toast element
+    searchToast_ = toastContainer_->addWidget(std::make_unique<Wt::WContainerWidget>());
+    searchToast_->setStyleClass("toast toast-enter toast-info");
+
+    // Toast header with search icon and title
+    auto header = searchToast_->addWidget(std::make_unique<Wt::WContainerWidget>());
+    header->setStyleClass("toast-header");
+
+    auto searchIcon = header->addWidget(std::make_unique<Wt::WText>("🔍"));
+    searchIcon->setStyleClass("toast-icon");
+
+    auto titleText = header->addWidget(std::make_unique<Wt::WText>("Searching..."));
+    titleText->setStyleClass("toast-title");
+
+    // Animated spinner
+    auto spinner = header->addWidget(std::make_unique<Wt::WContainerWidget>());
+    spinner->setStyleClass("toast-spinner");
+
+    // Toast body with message
+    auto body = searchToast_->addWidget(std::make_unique<Wt::WContainerWidget>());
+    body->setStyleClass("toast-body");
+    body->addWidget(std::make_unique<Wt::WText>("FranchiseAI is searching for prospects in your area..."));
+
+    // Trigger enter animation
+    doJavaScript("setTimeout(function() { " + searchToast_->jsRef() + ".classList.remove('toast-enter'); }, 10);");
+}
+
+void FranchiseApp::hideSearchToast() {
+    if (searchToast_ && searchToast_->parent()) {
+        searchToast_->addStyleClass("toast-exit");
+        auto* toastPtr = searchToast_;
+        searchToast_ = nullptr;
+
+        // Remove after exit animation completes
+        Wt::WTimer::singleShot(std::chrono::milliseconds(300), [toastPtr] {
+            if (toastPtr->parent()) {
+                toastPtr->parent()->removeWidget(toastPtr);
+            }
+        });
+    }
 }
 
 void FranchiseApp::onExportResults() {
