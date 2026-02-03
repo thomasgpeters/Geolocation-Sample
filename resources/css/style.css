@@ -3671,7 +3671,8 @@ input[type="range"].scoring-slider::before {
     border-radius: var(--border-radius-lg);
     padding: 0;
     transition: box-shadow var(--transition-fast);
-    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .prospect-card:hover {
@@ -3684,6 +3685,8 @@ input[type="range"].scoring-slider::before {
     justify-content: space-between;
     align-items: flex-start;
     padding: 20px 24px 16px 24px;
+    position: relative;
+    overflow: visible;
 }
 
 .header-left {
@@ -3696,6 +3699,8 @@ input[type="range"].scoring-slider::before {
 .header-right {
     flex-shrink: 0;
     margin-left: 16px;
+    position: relative;
+    overflow: visible;
 }
 
 .name-address-container {
@@ -3731,6 +3736,7 @@ input[type="range"].scoring-slider::before {
 /* Card Body - Single column layout */
 .prospect-card-body {
     padding: 16px 20px 8px 20px;
+    flex: 1;
 }
 
 /* Section Headers with Icons */
@@ -3743,9 +3749,10 @@ input[type="range"].scoring-slider::before {
 }
 
 /* Data Sources section needs more top padding */
-.sources-section {
-    margin-top: 8px;
+.card-section.sources-section {
+    margin-top: 12px;
     padding-top: 8px;
+    display: block;
 }
 
 .section-header {
@@ -4235,28 +4242,28 @@ input[type="range"].scoring-slider::before {
 .score-popover {
     position: absolute;
     top: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 240px;
+    left: auto;
+    right: 0;
+    width: 260px;
     background: white;
     border: 1px solid #e5e7eb;
     border-radius: var(--border-radius);
-    box-shadow: var(--shadow-lg);
-    padding: 12px;
-    z-index: 100;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    padding: 14px;
+    z-index: 9999;
     margin-top: 8px;
     transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
 .score-popover.hidden {
     opacity: 0;
-    transform: translateX(-50%) translateY(-8px);
+    transform: translateY(-8px);
     pointer-events: none;
 }
 
 .score-popover.visible {
     opacity: 1;
-    transform: translateX(-50%) translateY(0);
+    transform: translateY(0);
 }
 
 .scores-comparison {
@@ -4411,6 +4418,7 @@ input[type="range"].scoring-slider::before {
     display: flex;
     gap: 8px;
     padding: 16px 24px 20px 24px;
+    margin-top: auto;
 }
 
 .prospects-actions {
