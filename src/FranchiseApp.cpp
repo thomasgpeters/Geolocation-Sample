@@ -1858,7 +1858,8 @@ void FranchiseApp::showProspectsPage() {
 
                 // Toggle click handler
                 recActionsHeader->clicked().connect([triangle, recActionsList] {
-                    if (recActionsList->styleClass().find("collapsed") != std::string::npos) {
+                    std::string currentClass = recActionsList->styleClass().toUTF8();
+                    if (currentClass.find("collapsed") != std::string::npos) {
                         recActionsList->setStyleClass("recommended-actions-list");
                         triangle->setText("▼");
                     } else {
