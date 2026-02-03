@@ -1199,6 +1199,20 @@ std::vector<FranchiseeDTO> ApiLogicServerClient::parseFranchisees(const ApiRespo
 ApiResponse ApiLogicServerClient::saveScoringRule(const ScoringRuleDTO& rule) {
     ScoringRuleDTO dto = rule;
     if (dto.id.empty()) {
+        // No cached ID - try to find existing rule by rule_id first
+        std::cout << "  [ALS] Looking up existing ScoringRule by rule_id: " << dto.ruleId << std::endl;
+        auto existingResponse = httpGet("/ScoringRule?filter[rule_id]=" + dto.ruleId);
+        if (existingResponse.success && !existingResponse.body.empty()) {
+            // Try to extract the ID from the response
+            std::string existingId = extractJsonString(existingResponse.body, "id");
+            if (!existingId.empty()) {
+                dto.id = existingId;
+                std::cout << "  [ALS] Found existing rule with UUID: " << dto.id << std::endl;
+            }
+        }
+    }
+
+    if (dto.id.empty()) {
         // Create new record - POST to collection endpoint
         dto.id = generateUUID();
         std::string json = dto.toJson();

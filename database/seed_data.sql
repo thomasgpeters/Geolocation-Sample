@@ -285,57 +285,94 @@ INSERT INTO store_locations (id, franchisee_id, store_name, store_code, address_
 
 -- ============================================================================
 -- SAMPLE PROSPECTS
--- Example prospect records
+-- Example prospect records with AI scoring data
 -- ============================================================================
 
 INSERT INTO prospects (id, territory_id, franchisee_id, business_name, business_type,
                        employee_count, employee_count_range, address_line1, city, state_province,
                        postal_code, latitude, longitude, primary_phone, website,
-                       status, data_source, is_verified) VALUES
+                       status, data_source, is_verified,
+                       ai_score, optimized_score, relevance_score, ai_summary,
+                       key_highlights, recommended_actions, data_sources) VALUES
 -- Denver Prospects
 ('e1000000-0000-0000-0000-000000000001'::uuid,
  'b1000000-0000-0000-0000-000000000004'::uuid, 'c1000000-0000-0000-0000-000000000001'::uuid,
  'TechStart Colorado', 'Technology Company', 150, 'medium',
  '1801 California St', 'Denver', 'CO', '80202',
- 39.7489, -104.9878, '(303) 555-1001', 'https://techstartco.example.com', 'new', 'openstreetmap', true),
+ 39.7489, -104.9878, '(303) 555-1001', 'https://techstartco.example.com', 'new', 'openstreetmap', true,
+ 78, 82, 0.7800,
+ 'Growing tech company with strong catering potential. Regular team meetings and client events.',
+ 'Growing technology startup|Regular team meetings|Downtown location|Active hiring',
+ 'Schedule initial consultation call|Send catering menu samples|Propose recurring lunch program',
+ 'OpenStreetMap,GooglePlaces'),
 
 ('e1000000-0000-0000-0000-000000000002'::uuid,
  'b1000000-0000-0000-0000-000000000004'::uuid, 'c1000000-0000-0000-0000-000000000001'::uuid,
  'Colorado Healthcare Partners', 'Healthcare Facility', 320, 'large',
  '1635 Aurora Ct', 'Denver', 'CO', '80045',
- 39.7456, -104.8372, '(303) 555-1002', 'https://cohealthpartners.example.com', 'contacted', 'openstreetmap', true),
+ 39.7456, -104.8372, '(303) 555-1002', 'https://cohealthpartners.example.com', 'contacted', 'openstreetmap', true,
+ 88, 91, 0.8800,
+ 'Large healthcare facility with multiple departments. High volume catering needs for staff and events.',
+ 'Large employee base|Multiple departments|24/7 operations|Regular staff events',
+ 'Follow up on initial contact|Present enterprise catering options|Discuss dietary accommodations',
+ 'OpenStreetMap,BBB'),
 
 ('e1000000-0000-0000-0000-000000000003'::uuid,
  'b1000000-0000-0000-0000-000000000004'::uuid, 'c1000000-0000-0000-0000-000000000001'::uuid,
  'Mile High Law Group', 'Law Firm', 85, 'medium',
  '1700 Broadway', 'Denver', 'CO', '80290',
- 39.7436, -104.9872, '(303) 555-1003', 'https://milehighlaw.example.com', 'qualified', 'openstreetmap', true),
+ 39.7436, -104.9872, '(303) 555-1003', 'https://milehighlaw.example.com', 'qualified', 'openstreetmap', true,
+ 72, 78, 0.7200,
+ 'Professional law firm with regular client meetings. Premium catering opportunities.',
+ 'Premium clientele|Regular client meetings|Conference room facilities|Professional setting',
+ 'Send premium menu options|Propose client meeting packages|Schedule tasting session',
+ 'OpenStreetMap'),
 
 -- San Francisco Prospects
 ('e1000000-0000-0000-0000-000000000004'::uuid,
  'b1000000-0000-0000-0000-000000000001'::uuid, 'c1000000-0000-0000-0000-000000000002'::uuid,
  'Bay Innovations Inc', 'Technology Company', 280, 'large',
  '101 California St', 'San Francisco', 'CA', '94111',
- 37.7929, -122.3984, '(415) 555-2001', 'https://bayinnovations.example.com', 'new', 'openstreetmap', true),
+ 37.7929, -122.3984, '(415) 555-2001', 'https://bayinnovations.example.com', 'new', 'openstreetmap', true,
+ 85, 88, 0.8500,
+ 'Major tech company in financial district. High-volume daily catering potential.',
+ 'Large employee count|Tech-focused culture|Daily meal programs|Event hosting',
+ 'Research current catering provider|Prepare competitive proposal|Highlight tech-friendly ordering',
+ 'OpenStreetMap,GooglePlaces'),
 
 ('e1000000-0000-0000-0000-000000000005'::uuid,
  'b1000000-0000-0000-0000-000000000001'::uuid, 'c1000000-0000-0000-0000-000000000002'::uuid,
  'Pacific Financial Advisors', 'Financial Services', 120, 'medium',
  '425 Market St', 'San Francisco', 'CA', '94105',
- 37.7912, -122.3985, '(415) 555-2002', 'https://pacificfa.example.com', 'proposal_sent', 'openstreetmap', true),
+ 37.7912, -122.3985, '(415) 555-2002', 'https://pacificfa.example.com', 'proposal_sent', 'openstreetmap', true,
+ 70, 75, 0.7000,
+ 'Financial services firm with client-facing operations. Executive dining needs.',
+ 'Client-facing office|Executive team|Regular presentations|Professional atmosphere',
+ 'Follow up on proposal|Address any questions|Propose executive lunch program',
+ 'OpenStreetMap,BBB'),
 
 -- Chicago Prospects
 ('e1000000-0000-0000-0000-000000000006'::uuid,
  'b1000000-0000-0000-0000-000000000005'::uuid, 'c1000000-0000-0000-0000-000000000003'::uuid,
  'Midwest Corporate Holdings', 'Corporate Office', 450, 'large',
  '311 S Wacker Dr', 'Chicago', 'IL', '60606',
- 41.8776, -87.6363, '(312) 555-3001', 'https://midwestcorp.example.com', 'new', 'openstreetmap', true),
+ 41.8776, -87.6363, '(312) 555-3001', 'https://midwestcorp.example.com', 'new', 'openstreetmap', true,
+ 92, 94, 0.9200,
+ 'Large corporate headquarters with excellent catering potential. Multiple event spaces.',
+ 'Large corporate HQ|450+ employees|Multiple floors|Event facilities',
+ 'Schedule facility tour|Present corporate catering program|Discuss recurring service agreement',
+ 'OpenStreetMap,GooglePlaces,BBB'),
 
 ('e1000000-0000-0000-0000-000000000007'::uuid,
  'b1000000-0000-0000-0000-000000000005'::uuid, 'c1000000-0000-0000-0000-000000000003'::uuid,
  'Chicago Medical Center', 'Healthcare Facility', 890, 'enterprise',
  '710 N Lake Shore Dr', 'Chicago', 'IL', '60611',
- 41.8953, -87.6171, '(312) 555-3002', 'https://chicagomedical.example.com', 'qualified', 'openstreetmap', true);
+ 41.8953, -87.6171, '(312) 555-3002', 'https://chicagomedical.example.com', 'qualified', 'openstreetmap', true,
+ 94, 96, 0.9400,
+ 'Major medical center with extensive catering needs. High-volume potential across departments.',
+ 'Enterprise scale|24/7 operations|Multiple cafeterias|Event hosting|Staff appreciation',
+ 'Present enterprise solution|Discuss volume pricing|Propose pilot program for one department',
+ 'OpenStreetMap,GooglePlaces');
 
 
 -- ============================================================================
