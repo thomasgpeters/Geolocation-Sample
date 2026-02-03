@@ -1780,15 +1780,18 @@ void FranchiseApp::showProspectsPage() {
                 }
             }
 
-            // === RIGHT COLUMN: Scores (Mac-style) + Recommended Actions ===
+            // === RIGHT COLUMN: AI Score + Recommended Actions ===
 
-            // Score display section (Mac app icon style - score on top, label below, centered)
+            // Score display section - only show AI Score (optimized), click for details
             auto scoreDisplayContainer = rightColumn->addWidget(std::make_unique<Wt::WContainerWidget>());
             scoreDisplayContainer->setStyleClass("prospect-score-display mac-style");
 
-            // Optimized Score as colored bubble (Mac app icon style)
+            // AI Score as colored bubble (clickable for details)
             int optimizedScore = prospect.overallScore;
-            std::string scoreBubbleClass = "score-bubble";
+            int originalScore = static_cast<int>((prospect.aiConfidenceScore > 0 ? prospect.aiConfidenceScore : prospect.relevanceScore) * 100);
+            if (originalScore == 0) originalScore = optimizedScore; // Default to same if no AI score
+
+            std::string scoreBubbleClass = "score-bubble clickable";
             if (optimizedScore >= 80) {
                 scoreBubbleClass += " score-high";
             } else if (optimizedScore >= 60) {
@@ -1799,61 +1802,75 @@ void FranchiseApp::showProspectsPage() {
                 scoreBubbleClass += " score-very-low";
             }
 
-            auto optimizedContainer = scoreDisplayContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
-            optimizedContainer->setStyleClass("score-icon-container");
+            auto scoreContainer = scoreDisplayContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
+            scoreContainer->setStyleClass("score-icon-container clickable-score");
 
-            auto optBubble = optimizedContainer->addWidget(std::make_unique<Wt::WText>(std::to_string(optimizedScore)));
-            optBubble->setStyleClass(scoreBubbleClass);
+            auto scoreBubble = scoreContainer->addWidget(std::make_unique<Wt::WText>(std::to_string(optimizedScore)));
+            scoreBubble->setStyleClass(scoreBubbleClass);
 
-            auto optLabel = optimizedContainer->addWidget(std::make_unique<Wt::WText>("Optimized"));
-            optLabel->setStyleClass("score-icon-label");
+            auto scoreLabel = scoreContainer->addWidget(std::make_unique<Wt::WText>("AI Score"));
+            scoreLabel->setStyleClass("score-icon-label");
 
-            // AI Score (Mac app icon style)
-            if (prospect.aiConfidenceScore > 0 || prospect.relevanceScore > 0) {
-                auto aiContainer = scoreDisplayContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
-                aiContainer->setStyleClass("score-icon-container ai-score");
+            // Score details popover (hidden by default)
+            auto scorePopover = scoreContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
+            scorePopover->setStyleClass("score-popover hidden");
 
-                int aiScoreValue = static_cast<int>((prospect.aiConfidenceScore > 0 ? prospect.aiConfidenceScore : prospect.relevanceScore) * 100);
-                auto aiValue = aiContainer->addWidget(std::make_unique<Wt::WText>(std::to_string(aiScoreValue)));
-                aiValue->setStyleClass("ai-score-value");
-
-                auto aiLabel = aiContainer->addWidget(std::make_unique<Wt::WText>("AI Score"));
-                aiLabel->setStyleClass("score-icon-label ai-label");
-            }
-
-            // AI Expand button with popover info
-            auto expandBtnContainer = scoreDisplayContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
-            expandBtnContainer->setStyleClass("ai-expand-container");
-
-            auto expandBtn = expandBtnContainer->addWidget(std::make_unique<Wt::WPushButton>("⚡"));
-            expandBtn->setStyleClass("ai-expand-btn");
-            expandBtn->setToolTip("Expand with AI Engine");
-
-            // Popover container (hidden by default)
-            auto popoverContainer = expandBtnContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
-            popoverContainer->setStyleClass("ai-popover hidden");
-
-            auto popoverTitle = popoverContainer->addWidget(std::make_unique<Wt::WText>("AI Engine"));
+            auto popoverTitle = scorePopover->addWidget(std::make_unique<Wt::WText>("Score Details"));
             popoverTitle->setStyleClass("popover-title");
 
-            auto popoverDesc = popoverContainer->addWidget(std::make_unique<Wt::WText>(
-                "Expand prospect data with AI-powered analysis"
+            // Show both scores in popover
+            auto scoresRow = scorePopover->addWidget(std::make_unique<Wt::WContainerWidget>());
+            scoresRow->setStyleClass("scores-comparison");
+
+            auto optimizedLabel = scoresRow->addWidget(std::make_unique<Wt::WText>(
+                "Optimized: " + std::to_string(optimizedScore) + "%"
             ));
-            popoverDesc->setStyleClass("popover-desc");
+            optimizedLabel->setStyleClass("score-detail optimized");
 
-            auto analyzeBtn = popoverContainer->addWidget(std::make_unique<Wt::WPushButton>("🔍 Deep Analyze"));
-            analyzeBtn->setStyleClass("btn btn-sm btn-primary popover-btn");
+            auto originalLabel = scoresRow->addWidget(std::make_unique<Wt::WText>(
+                "Original: " + std::to_string(originalScore) + "%"
+            ));
+            originalLabel->setStyleClass("score-detail original");
 
-            auto enrichBtn = popoverContainer->addWidget(std::make_unique<Wt::WPushButton>("📊 Enrich Data"));
-            enrichBtn->setStyleClass("btn btn-sm btn-secondary popover-btn");
+            // Show rules explanation if scores differ
+            if (optimizedScore != originalScore) {
+                auto rulesExplanation = scorePopover->addWidget(std::make_unique<Wt::WContainerWidget>());
+                rulesExplanation->setStyleClass("rules-explanation");
 
-            // Toggle popover on button click
-            expandBtn->clicked().connect([popoverContainer] {
-                std::string currentClass = popoverContainer->styleClass().toUTF8();
-                if (currentClass.find("hidden") != std::string::npos) {
-                    popoverContainer->setStyleClass("ai-popover visible");
+                auto rulesTitle = rulesExplanation->addWidget(std::make_unique<Wt::WText>("Applied Rules:"));
+                rulesTitle->setStyleClass("rules-title");
+
+                // Build explanation based on score difference
+                std::string explanation;
+                int scoreDiff = optimizedScore - originalScore;
+                if (scoreDiff > 0) {
+                    explanation = "Score increased by " + std::to_string(scoreDiff) + " points due to: ";
+                    if (prospect.business) {
+                        if (prospect.business->employeeCount >= 100) explanation += "Large workforce (+10), ";
+                        if (prospect.business->hasConferenceRoom) explanation += "Conference facilities (+5), ";
+                        if (prospect.business->hasEventSpace) explanation += "Event space (+5), ";
+                        if (prospect.business->bbbAccredited) explanation += "BBB accreditation (+3), ";
+                        if (prospect.business->googleRating >= 4.5) explanation += "High rating (+5), ";
+                    }
+                    // Remove trailing comma and space
+                    if (explanation.length() > 2 && explanation.substr(explanation.length() - 2) == ", ") {
+                        explanation = explanation.substr(0, explanation.length() - 2);
+                    }
                 } else {
-                    popoverContainer->setStyleClass("ai-popover hidden");
+                    explanation = "Score adjusted by " + std::to_string(scoreDiff) + " points based on market conditions and competitive analysis.";
+                }
+
+                auto rulesText = rulesExplanation->addWidget(std::make_unique<Wt::WText>(explanation));
+                rulesText->setStyleClass("rules-text");
+            }
+
+            // Toggle score popover on click
+            scoreContainer->clicked().connect([scorePopover] {
+                std::string currentClass = scorePopover->styleClass().toUTF8();
+                if (currentClass.find("hidden") != std::string::npos) {
+                    scorePopover->setStyleClass("score-popover visible");
+                } else {
+                    scorePopover->setStyleClass("score-popover hidden");
                 }
             });
 
