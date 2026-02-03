@@ -4422,8 +4422,11 @@ input[type="range"].scoring-slider::before {
 }
 
 .prospects-actions {
-    margin-top: 24px;
-    padding-top: 20px;
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 32px;
+    padding-top: 24px;
     border-top: 1px solid var(--border-color);
 }
 
