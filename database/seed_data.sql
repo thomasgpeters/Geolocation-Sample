@@ -10,41 +10,41 @@
 
 INSERT INTO company_types (id, code, name, description, naics_prefix, default_search_radius_miles, default_prospect_industries, is_active) VALUES
 -- Franchise Companies (Food Service, Retail, Services)
-('ct000000-0000-0000-0000-000000000001'::uuid, 'franchise_food', 'Food Service Franchise',
+('c7000000-0000-0000-0000-000000000001'::uuid, 'franchise_food', 'Food Service Franchise',
  'Food service franchises including catering, restaurants, and food delivery. Target businesses that need regular food services for employees, meetings, and events.',
  '7225', 15.0, ARRAY['Corporate Offices', 'Technology Companies', 'Healthcare Facilities', 'Law Firms', 'Financial Services'], true),
 
-('ct000000-0000-0000-0000-000000000002'::uuid, 'franchise_retail', 'Retail Franchise',
+('c7000000-0000-0000-0000-000000000002'::uuid, 'franchise_retail', 'Retail Franchise',
  'Retail franchises including convenience stores, specialty retail, and service retail. Target high-traffic areas and complementary businesses.',
  '44', 10.0, ARRAY['Shopping Centers', 'Office Parks', 'Residential Areas'], true),
 
-('ct000000-0000-0000-0000-000000000003'::uuid, 'franchise_services', 'Service Franchise',
+('c7000000-0000-0000-0000-000000000003'::uuid, 'franchise_services', 'Service Franchise',
  'Service-based franchises including cleaning, maintenance, staffing, and business services. Target businesses needing ongoing service contracts.',
  '56', 25.0, ARRAY['Corporate Offices', 'Healthcare Facilities', 'Manufacturing Plants', 'Educational Institutions'], true),
 
 -- Manufacturing Companies
-('ct000000-0000-0000-0000-000000000010'::uuid, 'manufacturing_industrial', 'Industrial Manufacturing',
+('c7000000-0000-0000-0000-000000000010'::uuid, 'manufacturing_industrial', 'Industrial Manufacturing',
  'Industrial manufacturing companies producing machinery, equipment, and components. Target businesses needing industrial supplies and equipment.',
  '33', 50.0, ARRAY['Manufacturing Plants', 'Construction Companies', 'Utilities', 'Mining Operations'], true),
 
-('ct000000-0000-0000-0000-000000000011'::uuid, 'manufacturing_consumer', 'Consumer Goods Manufacturing',
+('c7000000-0000-0000-0000-000000000011'::uuid, 'manufacturing_consumer', 'Consumer Goods Manufacturing',
  'Consumer goods manufacturers producing food, beverages, household products, and consumer electronics. Target retailers and distributors.',
  '31', 100.0, ARRAY['Retail Stores', 'Wholesale Distributors', 'E-commerce Companies'], true),
 
-('ct000000-0000-0000-0000-000000000012'::uuid, 'manufacturing_tech', 'Technology Manufacturing',
+('c7000000-0000-0000-0000-000000000012'::uuid, 'manufacturing_tech', 'Technology Manufacturing',
  'Technology and electronics manufacturing including semiconductors, computers, and telecommunications equipment. Target tech companies and system integrators.',
  '334', 75.0, ARRAY['Technology Companies', 'Data Centers', 'Telecommunications', 'Defense Contractors'], true),
 
 -- Real Estate Companies
-('ct000000-0000-0000-0000-000000000020'::uuid, 'real_estate_commercial', 'Commercial Real Estate',
+('c7000000-0000-0000-0000-000000000020'::uuid, 'real_estate_commercial', 'Commercial Real Estate',
  'Commercial real estate companies dealing with office buildings, retail spaces, and industrial properties. Target businesses looking for commercial space.',
  '531', 30.0, ARRAY['Growing Businesses', 'Startups', 'Expanding Corporations', 'Retail Chains'], true),
 
-('ct000000-0000-0000-0000-000000000021'::uuid, 'real_estate_residential', 'Residential Real Estate',
+('c7000000-0000-0000-0000-000000000021'::uuid, 'real_estate_residential', 'Residential Real Estate',
  'Residential real estate companies and brokerages. Target individuals and families in relocation or home-buying markets.',
  '531', 20.0, ARRAY['Corporate HR Departments', 'Relocation Services', 'New Developments'], true),
 
-('ct000000-0000-0000-0000-000000000022'::uuid, 'real_estate_property_mgmt', 'Property Management',
+('c7000000-0000-0000-0000-000000000022'::uuid, 'real_estate_property_mgmt', 'Property Management',
  'Property management companies handling residential and commercial properties. Target property owners and HOAs.',
  '531', 25.0, ARRAY['Property Owners', 'HOAs', 'Investment Groups', 'REITs'], true);
 
@@ -198,52 +198,52 @@ INSERT INTO franchisees (id, business_name, dba_name, franchise_number, owner_fi
  'Rocky Mountain Catering LLC', 'Mountain Fresh Catering', 'FRA-001',
  'John', 'Smith', 'john.smith@rmcatering.com', '(303) 555-0101',
  '1600 California St', 'Denver', 'CO', '80202',
- 39.7456, -104.9885, '2022-01-15', true, 'ct000000-0000-0000-0000-000000000001'::uuid),
+ 39.7456, -104.9885, '2022-01-15', true, 'c7000000-0000-0000-0000-000000000001'::uuid),
 
 ('c1000000-0000-0000-0000-000000000002'::uuid,
  'Bay Area Gourmet Inc', 'SF Gourmet Catering', 'FRA-002',
  'Sarah', 'Johnson', 'sarah@sfgourmet.com', '(415) 555-0202',
  '555 Market St', 'San Francisco', 'CA', '94105',
- 37.7909, -122.3998, '2021-06-01', true, 'ct000000-0000-0000-0000-000000000001'::uuid),
+ 37.7909, -122.3998, '2021-06-01', true, 'c7000000-0000-0000-0000-000000000001'::uuid),
 
 ('c1000000-0000-0000-0000-000000000003'::uuid,
  'Windy City Eats LLC', 'Chicago Corporate Catering', 'FRA-003',
  'Michael', 'Davis', 'mdavis@windycityeats.com', '(312) 555-0303',
  '233 S Wacker Dr', 'Chicago', 'IL', '60606',
- 41.8789, -87.6359, '2020-09-01', true, 'ct000000-0000-0000-0000-000000000001'::uuid),
+ 41.8789, -87.6359, '2020-09-01', true, 'c7000000-0000-0000-0000-000000000001'::uuid),
 
 -- Default franchisee (Pittsburgh Catering)
 ('c2c5af5a-53a5-4d28-8218-3675c0942ead'::uuid,
  'Pittsburgh Catering Co', '', 'FRA-004',
  'Mike', '', '', '',
  '1687 Washington Road', 'Pittsburgh', 'PA', '15228',
- 40.3732, -80.0432, CURRENT_DATE, true, 'ct000000-0000-0000-0000-000000000001'::uuid),
+ 40.3732, -80.0432, CURRENT_DATE, true, 'c7000000-0000-0000-0000-000000000001'::uuid),
 
 -- Manufacturing Company Examples
 ('c1000000-0000-0000-0000-000000000010'::uuid,
  'Precision Parts Manufacturing', 'PPM Industries', 'MFG-001',
  'Robert', 'Chen', 'rchen@ppmind.com', '(614) 555-1010',
  '4500 Industrial Pkwy', 'Columbus', 'OH', '43228',
- 39.9612, -83.0007, '2019-03-15', true, 'ct000000-0000-0000-0000-000000000010'::uuid),
+ 39.9612, -83.0007, '2019-03-15', true, 'c7000000-0000-0000-0000-000000000010'::uuid),
 
 ('c1000000-0000-0000-0000-000000000011'::uuid,
  'TechComp Electronics', 'TechComp', 'MFG-002',
  'Jennifer', 'Park', 'jpark@techcomp.com', '(408) 555-1111',
  '2800 Technology Dr', 'San Jose', 'CA', '95134',
- 37.3861, -121.9389, '2020-07-01', true, 'ct000000-0000-0000-0000-000000000012'::uuid),
+ 37.3861, -121.9389, '2020-07-01', true, 'c7000000-0000-0000-0000-000000000012'::uuid),
 
 -- Real Estate Company Examples
 ('c1000000-0000-0000-0000-000000000020'::uuid,
  'Metro Commercial Realty', 'Metro Realty', 'RE-001',
  'David', 'Thompson', 'dthompson@metrorealty.com', '(212) 555-2020',
  '350 Fifth Avenue', 'New York', 'NY', '10118',
- 40.7484, -73.9857, '2018-11-01', true, 'ct000000-0000-0000-0000-000000000020'::uuid),
+ 40.7484, -73.9857, '2018-11-01', true, 'c7000000-0000-0000-0000-000000000020'::uuid),
 
 ('c1000000-0000-0000-0000-000000000021'::uuid,
  'Sunbelt Property Management', 'Sunbelt PM', 'RE-002',
  'Lisa', 'Rodriguez', 'lrodriguez@sunbeltpm.com', '(480) 555-2121',
  '3030 N Central Ave', 'Phoenix', 'AZ', '85012',
- 33.4842, -112.0740, '2021-02-15', true, 'ct000000-0000-0000-0000-000000000022'::uuid);
+ 33.4842, -112.0740, '2021-02-15', true, 'c7000000-0000-0000-0000-000000000022'::uuid);
 
 
 -- ============================================================================
