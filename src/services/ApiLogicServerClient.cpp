@@ -40,6 +40,29 @@ static std::string generateUUID() {
     return ss.str();
 }
 
+/**
+ * @brief Check if a string is a valid UUID format
+ * Format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (36 chars with hyphens)
+ */
+static bool isValidUUID(const std::string& str) {
+    if (str.length() != 36) return false;
+
+    // Check format: 8-4-4-4-12 with hyphens at positions 8, 13, 18, 23
+    if (str[8] != '-' || str[13] != '-' || str[18] != '-' || str[23] != '-') {
+        return false;
+    }
+
+    // Check all other characters are hex digits
+    for (size_t i = 0; i < str.length(); i++) {
+        if (i == 8 || i == 13 || i == 18 || i == 23) continue;  // Skip hyphens
+        char c = str[i];
+        if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))) {
+            return false;
+        }
+    }
+    return true;
+}
+
 // ============================================================================
 // StoreLocationDTO implementation
 // ============================================================================
@@ -1313,17 +1336,26 @@ std::vector<ScoringRuleDTO> ApiLogicServerClient::parseScoringRules(const ApiRes
 // ============================================================================
 
 ApiResponse ApiLogicServerClient::saveProspect(const SavedProspectDTO& prospect) {
-    // Always use PATCH with ID in URL (upsert pattern)
-    // ApiLogicServer expects client-generated UUIDs
     SavedProspectDTO dto = prospect;
-    if (dto.id.empty()) {
+
+    // Check if ID is empty or not a valid UUID (e.g., OSM node IDs)
+    if (dto.id.empty() || !isValidUUID(dto.id)) {
+        // New record - generate UUID and use POST
+        std::string originalId = dto.id;
         dto.id = generateUUID();
+        std::string json = dto.toJson();
+
+        if (!originalId.empty()) {
+            std::cout << "  [ALS] Creating new SavedProspect (original ID '" << originalId << "' not a valid UUID)" << std::endl;
+        }
         std::cout << "  [ALS] Creating new SavedProspect with generated UUID: " << dto.id << std::endl;
+        return httpPost("/SavedProspect", json);
     } else {
+        // Existing record retrieved from database - use PATCH
+        std::string json = dto.toJson();
         std::cout << "  [ALS] Updating existing SavedProspect: " << dto.id << std::endl;
+        return httpPatch("/SavedProspect/" + dto.id, json);
     }
-    std::string json = dto.toJson();
-    return httpPatch("/SavedProspect/" + dto.id, json);
 }
 
 ApiResponse ApiLogicServerClient::getProspectsForStore(const std::string& storeLocationId) {
@@ -1368,10 +1400,19 @@ ApiResponse ApiLogicServerClient::getProspectsForFranchisee(const std::string& f
 
 ApiResponse ApiLogicServerClient::saveProspect(const ProspectDTO& prospect) {
     ProspectDTO dto = prospect;
-    if (dto.id.empty()) {
-        // Create new record - POST to collection endpoint
+
+    // Check if ID is empty or not a valid UUID (e.g., OSM node IDs like "osm_node_123")
+    if (dto.id.empty() || !isValidUUID(dto.id)) {
+        // Store original ID for reference if it was an OSM ID
+        std::string originalId = dto.id;
+
+        // Generate a proper UUID for the database
         dto.id = generateUUID();
         std::string json = dto.toJson();
+
+        if (!originalId.empty()) {
+            std::cout << "  [ALS] Creating new Prospect (original ID '" << originalId << "' not a valid UUID)" << std::endl;
+        }
         std::cout << "  [ALS] Creating new Prospect with generated UUID: " << dto.id << std::endl;
         return httpPost("/Prospect", json);
     } else {
