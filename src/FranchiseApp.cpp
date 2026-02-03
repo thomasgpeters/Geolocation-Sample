@@ -1754,48 +1754,43 @@ void FranchiseApp::showProspectsPage() {
                 }
             }
 
-            // Score comparison section (AI Score vs Optimized Score)
-            auto scoreCompareContainer = card->addWidget(std::make_unique<Wt::WContainerWidget>());
-            scoreCompareContainer->setStyleClass("prospect-score-compare");
+            // Score display section (Optimized Score bubble + AI Score text)
+            auto scoreDisplayContainer = card->addWidget(std::make_unique<Wt::WContainerWidget>());
+            scoreDisplayContainer->setStyleClass("prospect-score-display");
 
-            // AI Confidence Score (if available)
-            if (prospect.aiConfidenceScore > 0 || prospect.relevanceScore > 0) {
-                auto aiScoreContainer = scoreCompareContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
-                aiScoreContainer->setStyleClass("score-item ai-score");
-
-                auto aiLabel = aiScoreContainer->addWidget(std::make_unique<Wt::WText>("AI Score"));
-                aiLabel->setStyleClass("score-label");
-
-                int aiScoreValue = static_cast<int>((prospect.aiConfidenceScore > 0 ? prospect.aiConfidenceScore : prospect.relevanceScore) * 100);
-                auto aiValue = aiScoreContainer->addWidget(std::make_unique<Wt::WText>(std::to_string(aiScoreValue)));
-                aiValue->setStyleClass("score-value");
+            // Optimized Score as colored bubble
+            int optimizedScore = prospect.overallScore;
+            std::string scoreBubbleClass = "score-bubble";
+            if (optimizedScore >= 80) {
+                scoreBubbleClass += " score-high";
+            } else if (optimizedScore >= 60) {
+                scoreBubbleClass += " score-medium";
+            } else if (optimizedScore >= 40) {
+                scoreBubbleClass += " score-low";
+            } else {
+                scoreBubbleClass += " score-very-low";
             }
 
-            // Optimized Score (after scoring rules applied)
-            auto optimizedScoreContainer = scoreCompareContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
-            optimizedScoreContainer->setStyleClass("score-item optimized-score");
+            auto optimizedContainer = scoreDisplayContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
+            optimizedContainer->setStyleClass("optimized-score-container");
 
-            auto optLabel = optimizedScoreContainer->addWidget(std::make_unique<Wt::WText>("Optimized"));
-            optLabel->setStyleClass("score-label");
+            auto optLabel = optimizedContainer->addWidget(std::make_unique<Wt::WText>("Optimized Score"));
+            optLabel->setStyleClass("score-display-label");
 
-            auto optValue = optimizedScoreContainer->addWidget(std::make_unique<Wt::WText>(std::to_string(prospect.overallScore)));
-            optValue->setStyleClass("score-value");
+            auto optBubble = optimizedContainer->addWidget(std::make_unique<Wt::WText>(std::to_string(optimizedScore)));
+            optBubble->setStyleClass(scoreBubbleClass);
 
-            // Score delta indicator (if AI score available)
+            // AI Score as grey text (if available)
             if (prospect.aiConfidenceScore > 0 || prospect.relevanceScore > 0) {
+                auto aiContainer = scoreDisplayContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
+                aiContainer->setStyleClass("ai-score-container");
+
+                auto aiLabel = aiContainer->addWidget(std::make_unique<Wt::WText>("AI Score"));
+                aiLabel->setStyleClass("score-display-label ai-label");
+
                 int aiScoreValue = static_cast<int>((prospect.aiConfidenceScore > 0 ? prospect.aiConfidenceScore : prospect.relevanceScore) * 100);
-                int delta = prospect.overallScore - aiScoreValue;
-                if (delta != 0) {
-                    auto deltaContainer = scoreCompareContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
-                    deltaContainer->setStyleClass(delta > 0 ? "score-item score-delta positive" : "score-item score-delta negative");
-
-                    auto deltaLabel = deltaContainer->addWidget(std::make_unique<Wt::WText>("Rules"));
-                    deltaLabel->setStyleClass("score-label");
-
-                    std::string deltaStr = (delta > 0 ? "+" : "") + std::to_string(delta);
-                    auto deltaValue = deltaContainer->addWidget(std::make_unique<Wt::WText>(deltaStr));
-                    deltaValue->setStyleClass("score-value");
-                }
+                auto aiValue = aiContainer->addWidget(std::make_unique<Wt::WText>(std::to_string(aiScoreValue)));
+                aiValue->setStyleClass("ai-score-value");
             }
 
             // AI Summary (if available)
@@ -1825,16 +1820,29 @@ void FranchiseApp::showProspectsPage() {
                 }
             }
 
-            // Recommended actions
+            // Recommended actions (collapsible with triangle)
             if (!prospect.recommendedActions.empty()) {
                 auto recActionsContainer = card->addWidget(std::make_unique<Wt::WContainerWidget>());
                 recActionsContainer->setStyleClass("prospect-recommended-actions");
 
-                auto recActionsLabel = recActionsContainer->addWidget(std::make_unique<Wt::WText>("Recommended Actions:"));
+                // Header with toggle triangle
+                auto recActionsHeader = recActionsContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
+                recActionsHeader->setStyleClass("recommended-actions-header");
+
+                auto triangle = recActionsHeader->addWidget(std::make_unique<Wt::WText>("▶"));
+                triangle->setStyleClass("toggle-triangle");
+
+                auto recActionsLabel = recActionsHeader->addWidget(std::make_unique<Wt::WText>("Recommended Actions"));
                 recActionsLabel->setStyleClass("recommended-actions-label");
 
+                auto actionCount = recActionsHeader->addWidget(std::make_unique<Wt::WText>(
+                    "(" + std::to_string(prospect.recommendedActions.size()) + ")"
+                ));
+                actionCount->setStyleClass("actions-count");
+
+                // Collapsible actions list (hidden by default)
                 auto recActionsList = recActionsContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
-                recActionsList->setStyleClass("recommended-actions-list");
+                recActionsList->setStyleClass("recommended-actions-list collapsed");
 
                 int actionNum = 1;
                 for (const auto& action : prospect.recommendedActions) {
@@ -1847,6 +1855,17 @@ void FranchiseApp::showProspectsPage() {
                     auto actionText = actionItem->addWidget(std::make_unique<Wt::WText>(action));
                     actionText->setStyleClass("action-text");
                 }
+
+                // Toggle click handler
+                recActionsHeader->clicked().connect([triangle, recActionsList] {
+                    if (recActionsList->styleClass().find("collapsed") != std::string::npos) {
+                        recActionsList->setStyleClass("recommended-actions-list");
+                        triangle->setText("▼");
+                    } else {
+                        recActionsList->setStyleClass("recommended-actions-list collapsed");
+                        triangle->setText("▶");
+                    }
+                });
             }
 
             // Actions
