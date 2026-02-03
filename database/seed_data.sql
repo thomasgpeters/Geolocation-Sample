@@ -3,10 +3,14 @@
 -- Run this AFTER schema.sql to populate initial data
 -- ============================================================================
 
+DO $$ BEGIN RAISE NOTICE '=== Starting FranchiseAI Seed Data ==='; END $$;
+
 -- ============================================================================
--- COMPANY TYPES
+-- COMPANY TYPES (9 records)
 -- Classification of companies/franchises using the FranchiseAI platform
 -- ============================================================================
+
+DO $$ BEGIN RAISE NOTICE 'Inserting COMPANY_TYPES...'; END $$;
 
 INSERT INTO company_types (id, code, name, description, naics_prefix, default_search_radius_miles, default_prospect_industries, is_active) VALUES
 -- Franchise Companies (Food Service, Retail, Services)
@@ -48,13 +52,17 @@ INSERT INTO company_types (id, code, name, description, naics_prefix, default_se
  'Property management companies handling residential and commercial properties. Target property owners and HOAs.',
  '531', 25.0, ARRAY['Property Owners', 'HOAs', 'Investment Groups', 'REITs'], true);
 
+DO $$ BEGIN RAISE NOTICE '  -> Inserted 9 company types'; END $$;
+
 
 -- ============================================================================
--- APPLICATION CONFIGURATION
+-- APPLICATION CONFIGURATION (13 records)
 -- Feature flags, display settings, and business rules
 -- ============================================================================
 
--- Feature Flags
+DO $$ BEGIN RAISE NOTICE 'Inserting APP_CONFIG...'; END $$;
+
+-- Feature Flags (5 records)
 INSERT INTO app_config (config_key, config_value, config_type, category, description, is_sensitive, is_required, default_value) VALUES
 ('enable_ai_search', 'true', 'boolean', 'features', 'Enable AI-powered prospect search', false, false, 'true'),
 ('enable_demographics', 'true', 'boolean', 'features', 'Enable demographics visualization', false, false, 'true'),
@@ -62,7 +70,7 @@ INSERT INTO app_config (config_key, config_value, config_type, category, descrip
 ('enable_prospect_scoring', 'true', 'boolean', 'features', 'Enable AI-based prospect scoring', false, false, 'true'),
 ('enable_market_analysis', 'true', 'boolean', 'features', 'Enable AI market analysis for prospects', false, false, 'true');
 
--- Display/UI Settings
+-- Display/UI Settings (5 records)
 INSERT INTO app_config (config_key, config_value, config_type, category, description, is_sensitive, is_required, default_value) VALUES
 ('default_map_zoom', '12', 'integer', 'display', 'Default zoom level for map views', false, false, '12'),
 ('default_search_radius', '5', 'integer', 'display', 'Default search radius in miles', false, false, '5'),
@@ -70,23 +78,27 @@ INSERT INTO app_config (config_key, config_value, config_type, category, descrip
 ('map_tile_provider', 'openstreetmap', 'string', 'display', 'Map tile provider: openstreetmap, mapbox', false, false, 'openstreetmap'),
 ('theme', 'light', 'string', 'display', 'UI theme: light, dark', false, false, 'light');
 
--- Business Rules
+-- Business Rules (4 records)
 INSERT INTO app_config (config_key, config_value, config_type, category, description, is_sensitive, is_required, default_value) VALUES
 ('min_prospect_score', '50', 'integer', 'business', 'Minimum score to qualify as a prospect', false, false, '50'),
 ('hot_lead_threshold', '80', 'integer', 'business', 'Score threshold for hot lead classification', false, false, '80'),
 ('geocoding_cache_minutes', '1440', 'integer', 'business', 'Cache duration for geocoding results (minutes)', false, false, '1440'),
 ('max_search_results', '100', 'integer', 'business', 'Maximum results returned from search', false, false, '100');
 
--- System Settings (runtime state)
+-- System Settings (2 records)
 INSERT INTO app_config (config_key, config_value, config_type, category, description, is_sensitive, is_required, default_value) VALUES
 ('current_franchisee_id', 'c2c5af5a-53a5-4d28-8218-3675c0942ead', 'string', 'system', 'Currently selected franchisee ID', false, false, ''),
 ('current_store_id', 'c14a9f57-2ed2-4e30-9834-98614465ddbb', 'string', 'system', 'Currently selected store location ID', false, false, '');
 
+DO $$ BEGIN RAISE NOTICE '  -> Inserted 16 app_config records (5 features, 5 display, 4 business, 2 system)'; END $$;
+
 
 -- ============================================================================
--- INDUSTRIES
+-- INDUSTRIES (15 records)
 -- Industry classification with catering/service relevance scoring
 -- ============================================================================
+
+DO $$ BEGIN RAISE NOTICE 'Inserting INDUSTRIES...'; END $$;
 
 INSERT INTO industries (name, naics_code, catering_potential_score, typical_order_size, peak_seasons) VALUES
 ('Corporate Offices', '551114', 9, '$500-$2000', ARRAY['Q4', 'Holiday Season']),
@@ -106,11 +118,15 @@ INSERT INTO industries (name, naics_code, catering_potential_score, typical_orde
 ('Property Management', '531311', 5, '$200-$600', ARRAY['Q1', 'Q4']),
 ('Real Estate Agencies', '531210', 6, '$300-$900', ARRAY['Spring', 'Summer']);
 
+DO $$ BEGIN RAISE NOTICE '  -> Inserted 15 industries'; END $$;
+
 
 -- ============================================================================
--- TAGS
+-- TAGS (12 records)
 -- Flexible tagging system for prospects
 -- ============================================================================
+
+DO $$ BEGIN RAISE NOTICE 'Inserting TAGS...'; END $$;
 
 INSERT INTO tags (name, color, description) VALUES
 ('hot-lead', '#e74c3c', 'High priority prospect requiring immediate attention'),
@@ -127,11 +143,15 @@ INSERT INTO tags (name, color, description) VALUES
 ('new-construction', '#16a085', 'New construction or development'),
 ('expansion-planned', '#d35400', 'Business planning expansion');
 
+DO $$ BEGIN RAISE NOTICE '  -> Inserted 12 tags'; END $$;
+
 
 -- ============================================================================
--- REGIONS
+-- REGIONS (4 records)
 -- Top-level geographic areas
 -- ============================================================================
+
+DO $$ BEGIN RAISE NOTICE 'Inserting REGIONS...'; END $$;
 
 INSERT INTO regions (id, name, code, country_code, timezone) VALUES
 ('a1000000-0000-0000-0000-000000000001'::uuid, 'Western Region', 'WEST', 'US', 'America/Los_Angeles'),
@@ -139,14 +159,18 @@ INSERT INTO regions (id, name, code, country_code, timezone) VALUES
 ('a1000000-0000-0000-0000-000000000003'::uuid, 'Eastern Region', 'EAST', 'US', 'America/New_York'),
 ('a1000000-0000-0000-0000-000000000004'::uuid, 'Southern Region', 'SOUTH', 'US', 'America/Chicago');
 
+DO $$ BEGIN RAISE NOTICE '  -> Inserted 4 regions (Western, Central, Eastern, Southern)'; END $$;
+
 
 -- ============================================================================
--- TERRITORIES
+-- TERRITORIES (10 records)
 -- Assignable sales territories within regions
 -- ============================================================================
 
+DO $$ BEGIN RAISE NOTICE 'Inserting TERRITORIES...'; END $$;
+
 INSERT INTO territories (id, region_id, name, code, description, center_latitude, center_longitude, radius_miles, is_active) VALUES
--- Western Region
+-- Western Region (3 territories)
 ('b1000000-0000-0000-0000-000000000001'::uuid, 'a1000000-0000-0000-0000-000000000001'::uuid,
  'San Francisco Metro', 'SF-METRO', 'San Francisco Bay Area territory',
  37.7749, -122.4194, 25.0, true),
@@ -157,7 +181,7 @@ INSERT INTO territories (id, region_id, name, code, description, center_latitude
  'Seattle Metro', 'SEA-METRO', 'Greater Seattle area',
  47.6062, -122.3321, 20.0, true),
 
--- Central Region
+-- Central Region (3 territories)
 ('b1000000-0000-0000-0000-000000000004'::uuid, 'a1000000-0000-0000-0000-000000000002'::uuid,
  'Denver Metro', 'DEN-METRO', 'Denver metropolitan area',
  39.7392, -104.9903, 20.0, true),
@@ -168,7 +192,7 @@ INSERT INTO territories (id, region_id, name, code, description, center_latitude
  'Austin Metro', 'AUS-METRO', 'Austin Texas metropolitan area',
  30.2672, -97.7431, 18.0, true),
 
--- Eastern Region
+-- Eastern Region (2 territories)
 ('b1000000-0000-0000-0000-000000000007'::uuid, 'a1000000-0000-0000-0000-000000000003'::uuid,
  'New York City', 'NYC', 'New York City five boroughs',
  40.7128, -74.0060, 15.0, true),
@@ -176,7 +200,7 @@ INSERT INTO territories (id, region_id, name, code, description, center_latitude
  'Boston Metro', 'BOS-METRO', 'Greater Boston area',
  42.3601, -71.0589, 18.0, true),
 
--- Southern Region
+-- Southern Region (2 territories)
 ('b1000000-0000-0000-0000-000000000009'::uuid, 'a1000000-0000-0000-0000-000000000004'::uuid,
  'Atlanta Metro', 'ATL-METRO', 'Atlanta metropolitan area',
  33.7490, -84.3880, 22.0, true),
@@ -184,16 +208,20 @@ INSERT INTO territories (id, region_id, name, code, description, center_latitude
  'Miami Metro', 'MIA-METRO', 'Miami-Dade area',
  25.7617, -80.1918, 20.0, true);
 
+DO $$ BEGIN RAISE NOTICE '  -> Inserted 10 territories (3 West, 3 Central, 2 East, 2 South)'; END $$;
+
 
 -- ============================================================================
--- FRANCHISEES
+-- FRANCHISEES (8 records)
 -- Franchise owners/operators with company type classification
 -- ============================================================================
+
+DO $$ BEGIN RAISE NOTICE 'Inserting FRANCHISEES...'; END $$;
 
 INSERT INTO franchisees (id, business_name, dba_name, franchise_number, owner_first_name, owner_last_name,
                          email, phone, address_line1, city, state_province, postal_code,
                          latitude, longitude, start_date, is_active, company_type_id) VALUES
--- Food Service Franchises
+-- Food Service Franchises (4 records)
 ('c1000000-0000-0000-0000-000000000001'::uuid,
  'Rocky Mountain Catering LLC', 'Mountain Fresh Catering', 'FRA-001',
  'John', 'Smith', 'john.smith@rmcatering.com', '(303) 555-0101',
@@ -212,14 +240,14 @@ INSERT INTO franchisees (id, business_name, dba_name, franchise_number, owner_fi
  '233 S Wacker Dr', 'Chicago', 'IL', '60606',
  41.8789, -87.6359, '2020-09-01', true, 'c7000000-0000-0000-0000-000000000001'::uuid),
 
--- Default franchisee (Pittsburgh Catering)
+-- Default franchisee (Pittsburgh Catering) - used by app
 ('c2c5af5a-53a5-4d28-8218-3675c0942ead'::uuid,
  'Pittsburgh Catering Co', '', 'FRA-004',
  'Mike', '', '', '',
  '1687 Washington Road', 'Pittsburgh', 'PA', '15228',
  40.3732, -80.0432, CURRENT_DATE, true, 'c7000000-0000-0000-0000-000000000001'::uuid),
 
--- Manufacturing Company Examples
+-- Manufacturing Company Examples (2 records)
 ('c1000000-0000-0000-0000-000000000010'::uuid,
  'Precision Parts Manufacturing', 'PPM Industries', 'MFG-001',
  'Robert', 'Chen', 'rchen@ppmind.com', '(614) 555-1010',
@@ -232,7 +260,7 @@ INSERT INTO franchisees (id, business_name, dba_name, franchise_number, owner_fi
  '2800 Technology Dr', 'San Jose', 'CA', '95134',
  37.3861, -121.9389, '2020-07-01', true, 'c7000000-0000-0000-0000-000000000012'::uuid),
 
--- Real Estate Company Examples
+-- Real Estate Company Examples (2 records)
 ('c1000000-0000-0000-0000-000000000020'::uuid,
  'Metro Commercial Realty', 'Metro Realty', 'RE-001',
  'David', 'Thompson', 'dthompson@metrorealty.com', '(212) 555-2020',
@@ -245,10 +273,14 @@ INSERT INTO franchisees (id, business_name, dba_name, franchise_number, owner_fi
  '3030 N Central Ave', 'Phoenix', 'AZ', '85012',
  33.4842, -112.0740, '2021-02-15', true, 'c7000000-0000-0000-0000-000000000022'::uuid);
 
+DO $$ BEGIN RAISE NOTICE '  -> Inserted 8 franchisees (4 food service, 2 manufacturing, 2 real estate)'; END $$;
+
 
 -- ============================================================================
--- FRANCHISEE TERRITORY ASSIGNMENTS
+-- FRANCHISEE TERRITORY ASSIGNMENTS (4 records)
 -- ============================================================================
+
+DO $$ BEGIN RAISE NOTICE 'Inserting FRANCHISEE_TERRITORIES...'; END $$;
 
 INSERT INTO franchisee_territories (franchisee_id, territory_id, is_primary, assigned_date) VALUES
 ('c1000000-0000-0000-0000-000000000001'::uuid, 'b1000000-0000-0000-0000-000000000004'::uuid, true, '2022-01-15'),
@@ -256,11 +288,15 @@ INSERT INTO franchisee_territories (franchisee_id, territory_id, is_primary, ass
 ('c1000000-0000-0000-0000-000000000003'::uuid, 'b1000000-0000-0000-0000-000000000005'::uuid, true, '2020-09-01'),
 ('c1000000-0000-0000-0000-000000000020'::uuid, 'b1000000-0000-0000-0000-000000000007'::uuid, true, '2018-11-01');
 
+DO $$ BEGIN RAISE NOTICE '  -> Inserted 4 franchisee-territory assignments'; END $$;
+
 
 -- ============================================================================
--- STORE LOCATIONS
+-- STORE LOCATIONS (4 records)
 -- Physical store locations for franchise operations
 -- ============================================================================
+
+DO $$ BEGIN RAISE NOTICE 'Inserting STORE_LOCATIONS...'; END $$;
 
 INSERT INTO store_locations (id, franchisee_id, store_name, store_code, address_line1, city, state_province,
                              postal_code, latitude, longitude, geocode_source, geocoded_at,
@@ -277,16 +313,20 @@ INSERT INTO store_locations (id, franchisee_id, store_name, store_code, address_
  'Willis Tower Store', 'CHI-001', '233 S Wacker Dr', 'Chicago', 'IL', '60606',
  41.8789, -87.6359, 'nominatim', CURRENT_TIMESTAMP, 12.0, '(312) 555-0303', true, true),
 
--- Default store location
+-- Default store location (Pittsburgh) - used by app
 ('c14a9f57-2ed2-4e30-9834-98614465ddbb'::uuid, 'c2c5af5a-53a5-4d28-8218-3675c0942ead'::uuid,
  'Pittsburgh Store', 'PIT-001', '1687 Washington Road', 'Pittsburgh', 'PA', '15228',
  40.3732, -80.0432, 'nominatim', CURRENT_TIMESTAMP, 25.0, '', true, true);
 
+DO $$ BEGIN RAISE NOTICE '  -> Inserted 4 store locations'; END $$;
+
 
 -- ============================================================================
--- SAMPLE PROSPECTS
+-- SAMPLE PROSPECTS (7 records)
 -- Example prospect records with AI scoring data
 -- ============================================================================
+
+DO $$ BEGIN RAISE NOTICE 'Inserting PROSPECTS with AI scoring data...'; END $$;
 
 INSERT INTO prospects (id, territory_id, franchisee_id, business_name, business_type,
                        employee_count, employee_count_range, address_line1, city, state_province,
@@ -294,7 +334,7 @@ INSERT INTO prospects (id, territory_id, franchisee_id, business_name, business_
                        status, data_source, is_verified,
                        ai_score, optimized_score, relevance_score, ai_summary,
                        key_highlights, recommended_actions, data_sources) VALUES
--- Denver Prospects
+-- Denver Prospects (3 records)
 ('e1000000-0000-0000-0000-000000000001'::uuid,
  'b1000000-0000-0000-0000-000000000004'::uuid, 'c1000000-0000-0000-0000-000000000001'::uuid,
  'TechStart Colorado', 'Technology Company', 150, 'medium',
@@ -328,7 +368,7 @@ INSERT INTO prospects (id, territory_id, franchisee_id, business_name, business_
  'Send premium menu options|Propose client meeting packages|Schedule tasting session',
  'OpenStreetMap'),
 
--- San Francisco Prospects
+-- San Francisco Prospects (2 records)
 ('e1000000-0000-0000-0000-000000000004'::uuid,
  'b1000000-0000-0000-0000-000000000001'::uuid, 'c1000000-0000-0000-0000-000000000002'::uuid,
  'Bay Innovations Inc', 'Technology Company', 280, 'large',
@@ -351,7 +391,7 @@ INSERT INTO prospects (id, territory_id, franchisee_id, business_name, business_
  'Follow up on proposal|Address any questions|Propose executive lunch program',
  'OpenStreetMap,BBB'),
 
--- Chicago Prospects
+-- Chicago Prospects (2 records)
 ('e1000000-0000-0000-0000-000000000006'::uuid,
  'b1000000-0000-0000-0000-000000000005'::uuid, 'c1000000-0000-0000-0000-000000000003'::uuid,
  'Midwest Corporate Holdings', 'Corporate Office', 450, 'large',
@@ -374,11 +414,15 @@ INSERT INTO prospects (id, territory_id, franchisee_id, business_name, business_
  'Present enterprise solution|Discuss volume pricing|Propose pilot program for one department',
  'OpenStreetMap,GooglePlaces');
 
+DO $$ BEGIN RAISE NOTICE '  -> Inserted 7 prospects (3 Denver, 2 SF, 2 Chicago) with AI scores'; END $$;
+
 
 -- ============================================================================
--- PROSPECT SCORES
+-- PROSPECT SCORES (7 records)
 -- AI and manual lead scoring
 -- ============================================================================
+
+DO $$ BEGIN RAISE NOTICE 'Inserting PROSPECT_SCORES...'; END $$;
 
 INSERT INTO prospect_scores (prospect_id, total_score, score_grade, fit_score, engagement_score,
                             catering_potential_score, proximity_score, score_source, model_version, confidence) VALUES
@@ -390,11 +434,15 @@ INSERT INTO prospect_scores (prospect_id, total_score, score_grade, fit_score, e
 ('e1000000-0000-0000-0000-000000000006'::uuid, 94, 'A', 96, 90, 95, 92, 'ai_model', '1.0.0', 0.94),
 ('e1000000-0000-0000-0000-000000000007'::uuid, 96, 'A', 98, 92, 98, 88, 'ai_model', '1.0.0', 0.96);
 
+DO $$ BEGIN RAISE NOTICE '  -> Inserted 7 prospect scores (3 grade A, 4 grade B)'; END $$;
+
 
 -- ============================================================================
--- TERRITORY DEMOGRAPHICS
+-- TERRITORY DEMOGRAPHICS (3 records)
 -- Demographic and market data per territory
 -- ============================================================================
+
+DO $$ BEGIN RAISE NOTICE 'Inserting TERRITORY_DEMOGRAPHICS...'; END $$;
 
 INSERT INTO territory_demographics (territory_id, total_population, population_density, median_age,
                                    total_households, median_household_income, total_businesses,
@@ -406,13 +454,17 @@ INSERT INTO territory_demographics (territory_id, total_population, population_d
 ('b1000000-0000-0000-0000-000000000005'::uuid, 2693976, 11841.8, 35.8, 1087650, 78650.00,
  125680, 1892450, 552.4, 2024, 'US Census Bureau');
 
+DO $$ BEGIN RAISE NOTICE '  -> Inserted 3 territory demographics (Denver, SF, Chicago)'; END $$;
+
 
 -- ============================================================================
--- USERS
+-- USERS (4 records)
 -- Application users with authentication
 -- NOTE: Password hashes are for development only (MD5)
 -- In production, use bcrypt or Argon2 with proper salting
 -- ============================================================================
+
+DO $$ BEGIN RAISE NOTICE 'Inserting USERS...'; END $$;
 
 INSERT INTO users (id, email, password_hash, first_name, last_name, role, franchisee_id, is_active, is_verified) VALUES
 -- Admin user (password: admin123)
@@ -442,13 +494,17 @@ INSERT INTO users (id, email, password_hash, first_name, last_name, role, franch
  'David', 'Thompson', 'franchisee',
  'c1000000-0000-0000-0000-000000000020'::uuid, true, true);
 
+DO $$ BEGIN RAISE NOTICE '  -> Inserted 4 users (1 admin, 3 franchisees)'; END $$;
+
 
 -- ============================================================================
--- SCORING RULES
+-- SCORING RULES (13 records)
 -- Configurable rules for prospect score adjustments
 -- ============================================================================
 
--- Penalty rules (negative adjustments for missing/incomplete data)
+DO $$ BEGIN RAISE NOTICE 'Inserting SCORING_RULES...'; END $$;
+
+-- Penalty rules (5 records - negative adjustments for missing/incomplete data)
 INSERT INTO scoring_rules (rule_id, name, description, is_penalty, enabled, default_points, current_points, min_points, max_points) VALUES
 ('no_address', 'Missing Address', 'Prospects without addresses are harder to contact and verify', true, true, -10, -10, -25, 0),
 ('no_employees', 'Missing Employee Count', 'Unknown employee count makes potential harder to estimate', true, true, -3, -3, -15, 0),
@@ -456,7 +512,9 @@ INSERT INTO scoring_rules (rule_id, name, description, is_penalty, enabled, defa
 ('no_website', 'Missing Website', 'No web presence may indicate smaller operation', true, true, -2, -2, -10, 0),
 ('incomplete_profile', 'Incomplete Business Profile', 'Missing key business information', true, true, -4, -4, -15, 0);
 
--- Bonus rules (positive adjustments for quality indicators)
+DO $$ BEGIN RAISE NOTICE '  -> Inserted 5 penalty rules'; END $$;
+
+-- Bonus rules (8 records - positive adjustments for quality indicators)
 INSERT INTO scoring_rules (rule_id, name, description, is_penalty, enabled, default_points, current_points, min_points, max_points) VALUES
 ('verified', 'Verified Business', 'Business has been verified through data sources', false, true, 5, 5, 0, 15),
 ('bbb_accredited', 'BBB Accredited', 'Business is accredited by the Better Business Bureau', false, true, 10, 10, 0, 20),
@@ -467,7 +525,30 @@ INSERT INTO scoring_rules (rule_id, name, description, is_penalty, enabled, defa
 ('growth_indicators', 'Growth Indicators', 'Business shows signs of growth or expansion', false, true, 6, 6, 0, 18),
 ('multiple_locations', 'Multiple Locations', 'Business has multiple locations', false, true, 10, 10, 0, 25);
 
+DO $$ BEGIN RAISE NOTICE '  -> Inserted 8 bonus rules'; END $$;
+
 
 -- ============================================================================
--- END OF SEED DATA
+-- SEED DATA COMPLETE
 -- ============================================================================
+
+DO $$ BEGIN RAISE NOTICE ''; END $$;
+DO $$ BEGIN RAISE NOTICE '=== FranchiseAI Seed Data Complete ==='; END $$;
+DO $$ BEGIN RAISE NOTICE 'Summary:'; END $$;
+DO $$ BEGIN RAISE NOTICE '  - 9 company types'; END $$;
+DO $$ BEGIN RAISE NOTICE '  - 16 app config settings'; END $$;
+DO $$ BEGIN RAISE NOTICE '  - 15 industries'; END $$;
+DO $$ BEGIN RAISE NOTICE '  - 12 tags'; END $$;
+DO $$ BEGIN RAISE NOTICE '  - 4 regions'; END $$;
+DO $$ BEGIN RAISE NOTICE '  - 10 territories'; END $$;
+DO $$ BEGIN RAISE NOTICE '  - 8 franchisees'; END $$;
+DO $$ BEGIN RAISE NOTICE '  - 4 franchisee-territory assignments'; END $$;
+DO $$ BEGIN RAISE NOTICE '  - 4 store locations'; END $$;
+DO $$ BEGIN RAISE NOTICE '  - 7 prospects with AI scoring data'; END $$;
+DO $$ BEGIN RAISE NOTICE '  - 7 prospect scores'; END $$;
+DO $$ BEGIN RAISE NOTICE '  - 3 territory demographics'; END $$;
+DO $$ BEGIN RAISE NOTICE '  - 4 users'; END $$;
+DO $$ BEGIN RAISE NOTICE '  - 13 scoring rules (5 penalties, 8 bonuses)'; END $$;
+DO $$ BEGIN RAISE NOTICE ''; END $$;
+DO $$ BEGIN RAISE NOTICE 'Default login: mike@pittsburghcatering.com / mike123'; END $$;
+DO $$ BEGIN RAISE NOTICE '=== END ==='; END $$;
