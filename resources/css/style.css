@@ -1272,6 +1272,7 @@ input[type="range"].form-slider::-moz-range-thumb {
 .buttons-container {
     display: flex;
     gap: 10px;
+    justify-content: flex-end;
 }
 
 /* ==================== Buttons ==================== */
