@@ -1340,18 +1340,22 @@ ApiResponse ApiLogicServerClient::saveProspect(const SavedProspectDTO& prospect)
 
     // Check if ID is empty or not a valid UUID (e.g., OSM node IDs)
     if (dto.id.empty() || !isValidUUID(dto.id)) {
+        // New record - generate UUID and use POST
         std::string originalId = dto.id;
         dto.id = generateUUID();
+        std::string json = dto.toJson();
 
         if (!originalId.empty()) {
             std::cout << "  [ALS] Creating new SavedProspect (original ID '" << originalId << "' not a valid UUID)" << std::endl;
         }
         std::cout << "  [ALS] Creating new SavedProspect with generated UUID: " << dto.id << std::endl;
+        return httpPost("/SavedProspect", json);
     } else {
+        // Existing record retrieved from database - use PATCH
+        std::string json = dto.toJson();
         std::cout << "  [ALS] Updating existing SavedProspect: " << dto.id << std::endl;
+        return httpPatch("/SavedProspect/" + dto.id, json);
     }
-    std::string json = dto.toJson();
-    return httpPatch("/SavedProspect/" + dto.id, json);
 }
 
 ApiResponse ApiLogicServerClient::getProspectsForStore(const std::string& storeLocationId) {
