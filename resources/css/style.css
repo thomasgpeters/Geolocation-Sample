@@ -1112,19 +1112,47 @@ input[type="range"].form-slider {
     -webkit-appearance: none;
     appearance: none;
     width: 100%;
-    height: 6px;
-    background: #f1f5f9;
-    border-radius: 3px;
+    height: 20px;
+    background: transparent;
     outline: none;
     cursor: pointer;
 }
 
+/* Track - thin with border */
+.form-slider input[type="range"]::-webkit-slider-runnable-track,
+input[type="range"].form-slider::-webkit-slider-runnable-track {
+    height: 4px;
+    background: #e2e8f0;
+    border-radius: 2px;
+    border: 1px solid #cbd5e1;
+}
+
+.form-slider input[type="range"]::-moz-range-track,
+input[type="range"].form-slider::-moz-range-track {
+    height: 4px;
+    background: #e2e8f0;
+    border-radius: 2px;
+    border: 1px solid #cbd5e1;
+}
+
+/* Firefox progress (filled portion) - purple */
+.form-slider input[type="range"]::-moz-range-progress,
+input[type="range"].form-slider::-moz-range-progress {
+    height: 4px;
+    background: #a5b4fc;
+    border-radius: 2px 0 0 2px;
+    border: 1px solid #818cf8;
+    border-right: none;
+}
+
+/* Thumb - 3D style */
 .form-slider input[type="range"]::-webkit-slider-thumb,
 input[type="range"].form-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
+    margin-top: -8px;
     background: linear-gradient(145deg, #6366f1, #4f46e5);
     border-radius: 50%;
     cursor: pointer;
@@ -1137,8 +1165,8 @@ input[type="range"].form-slider::-webkit-slider-thumb {
 
 .form-slider input[type="range"]::-moz-range-thumb,
 input[type="range"].form-slider::-moz-range-thumb {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     background: linear-gradient(145deg, #6366f1, #4f46e5);
     border-radius: 50%;
     cursor: pointer;
@@ -1147,20 +1175,6 @@ input[type="range"].form-slider::-moz-range-thumb {
         0 2px 4px rgba(0,0,0,0.2),
         0 4px 8px rgba(79, 70, 229, 0.3),
         inset 0 1px 2px rgba(255,255,255,0.3);
-}
-
-.form-slider input[type="range"]::-webkit-slider-runnable-track,
-input[type="range"].form-slider::-webkit-slider-runnable-track {
-    height: 6px;
-    background: #f1f5f9;
-    border-radius: 3px;
-}
-
-.form-slider input[type="range"]::-moz-range-track,
-input[type="range"].form-slider::-moz-range-track {
-    height: 6px;
-    background: #f1f5f9;
-    border-radius: 3px;
 }
 
 /* Slider group - clean container for full-width sliders */
@@ -2180,13 +2194,49 @@ input[type="range"].form-slider::-moz-range-track {
 .scoring-slider input[type="range"],
 input[type="range"].scoring-slider {
     width: 100%;
-    height: 6px;
+    height: 20px;
     -webkit-appearance: none;
     appearance: none;
-    background: #f1f5f9;
-    border-radius: 3px;
+    background: transparent;
     outline: none;
     cursor: pointer;
+}
+
+/* Track styling - thinner with border */
+.scoring-slider input[type="range"]::-webkit-slider-runnable-track,
+input[type="range"].scoring-slider::-webkit-slider-runnable-track {
+    height: 4px;
+    background: #e2e8f0;
+    border-radius: 2px;
+    border: 1px solid #cbd5e1;
+}
+
+.scoring-slider input[type="range"]::-moz-range-track,
+input[type="range"].scoring-slider::-moz-range-track {
+    height: 4px;
+    background: #e2e8f0;
+    border-radius: 2px;
+    border: 1px solid #cbd5e1;
+}
+
+/* Firefox progress (filled portion) - Penalties red */
+.scoring-panel.penalties .scoring-slider input[type="range"]::-moz-range-progress,
+.scoring-panel.penalties input[type="range"].scoring-slider::-moz-range-progress {
+    height: 4px;
+    background: #fca5a5;
+    border-radius: 2px 0 0 2px;
+    border: 1px solid #f87171;
+    border-right: none;
+}
+
+/* Firefox progress (filled portion) - Bonuses green */
+.scoring-panel.bonuses .scoring-slider input[type="range"]::-moz-range-progress,
+.scoring-panel.bonuses input[type="range"].scoring-slider::-moz-range-progress {
+    height: 4px;
+    background: #86efac;
+    border-radius: 2px 0 0 2px;
+    border: 1px solid #4ade80;
+    border-right: none;
 }
 
 /* Penalties slider - red 3D thumb */
@@ -2194,8 +2244,9 @@ input[type="range"].scoring-slider {
 .scoring-panel.penalties input[type="range"].scoring-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
+    margin-top: -8px;
     background: linear-gradient(145deg, #ef4444, #dc2626);
     border-radius: 50%;
     cursor: pointer;
@@ -2208,8 +2259,8 @@ input[type="range"].scoring-slider {
 
 .scoring-panel.penalties .scoring-slider input[type="range"]::-moz-range-thumb,
 .scoring-panel.penalties input[type="range"].scoring-slider::-moz-range-thumb {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     background: linear-gradient(145deg, #ef4444, #dc2626);
     border-radius: 50%;
     cursor: pointer;
@@ -2225,8 +2276,9 @@ input[type="range"].scoring-slider {
 .scoring-panel.bonuses input[type="range"].scoring-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
+    margin-top: -8px;
     background: linear-gradient(145deg, #10b981, #059669);
     border-radius: 50%;
     cursor: pointer;
@@ -2239,8 +2291,8 @@ input[type="range"].scoring-slider {
 
 .scoring-panel.bonuses .scoring-slider input[type="range"]::-moz-range-thumb,
 .scoring-panel.bonuses input[type="range"].scoring-slider::-moz-range-thumb {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     background: linear-gradient(145deg, #10b981, #059669);
     border-radius: 50%;
     cursor: pointer;
@@ -2249,21 +2301,6 @@ input[type="range"].scoring-slider {
         0 2px 4px rgba(0,0,0,0.2),
         0 4px 8px rgba(5, 150, 105, 0.3),
         inset 0 1px 2px rgba(255,255,255,0.3);
-}
-
-/* Track styling for scoring sliders */
-.scoring-slider input[type="range"]::-webkit-slider-runnable-track,
-input[type="range"].scoring-slider::-webkit-slider-runnable-track {
-    height: 6px;
-    background: #f1f5f9;
-    border-radius: 3px;
-}
-
-.scoring-slider input[type="range"]::-moz-range-track,
-input[type="range"].scoring-slider::-moz-range-track {
-    height: 6px;
-    background: #f1f5f9;
-    border-radius: 3px;
 }
 
 /* Points value cell */
