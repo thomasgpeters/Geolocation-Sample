@@ -472,9 +472,27 @@ void FranchiseApp::onQuickSearch(const std::string& query) {
 void FranchiseApp::onSearchRequested(const Models::SearchQuery& query) {
     if (!searchService_) return;
 
-    // Show search toast notification
+    // Show search toast notification FIRST
     showSearchToast();
 
+    // Show loading state immediately
+    if (resultsDisplay_) {
+        resultsDisplay_->showLoading();
+    }
+
+    if (searchPanel_) {
+        searchPanel_->setSearchEnabled(false);
+        searchPanel_->showProgress(true);
+    }
+
+    // Defer the actual search to allow the UI (toast) to render first
+    // This ensures the toast is visible before the search starts
+    Wt::WTimer::singleShot(std::chrono::milliseconds(100), [this, query]() {
+        executeSearch(query);
+    });
+}
+
+void FranchiseApp::executeSearch(const Models::SearchQuery& query) {
     // Create a modified query that includes settings from Settings > Marketing tab
     Models::SearchQuery searchQuery = query;
 
@@ -500,16 +518,6 @@ void FranchiseApp::onSearchRequested(const Models::SearchQuery& query) {
         currentSearchArea_ = Models::SearchArea::fromMiles(location, searchQuery.radiusMiles);
     }
     hasActiveSearch_ = true;
-
-    // Show loading state
-    if (resultsDisplay_) {
-        resultsDisplay_->showLoading();
-    }
-
-    if (searchPanel_) {
-        searchPanel_->setSearchEnabled(false);
-        searchPanel_->showProgress(true);
-    }
 
     // Perform search with merged query
     searchService_->search(
