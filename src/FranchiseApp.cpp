@@ -1770,20 +1770,14 @@ void FranchiseApp::showProspectsPage() {
             auto divider = card->addWidget(std::make_unique<Wt::WContainerWidget>());
             divider->setStyleClass("card-divider");
 
-            // === CARD BODY: Two columns below divider ===
+            // === CARD BODY: Single column layout ===
             auto cardBody = card->addWidget(std::make_unique<Wt::WContainerWidget>());
             cardBody->setStyleClass("prospect-card-body");
 
-            auto leftColumn = cardBody->addWidget(std::make_unique<Wt::WContainerWidget>());
-            leftColumn->setStyleClass("prospect-left-column");
-
-            auto rightColumn = cardBody->addWidget(std::make_unique<Wt::WContainerWidget>());
-            rightColumn->setStyleClass("prospect-right-column");
-
-            // === LEFT COLUMN: Demographics + Data Sources ===
+            // === Demographics + Data Sources + Recommended Actions ===
             if (prospect.business) {
                 // Demographics section
-                auto demographicsSection = leftColumn->addWidget(std::make_unique<Wt::WContainerWidget>());
+                auto demographicsSection = cardBody->addWidget(std::make_unique<Wt::WContainerWidget>());
                 demographicsSection->setStyleClass("card-section demographics-section");
 
                 auto demoHeader = demographicsSection->addWidget(std::make_unique<Wt::WContainerWidget>());
@@ -1851,7 +1845,7 @@ void FranchiseApp::showProspectsPage() {
                 }
 
                 // Data Sources section
-                auto sourcesSection = leftColumn->addWidget(std::make_unique<Wt::WContainerWidget>());
+                auto sourcesSection = cardBody->addWidget(std::make_unique<Wt::WContainerWidget>());
                 sourcesSection->setStyleClass("card-section sources-section");
 
                 auto sourcesHeader = sourcesSection->addWidget(std::make_unique<Wt::WContainerWidget>());
@@ -1881,9 +1875,9 @@ void FranchiseApp::showProspectsPage() {
                 }
             }
 
-            // AI Summary (if available) - in left column
+            // AI Summary (if available)
             if (!prospect.aiSummary.empty()) {
-                auto summaryContainer = leftColumn->addWidget(std::make_unique<Wt::WContainerWidget>());
+                auto summaryContainer = cardBody->addWidget(std::make_unique<Wt::WContainerWidget>());
                 summaryContainer->setStyleClass("prospect-summary");
 
                 auto summaryLabel = summaryContainer->addWidget(std::make_unique<Wt::WText>("AI Analysis:"));
@@ -1895,9 +1889,9 @@ void FranchiseApp::showProspectsPage() {
                 summaryText->setStyleClass("summary-text");
             }
 
-            // Key highlights - in left column
+            // Key highlights
             if (!prospect.keyHighlights.empty()) {
-                auto highlightsContainer = leftColumn->addWidget(std::make_unique<Wt::WContainerWidget>());
+                auto highlightsContainer = cardBody->addWidget(std::make_unique<Wt::WContainerWidget>());
                 highlightsContainer->setStyleClass("prospect-highlights");
 
                 for (const auto& highlight : prospect.keyHighlights) {
@@ -1908,10 +1902,10 @@ void FranchiseApp::showProspectsPage() {
                 }
             }
 
-            // Recommended actions (collapsible with triangle) - in RIGHT column
+            // Recommended actions (collapsible with triangle) - under Data Sources
             if (!prospect.recommendedActions.empty()) {
-                auto recActionsContainer = rightColumn->addWidget(std::make_unique<Wt::WContainerWidget>());
-                recActionsContainer->setStyleClass("prospect-recommended-actions vertical");
+                auto recActionsContainer = cardBody->addWidget(std::make_unique<Wt::WContainerWidget>());
+                recActionsContainer->setStyleClass("prospect-recommended-actions");
 
                 // Header with toggle triangle
                 auto recActionsHeader = recActionsContainer->addWidget(std::make_unique<Wt::WContainerWidget>());
