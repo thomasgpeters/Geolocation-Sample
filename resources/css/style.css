@@ -3663,36 +3663,39 @@ input[type="range"].scoring-slider::before {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius-lg);
-    padding: 20px;
+    padding: 0;
     transition: box-shadow var(--transition-fast);
+    overflow: hidden;
 }
 
 .prospect-card:hover {
     box-shadow: var(--shadow-md);
 }
 
-/* Two-column card layout */
-.prospect-card.prospect-card-two-column {
-    padding: 0;
-}
-
-.prospect-card-body {
+/* Card Header - spans full width with score on right */
+.prospect-card-header {
     display: flex;
-    gap: 0;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 20px 24px 16px 24px;
 }
 
-.prospect-left-column {
+.header-left {
+    display: flex;
+    align-items: flex-start;
     flex: 1;
-    padding: 20px;
     min-width: 0;
 }
 
-.prospect-right-column {
-    flex: 1;
-    padding: 20px;
+.header-right {
+    flex-shrink: 0;
+    margin-left: 16px;
+}
+
+.name-address-container {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    min-width: 0;
 }
 
 /* Business Type Icon */
@@ -3705,7 +3708,7 @@ input[type="range"].scoring-slider::before {
     justify-content: center;
     background: #f3f4f6;
     border-radius: 12px;
-    margin-right: 12px;
+    margin-right: 14px;
     filter: grayscale(100%);
     opacity: 0.8;
 }
@@ -3714,10 +3717,69 @@ input[type="range"].scoring-slider::before {
     font-size: 24px;
 }
 
-.prospect-card-header {
+/* Dividing Line */
+.card-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 0 24px;
+}
+
+/* Card Body - Two columns */
+.prospect-card-body {
+    display: flex;
+    gap: 0;
+    padding: 0;
+}
+
+.prospect-left-column {
+    flex: 1;
+    padding: 16px 24px 20px 24px;
+    min-width: 0;
+}
+
+.prospect-right-column {
+    flex: 1;
+    padding: 16px 24px 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Section Headers with Icons */
+.card-section {
+    margin-bottom: 16px;
+}
+
+.card-section:last-child {
+    margin-bottom: 0;
+}
+
+.section-header {
     display: flex;
     align-items: center;
-    margin-bottom: 12px;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.section-icon {
+    font-size: 14px;
+    filter: grayscale(100%);
+    opacity: 0.7;
+}
+
+.section-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Source Badges Container */
+.source-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
 }
 
 .prospect-name {
@@ -4362,8 +4424,7 @@ input[type="range"].scoring-slider::before {
 .prospect-actions {
     display: flex;
     gap: 8px;
-    padding-top: 12px;
-    border-top: 1px solid var(--border-color);
+    padding: 16px 24px 20px 24px;
 }
 
 .prospects-actions {
