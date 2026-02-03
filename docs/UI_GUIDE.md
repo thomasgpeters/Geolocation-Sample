@@ -281,3 +281,38 @@ Each prospect displays:
 - `.page-header` - Page title area
 - `.page-title` - Main heading
 - `.page-subtitle` - Secondary text
+
+---
+
+## Future UI Requirements
+
+This section captures planned UI enhancements for future sprints.
+
+### Open Street Map Result Pills
+
+**Priority:** Medium
+**Sprint:** TBD
+
+**Requirement:**
+The Open Street Map category pill/tray items in the search results need visual alignment with the map markers.
+
+**Details:**
+- Add a **left-hand border** (3 pixels, rounded corner) to each pill item
+- The border color should **match the corresponding map marker color** for that category
+- This creates visual continuity between the result list and the map pins
+- Example: If "Corporate Offices" markers are blue on the map, the Corporate Offices pill should have a 3px blue left border
+
+**Implementation Notes:**
+- Update `.category-pill` or equivalent class with `border-left: 3px solid <color>`
+- Add `border-radius` to the left corners only: `border-top-left-radius: 3px; border-bottom-left-radius: 3px`
+- Color mapping should be consistent with `MapWidget` marker color definitions
+- Consider extracting marker colors to CSS custom properties for single-source-of-truth
+
+**CSS Sketch:**
+```css
+.category-pill.corporate-office {
+    border-left: 3px solid #3b82f6; /* Match blue marker */
+    border-top-left-radius: 3px;
+    border-bottom-left-radius: 3px;
+}
+```
