@@ -3224,10 +3224,17 @@ void FranchiseApp::showSettingsPage() {
         auto descText = nameCell->addWidget(std::make_unique<Wt::WText>(rule->description));
         descText->setStyleClass("rule-description");
 
-        // Slider cell
+        // Slider cell with range labels
         auto sliderCell = ruleRow->addWidget(std::make_unique<Wt::WContainerWidget>());
         sliderCell->setStyleClass("cell-slider");
-        auto slider = sliderCell->addWidget(std::make_unique<Wt::WSlider>(Wt::Orientation::Horizontal));
+
+        auto sliderWrapper = sliderCell->addWidget(std::make_unique<Wt::WContainerWidget>());
+        sliderWrapper->setStyleClass("slider-with-range");
+
+        auto minLabel = sliderWrapper->addWidget(std::make_unique<Wt::WText>(std::to_string(rule->minPoints)));
+        minLabel->setStyleClass("slider-range-label");
+
+        auto slider = sliderWrapper->addWidget(std::make_unique<Wt::WSlider>(Wt::Orientation::Horizontal));
         slider->setNativeControl(true);
         slider->setMinimum(rule->minPoints);
         slider->setMaximum(rule->maxPoints);
@@ -3235,6 +3242,9 @@ void FranchiseApp::showSettingsPage() {
         slider->setStyleClass("scoring-slider");
         slider->resize(Wt::WLength::Auto, 24);
         penaltySliders.push_back({rule->id, slider});
+
+        auto maxLabel = sliderWrapper->addWidget(std::make_unique<Wt::WText>(std::to_string(rule->maxPoints)));
+        maxLabel->setStyleClass("slider-range-label");
 
         // Points cell
         auto pointsCell = ruleRow->addWidget(std::make_unique<Wt::WContainerWidget>());
@@ -3293,10 +3303,17 @@ void FranchiseApp::showSettingsPage() {
         auto descText = nameCell->addWidget(std::make_unique<Wt::WText>(rule->description));
         descText->setStyleClass("rule-description");
 
-        // Slider cell
+        // Slider cell with range labels
         auto sliderCell = ruleRow->addWidget(std::make_unique<Wt::WContainerWidget>());
         sliderCell->setStyleClass("cell-slider");
-        auto slider = sliderCell->addWidget(std::make_unique<Wt::WSlider>(Wt::Orientation::Horizontal));
+
+        auto sliderWrapper = sliderCell->addWidget(std::make_unique<Wt::WContainerWidget>());
+        sliderWrapper->setStyleClass("slider-with-range");
+
+        auto minLabel = sliderWrapper->addWidget(std::make_unique<Wt::WText>(std::to_string(rule->minPoints)));
+        minLabel->setStyleClass("slider-range-label");
+
+        auto slider = sliderWrapper->addWidget(std::make_unique<Wt::WSlider>(Wt::Orientation::Horizontal));
         slider->setNativeControl(true);
         slider->setMinimum(rule->minPoints);
         slider->setMaximum(rule->maxPoints);
@@ -3304,6 +3321,9 @@ void FranchiseApp::showSettingsPage() {
         slider->setStyleClass("scoring-slider");
         slider->resize(Wt::WLength::Auto, 24);
         bonusSliders.push_back({rule->id, slider});
+
+        auto maxLabel = sliderWrapper->addWidget(std::make_unique<Wt::WText>(std::to_string(rule->maxPoints)));
+        maxLabel->setStyleClass("slider-range-label");
 
         // Points cell
         auto pointsCell = ruleRow->addWidget(std::make_unique<Wt::WContainerWidget>());
