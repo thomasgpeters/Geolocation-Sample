@@ -458,18 +458,66 @@ The search system includes robust error handling to ensure results even when som
 ### My Prospects
 View and manage saved prospects with AI-powered analysis.
 
-#### Features
-- **Prospect Cards**: Each saved prospect displays:
-  - Business name and catering potential score (color-coded badge)
-  - Address and business type information
-  - AI Analysis summary (generated when prospect was saved)
-  - Key highlights and recommended actions
-- **Score Badges**:
-  - **Green (70%+)**: High catering potential
-  - **Yellow (40-69%)**: Medium potential
-  - **Red (<40%)**: Lower potential
-- **Remove**: Delete prospects from your saved list (also removes from database)
-- **Find More**: Quick link to return to AI Search
+#### Two-Column Grid Layout
+The My Prospects page displays saved prospects in a responsive two-column grid:
+- **Desktop (>1200px)**: Two prospect cards side-by-side per row
+- **Tablet/Mobile (<1200px)**: Single column layout for readability
+
+#### Prospect Card Structure
+Each prospect card features a professional layout with distinct sections:
+
+**Card Header:**
+- **Business Type Icon**: Greyscale emoji representing the business type (🏢 Corporate, 🏨 Hotel, 🏭 Warehouse, etc.)
+- **Business Name**: Primary heading with company name
+- **Address**: Full formatted address below the name
+- **AI Score Bubble**: Color-coded clickable score badge in the top-right corner
+
+**AI Score Popover:**
+Clicking the AI Score bubble reveals a details popover showing:
+- **Optimized Score**: The final adjusted score with applied rules
+- **Original Score**: The base score before rule adjustments
+- **Applied Rules**: When scores differ, explains which rules caused the change (e.g., "Large workforce (+10), Conference facilities (+5)")
+
+**Demographics Section (👥):**
+- Section header with icon and "DEMOGRAPHICS" label
+- Stat badges for: Business type, Employee count, Google rating
+- Feature badges: Conference Room, Event Space, BBB Accredited
+
+**Data Sources Section (📊):**
+- Section header with icon and "DATA SOURCES" label
+- Source badges showing where data originated (OpenStreetMap, Google, BBB, etc.)
+
+**Recommended Actions:**
+- Collapsible yellow box with exposure triangle (▶/▼)
+- Shows action count in header (e.g., "Recommended Actions (3)")
+- Numbered list of AI-generated recommended actions when expanded
+- Compact styling when collapsed for minimal visual footprint
+
+**Card Footer:**
+- Remove button to delete prospect from saved list
+
+#### Score Badge Colors
+| Score Range | Color | Meaning |
+|-------------|-------|---------|
+| 80-100 | Green | Excellent potential |
+| 60-79 | Yellow/Orange | Good potential |
+| 40-59 | Orange | Fair potential |
+| 0-39 | Red | Lower potential |
+
+#### Business Type Icons
+| Icon | Business Type |
+|------|---------------|
+| 🏢 | Corporate Office |
+| 🏭 | Warehouse / Manufacturing |
+| 🏛️ | Conference Center / Government |
+| 🏨 | Hotel |
+| 💼 | Coworking Space |
+| 🏥 | Medical Facility |
+| 🎓 | Educational Institution |
+| 💻 | Tech Company |
+| 🏦 | Financial Services |
+| ⚖️ | Law Firm |
+| ❤️ | Non-Profit |
 
 #### Prospect-Franchisee Linking
 Saved prospects are **linked to the current franchisee/store location**:
