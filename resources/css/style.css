@@ -3663,39 +3663,39 @@ input[type="range"].scoring-slider::before {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius-lg);
-    padding: 20px;
+    padding: 0;
     transition: box-shadow var(--transition-fast);
+    overflow: hidden;
 }
 
 .prospect-card:hover {
     box-shadow: var(--shadow-md);
 }
 
-/* Two-column card layout */
-.prospect-card.prospect-card-two-column {
-    padding: 0;
-}
-
-.prospect-card-body {
+/* Card Header - spans full width with score on right */
+.prospect-card-header {
     display: flex;
-    gap: 0;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 20px 24px 16px 24px;
 }
 
-.prospect-left-column {
+.header-left {
+    display: flex;
+    align-items: flex-start;
     flex: 1;
-    padding: 20px;
     min-width: 0;
 }
 
-.prospect-right-column {
-    width: 200px;
-    min-width: 200px;
-    padding: 16px;
-    background: linear-gradient(to right, #f8fafc, #f1f5f9);
-    border-left: 1px solid var(--border-color);
+.header-right {
+    flex-shrink: 0;
+    margin-left: 16px;
+}
+
+.name-address-container {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    min-width: 0;
 }
 
 /* Business Type Icon */
@@ -3706,21 +3706,78 @@ input[type="range"].scoring-slider::before {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #f3f4f6;
-    border-radius: 12px;
-    margin-right: 12px;
+    margin-right: 14px;
     filter: grayscale(100%);
-    opacity: 0.8;
+    opacity: 0.7;
 }
 
 .type-icon-emoji {
     font-size: 24px;
 }
 
-.prospect-card-header {
+/* Dividing Line */
+.card-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 0 24px;
+}
+
+/* Card Body - Two columns */
+.prospect-card-body {
+    display: flex;
+    gap: 0;
+    padding: 0;
+}
+
+.prospect-left-column {
+    flex: 1;
+    padding: 16px 24px 20px 24px;
+    min-width: 0;
+}
+
+.prospect-right-column {
+    flex: 1;
+    padding: 16px 24px 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Section Headers with Icons */
+.card-section {
+    margin-bottom: 16px;
+}
+
+.card-section:last-child {
+    margin-bottom: 0;
+}
+
+.section-header {
     display: flex;
     align-items: center;
-    margin-bottom: 12px;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.section-icon {
+    font-size: 14px;
+    filter: grayscale(100%);
+    opacity: 0.7;
+}
+
+.section-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Source Badges Container */
+.source-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
 }
 
 .prospect-name {
@@ -4163,6 +4220,94 @@ input[type="range"].scoring-slider::before {
     box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
 }
 
+/* Clickable score bubble */
+.score-bubble.clickable {
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.score-bubble.clickable:hover {
+    transform: scale(1.1);
+}
+
+.clickable-score {
+    position: relative;
+    cursor: pointer;
+}
+
+/* Score details popover */
+.score-popover {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 240px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    padding: 12px;
+    z-index: 100;
+    margin-top: 8px;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.score-popover.hidden {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-8px);
+    pointer-events: none;
+}
+
+.score-popover.visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.scores-comparison {
+    display: flex;
+    justify-content: space-between;
+    margin: 10px 0;
+    padding: 8px;
+    background: #f9fafb;
+    border-radius: 6px;
+}
+
+.score-detail {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.score-detail.optimized {
+    color: #059669;
+}
+
+.score-detail.original {
+    color: #6b7280;
+}
+
+.rules-explanation {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.rules-title {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.rules-text {
+    display: block;
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
 /* AI Score (grey text) */
 .ai-score-value {
     font-size: 16px;
@@ -4179,33 +4324,29 @@ input[type="range"].scoring-slider::before {
     overflow: hidden;
 }
 
-/* Vertical layout for right column */
+/* Vertical layout for right column - keep light yellow box styling */
 .prospect-recommended-actions.vertical {
     flex: 1;
     margin-bottom: 0;
-    background-color: transparent;
-    border: none;
-    border-top: 1px solid #e5e7eb;
-    border-radius: 0;
-    padding-top: 12px;
-}
-
-.prospect-recommended-actions.vertical .recommended-actions-header {
-    padding: 8px 0;
-    background: transparent;
-}
-
-.prospect-recommended-actions.vertical .recommended-actions-header:hover {
-    background: rgba(254, 243, 199, 0.5);
+    background-color: #fffbeb;
+    border: 1px solid #fde68a;
     border-radius: var(--border-radius);
 }
 
+.prospect-recommended-actions.vertical .recommended-actions-header {
+    padding: 10px 12px;
+}
+
+.prospect-recommended-actions.vertical .recommended-actions-header:hover {
+    background-color: #fef3c7;
+}
+
 .prospect-recommended-actions.vertical .recommended-actions-list {
-    padding: 8px 0 0 16px;
+    padding: 0 12px 12px 28px;
 }
 
 .prospect-recommended-actions.vertical .recommended-action-item {
-    font-size: 12px;
+    font-size: 13px;
     padding: 4px 0;
 }
 
@@ -4281,8 +4422,7 @@ input[type="range"].scoring-slider::before {
 .prospect-actions {
     display: flex;
     gap: 8px;
-    padding-top: 12px;
-    border-top: 1px solid var(--border-color);
+    padding: 16px 24px 20px 24px;
 }
 
 .prospects-actions {
