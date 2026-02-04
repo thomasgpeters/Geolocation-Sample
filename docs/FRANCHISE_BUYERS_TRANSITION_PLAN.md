@@ -641,6 +641,513 @@ Provide prospects with ROI projections:
 | **Zoho CRM** | REST API | Bi-directional |
 | **FranConnect** | Partner API | Bi-directional |
 
+#### Twilio SMS Outbound Communication
+
+Integrate Twilio Programmable Messaging APIs to enable direct SMS-based outreach to franchise buyer candidates. SMS provides a high-open-rate, immediate-delivery channel for pipeline hooks, marketing campaigns, and long-term grooming sequences.
+
+##### Twilio Integration Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                  Twilio SMS Integration Layer                        │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  ┌──────────────┐    ┌──────────────┐    ┌───────────────────────┐  │
+│  │ TwilioSMS    │───▶│ Campaign     │───▶│ Message Template      │  │
+│  │ Service      │    │ Engine       │    │ Engine                │  │
+│  └──────────────┘    └──────────────┘    └───────────────────────┘  │
+│         │                  │                       │                │
+│         ▼                  ▼                       ▼                │
+│  ┌──────────────┐    ┌──────────────┐    ┌───────────────────────┐  │
+│  │ Webhook      │    │ Scheduler    │    │ AI Personalization    │  │
+│  │ Handler      │    │ (Cron/Queue) │    │ (GPT message tuning)  │  │
+│  └──────────────┘    └──────────────┘    └───────────────────────┘  │
+│         │                  │                       │                │
+│         ▼                  ▼                       ▼                │
+│  ┌──────────────┐    ┌──────────────┐    ┌───────────────────────┐  │
+│  │ Delivery     │    │ Opt-In/Out   │    │ Analytics &           │  │
+│  │ Tracking     │    │ Manager      │    │ Reporting             │  │
+│  └──────────────┘    └──────────────┘    └───────────────────────┘  │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+##### Twilio API Products Required
+
+| Product | Purpose | Pricing Model |
+|---------|---------|---------------|
+| **Programmable Messaging** | Send/receive SMS and MMS | Per-message ($0.0079/SMS outbound) |
+| **Messaging Services** | Sender pools, opt-out handling, rate limiting | Included with Messaging |
+| **Twilio Phone Numbers** | Dedicated sending numbers (local, toll-free, short code) | $1-$1,000/month depending on type |
+| **Twilio Verify** | Phone number validation before sending | Per-verification ($0.05) |
+| **Twilio Lookup** | Carrier/line-type detection (mobile vs. landline) | Per-lookup ($0.01) |
+
+##### TwilioSMSService Class
+
+```cpp
+// src/services/TwilioSMSService.h
+class TwilioSMSService {
+public:
+    // Configuration
+    void configure(const std::string& accountSid,
+                   const std::string& authToken,
+                   const std::string& messagingServiceSid);
+
+    // Single Message
+    SendResult sendSMS(const std::string& toNumber,
+                       const std::string& messageBody);
+    SendResult sendTemplateSMS(const std::string& toNumber,
+                               const std::string& templateId,
+                               const TemplateContext& context);
+    SendResult sendMMS(const std::string& toNumber,
+                       const std::string& messageBody,
+                       const std::string& mediaUrl);
+
+    // Bulk / Campaign
+    CampaignResult launchCampaign(const Campaign& campaign);
+    void pauseCampaign(const std::string& campaignId);
+    void resumeCampaign(const std::string& campaignId);
+    CampaignStats getCampaignStats(const std::string& campaignId);
+
+    // Pipeline Hooks
+    void registerHook(PipelineStage stage, const MessageTemplate& tmpl);
+    void triggerHook(PipelineStage stage, const CandidateProfile& candidate);
+
+    // Grooming Sequences
+    std::string enrollInSequence(const std::string& candidateId,
+                                  const std::string& sequenceId);
+    void advanceSequenceStep(const std::string& enrollmentId);
+    void pauseSequence(const std::string& enrollmentId);
+    void removeFromSequence(const std::string& enrollmentId);
+
+    // Compliance
+    bool verifyOptIn(const std::string& phoneNumber);
+    void processOptOut(const std::string& phoneNumber);
+    bool isNumberMobile(const std::string& phoneNumber);
+    ConsentStatus getConsentStatus(const std::string& candidateId);
+
+    // Webhooks (inbound from Twilio)
+    void handleDeliveryCallback(const DeliveryEvent& event);
+    void handleInboundSMS(const InboundMessage& message);
+    void handleOptOutCallback(const OptOutEvent& event);
+
+    // Analytics
+    MessagingStats getStats(const DateRange& range);
+    std::vector<MessageLog> getMessageHistory(const std::string& candidateId);
+
+private:
+    std::string accountSid_;
+    std::string authToken_;
+    std::string messagingServiceSid_;
+    RateLimiter rateLimiter_;
+    DeliveryTracker deliveryTracker_;
+    ConsentManager consentManager_;
+};
+```
+
+##### SMS Communication Types
+
+**1. Pipeline Hook Messages (Event-Driven)**
+
+Automated SMS messages triggered by candidate pipeline stage changes and system events.
+
+| Hook Trigger | Message Purpose | Timing |
+|-------------|-----------------|--------|
+| **New Lead Added** | Welcome / introduction | Immediate |
+| **Qualified Stage** | Discovery day invitation | Immediate |
+| **FDD Sent** | Confirmation + next steps | Immediate |
+| **Application Received** | Acknowledgment + timeline | Within 1 hour |
+| **Approval Granted** | Congratulations + onboarding info | Immediate |
+| **Stale Lead (7 days)** | Re-engagement nudge | Automated |
+| **Discovery Day Reminder** | Event reminder | 24 hours before |
+| **Document Deadline** | Reminder to complete paperwork | 48 hours before |
+| **Birthday/Anniversary** | Personal touch | Day-of |
+
+**Hook Registration Model:**
+
+```cpp
+struct PipelineHook {
+    std::string hookId;
+    PipelineStage triggerStage;      // Lead, Qualified, Applied, etc.
+    HookEvent triggerEvent;          // STAGE_ENTER, STAGE_EXIT, STALE, REMINDER
+    std::string messageTemplateId;
+    int delayMinutes;                // 0 = immediate
+    bool requiresOptIn;              // true (always)
+    bool isActive;
+    std::string createdBy;
+};
+```
+
+**2. Marketing Campaign Messages (Bulk Outreach)**
+
+Targeted SMS campaigns to engage potential franchise buyers at scale.
+
+| Campaign Type | Target Audience | Content Focus |
+|--------------|-----------------|---------------|
+| **Territory Launch** | Candidates in new territory area | "New franchise opportunity in [City]" |
+| **Franchise Expo Follow-Up** | Expo attendees | "Great meeting you at [Expo] - next steps" |
+| **Webinar Invitation** | Qualified leads, warm prospects | "Join our franchise info session" |
+| **Success Story** | All pipeline candidates | "Meet [Name], our newest franchise owner" |
+| **Limited Availability** | High-score candidates in target territory | "Only [N] territories remaining in [Area]" |
+| **Seasonal Promotion** | All opted-in candidates | Reduced franchise fee, financing offers |
+| **Referral Request** | Funded franchisees | "Know someone who'd be a great owner?" |
+
+**Campaign Configuration:**
+
+```cpp
+struct Campaign {
+    std::string campaignId;
+    std::string name;
+    CampaignType type;               // MARKETING, ANNOUNCEMENT, REFERRAL
+    std::string messageTemplateId;
+
+    // Targeting
+    CandidateFilter targetFilter;    // Pipeline stage, score range, territory, etc.
+    std::vector<std::string> excludeCandidateIds;
+
+    // Scheduling
+    ScheduleType schedule;           // IMMEDIATE, SCHEDULED, RECURRING
+    std::string scheduledTime;       // ISO 8601
+    std::string recurringCron;       // e.g. "0 10 * * MON" (Monday 10 AM)
+    std::string timezone;
+
+    // Throttling
+    int maxMessagesPerHour;          // Rate limiting
+    int maxMessagesPerDay;
+    bool respectQuietHours;          // No messages 9PM-9AM local time
+
+    // Tracking
+    CampaignStatus status;           // DRAFT, SCHEDULED, ACTIVE, PAUSED, COMPLETED
+    int totalRecipients;
+    int messagesSent;
+    int messagesDelivered;
+    int messagesFailed;
+    int optOuts;
+    int responses;
+};
+```
+
+**3. Grooming Campaign Messages (Nurture Sequences)**
+
+Multi-touch SMS sequences designed to build trust, educate, and move candidates through the franchise buying journey over time.
+
+| Sequence | Target Stage | Duration | Touches | Goal |
+|----------|-------------|----------|---------|------|
+| **Awareness Drip** | New Leads | 30 days | 6 messages | Educate on franchise ownership benefits |
+| **Qualification Nurture** | Qualified | 21 days | 5 messages | Build urgency, share success stories |
+| **FDD Follow-Up** | Applied (FDD Sent) | 14 days | 4 messages | Answer concerns, encourage review |
+| **Re-Engagement** | Stale Leads (30+ days) | 45 days | 4 messages | Rekindle interest |
+| **Post-Discovery Day** | Post-Event | 10 days | 3 messages | Close the deal, address objections |
+| **Long-Term Nurture** | Not Ready (6-12 mo) | 6 months | 12 messages | Stay top-of-mind |
+
+**Grooming Sequence Model:**
+
+```cpp
+struct GroomingSequence {
+    std::string sequenceId;
+    std::string name;
+    std::string description;
+    PipelineStage targetStage;
+    int totalSteps;
+    bool autoEnroll;                 // Auto-enroll when candidate enters target stage
+    bool exitOnStageChange;          // Remove from sequence if pipeline stage advances
+
+    std::vector<SequenceStep> steps;
+};
+
+struct SequenceStep {
+    int stepNumber;
+    int delayDays;                   // Days after previous step (or enrollment)
+    std::string messageTemplateId;
+    std::string sendTime;            // Preferred time of day "10:00"
+    bool skipWeekends;
+    std::string exitCondition;       // e.g. "candidate.stage != 'Lead'"
+
+    // A/B Testing
+    bool abTestEnabled;
+    std::string variantATemplateId;
+    std::string variantBTemplateId;
+    int variantASplitPercent;        // e.g. 50
+};
+
+struct SequenceEnrollment {
+    std::string enrollmentId;
+    std::string candidateId;
+    std::string sequenceId;
+    int currentStep;
+    EnrollmentStatus status;         // ACTIVE, PAUSED, COMPLETED, EXITED
+    std::string enrolledAt;
+    std::string nextMessageAt;
+    std::string completedAt;
+    std::string exitReason;          // "completed", "opt_out", "stage_changed", "manual"
+};
+```
+
+**Example: Awareness Drip Sequence (30 Days)**
+
+| Day | Message Theme | Example Content |
+|-----|--------------|-----------------|
+| 1 | Welcome | "Hi [Name], thanks for your interest in [Franchise]. We help entrepreneurs build wealth through franchise ownership. Reply STOP to opt out." |
+| 5 | Social Proof | "[Name], did you know our average franchise owner reaches profitability within 18 months? Here's how: [link]" |
+| 10 | Education | "Thinking about franchise ownership? Here are the top 5 questions every investor asks: [link]" |
+| 17 | Success Story | "Meet [Owner Name] - went from corporate VP to franchise owner in [City]. Read their story: [link]" |
+| 24 | Territory Alert | "[Name], we have [N] territories available near [City]. Interested in learning more? Reply YES." |
+| 30 | Call to Action | "[Name], ready to take the next step? Schedule a discovery call with our franchise team: [link]" |
+
+##### AI-Powered Message Personalization
+
+Leverage the existing AI engine (OpenAI/Gemini) to personalize SMS content based on candidate profiles.
+
+```
+AI Personalization Prompt:
+
+You are a franchise development copywriter. Personalize this SMS template
+for the candidate based on their profile.
+
+TEMPLATE: "{template_text}"
+CANDIDATE PROFILE: {profile_json}
+MESSAGE TYPE: {hook|marketing|grooming}
+TONE: Professional, warm, entrepreneurial
+CHARACTER LIMIT: 160 (SMS segment)
+
+Rules:
+- Keep under 160 characters for single SMS segment when possible
+- Reference candidate's industry or background naturally
+- Match urgency level to pipeline stage
+- Never include financial guarantees or earnings claims
+- Always include opt-out language on first message
+
+Return personalized message text only.
+```
+
+| Personalization Factor | Example Adaptation |
+|-----------------------|-------------------|
+| **Industry Background** | "Your hospitality experience is exactly what makes great franchise owners..." |
+| **Career Stage** | "Many executives like you have found franchise ownership the perfect next chapter..." |
+| **Location** | "The [City] market is growing fast - perfect timing for a new franchise..." |
+| **Financial Tier** | Adjust investment language: "accessible investment" vs. "portfolio diversification" |
+| **Engagement Level** | First touch = softer; 5th touch = more direct call-to-action |
+
+##### SMS Compliance & Regulations
+
+**TCPA (Telephone Consumer Protection Act) Requirements:**
+
+| Requirement | Implementation |
+|-------------|----------------|
+| **Prior Express Written Consent** | Digital opt-in form with clear disclosure before any SMS |
+| **Opt-Out Handling** | Honor STOP/UNSUBSCRIBE/CANCEL/QUIT/END keywords immediately |
+| **Quiet Hours** | No messages before 8 AM or after 9 PM in recipient's local timezone |
+| **Message Frequency Disclosure** | "Msg frequency varies. Msg & data rates may apply." on opt-in |
+| **Business Identification** | Every message must identify the sender business name |
+| **Record Retention** | Store consent records, opt-out timestamps, message logs for 5 years |
+
+**10DLC Registration (Required for A2P SMS):**
+
+| Step | Description | Status |
+|------|-------------|--------|
+| 1 | Register brand with The Campaign Registry (TCR) | Required |
+| 2 | Create campaign use case (Franchise Lead Nurturing) | Required |
+| 3 | Obtain 10DLC phone numbers | Required |
+| 4 | Submit campaign for carrier approval | Required |
+| 5 | Maintain throughput within approved tier | Ongoing |
+
+**Consent Management Database:**
+
+```sql
+-- New table: sms_consent
+CREATE TABLE sms_consent (
+    id UUID PRIMARY KEY,
+    candidate_id UUID REFERENCES candidate_profiles(id),
+    phone_number VARCHAR(20) NOT NULL,
+    consent_status VARCHAR(20) NOT NULL,        -- OPTED_IN, OPTED_OUT, PENDING
+    consent_source VARCHAR(100),                -- web_form, discovery_day, expo, manual
+    consent_timestamp TIMESTAMP NOT NULL,
+    opt_out_timestamp TIMESTAMP,
+    opt_out_keyword VARCHAR(20),                -- STOP, UNSUBSCRIBE, etc.
+    ip_address VARCHAR(45),                     -- For web form consent
+    consent_text TEXT,                          -- Exact disclosure shown
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- New table: sms_messages
+CREATE TABLE sms_messages (
+    id UUID PRIMARY KEY,
+    candidate_id UUID REFERENCES candidate_profiles(id),
+    campaign_id UUID,
+    sequence_enrollment_id UUID,
+    hook_id UUID,
+    message_type VARCHAR(20) NOT NULL,          -- HOOK, MARKETING, GROOMING
+    twilio_message_sid VARCHAR(50),
+    from_number VARCHAR(20),
+    to_number VARCHAR(20),
+    message_body TEXT NOT NULL,
+    media_url VARCHAR(500),
+    direction VARCHAR(10) NOT NULL,             -- OUTBOUND, INBOUND
+    status VARCHAR(20),                         -- QUEUED, SENT, DELIVERED, FAILED, UNDELIVERED
+    error_code VARCHAR(10),
+    error_message TEXT,
+    sent_at TIMESTAMP,
+    delivered_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- New table: sms_campaigns
+CREATE TABLE sms_campaigns (
+    id UUID PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    campaign_type VARCHAR(50),
+    message_template_id UUID,
+    target_filter JSONB,
+    schedule_type VARCHAR(20),
+    scheduled_time TIMESTAMP,
+    recurring_cron VARCHAR(50),
+    timezone VARCHAR(50),
+    max_messages_per_hour INTEGER DEFAULT 60,
+    respect_quiet_hours BOOLEAN DEFAULT TRUE,
+    status VARCHAR(20) DEFAULT 'DRAFT',
+    total_recipients INTEGER DEFAULT 0,
+    messages_sent INTEGER DEFAULT 0,
+    messages_delivered INTEGER DEFAULT 0,
+    messages_failed INTEGER DEFAULT 0,
+    opt_outs INTEGER DEFAULT 0,
+    responses INTEGER DEFAULT 0,
+    created_by VARCHAR(100),
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- New table: grooming_sequences
+CREATE TABLE grooming_sequences (
+    id UUID PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    description TEXT,
+    target_stage VARCHAR(50),
+    total_steps INTEGER,
+    auto_enroll BOOLEAN DEFAULT FALSE,
+    exit_on_stage_change BOOLEAN DEFAULT TRUE,
+    is_active BOOLEAN DEFAULT TRUE,
+    steps JSONB NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- New table: sequence_enrollments
+CREATE TABLE sequence_enrollments (
+    id UUID PRIMARY KEY,
+    candidate_id UUID REFERENCES candidate_profiles(id),
+    sequence_id UUID REFERENCES grooming_sequences(id),
+    current_step INTEGER DEFAULT 0,
+    status VARCHAR(20) DEFAULT 'ACTIVE',
+    enrolled_at TIMESTAMP DEFAULT NOW(),
+    next_message_at TIMESTAMP,
+    completed_at TIMESTAMP,
+    exit_reason VARCHAR(100)
+);
+```
+
+##### SMS Settings UI
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Settings > SMS Configuration                      │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  Twilio Credentials                                                 │
+│  ┌───────────────────────────────────────────────────────────────┐  │
+│  │ Account SID:          [AC_______________________________]    │  │
+│  │ Auth Token:           [••••••••••••••••••••••••••••••••]     │  │
+│  │ Messaging Service ID: [MG_______________________________]    │  │
+│  │ Status: ✅ Connected                         [Test Connection]│  │
+│  └───────────────────────────────────────────────────────────────┘  │
+│                                                                     │
+│  Sending Preferences                                                │
+│  ┌───────────────────────────────────────────────────────────────┐  │
+│  │ Default Sender Number: [(412) 555-0100          ▼]           │  │
+│  │ Quiet Hours:           [9:00 PM] to [8:00 AM]               │  │
+│  │ Max Messages/Day:      [200        ]                        │  │
+│  │ Timezone:              [America/New_York       ▼]           │  │
+│  │ □ Respect weekends (no marketing on Sat/Sun)                │  │
+│  │ ☑ Require opt-in before first message                       │  │
+│  └───────────────────────────────────────────────────────────────┘  │
+│                                                                     │
+│  Pipeline Hooks                                                     │
+│  ┌───────────────────────────────────────────────────────────────┐  │
+│  │ ☑ New Lead Welcome          Template: [Welcome v2       ▼]  │  │
+│  │ ☑ Qualified Notification    Template: [Discovery Invite ▼]  │  │
+│  │ ☑ FDD Sent Confirmation     Template: [FDD Confirm      ▼]  │  │
+│  │ ☑ Application Received      Template: [App Received     ▼]  │  │
+│  │ ☑ Approval Granted          Template: [Congrats         ▼]  │  │
+│  │ ☑ Stale Lead (7 days)       Template: [Re-Engage        ▼]  │  │
+│  │ □ Discovery Day Reminder    Template: [DD Reminder      ▼]  │  │
+│  │                                                              │  │
+│  │ [+ Add Custom Hook]                                          │  │
+│  └───────────────────────────────────────────────────────────────┘  │
+│                                                                     │
+│  Grooming Sequences                                                 │
+│  ┌───────────────────────────────────────────────────────────────┐  │
+│  │ Name                  │ Target    │ Steps │ Enrolled │ Status │  │
+│  │ Awareness Drip        │ Lead      │ 6     │ 48       │ Active │  │
+│  │ Qualification Nurture │ Qualified │ 5     │ 22       │ Active │  │
+│  │ FDD Follow-Up         │ Applied   │ 4     │ 8        │ Active │  │
+│  │ Re-Engagement         │ Stale     │ 4     │ 15       │ Active │  │
+│  │ Long-Term Nurture     │ Not Ready │ 12    │ 34       │ Active │  │
+│  │                                                              │  │
+│  │ [+ Create New Sequence]  [Edit]  [Pause All]                 │  │
+│  └───────────────────────────────────────────────────────────────┘  │
+│                                                                     │
+│  Message Templates                                                  │
+│  ┌───────────────────────────────────────────────────────────────┐  │
+│  │ [+ New Template]                                             │  │
+│  │                                                              │  │
+│  │ Template Name     │ Type      │ Characters │ AI Personal. │  │
+│  │ Welcome v2        │ Hook      │ 142        │ ☑           │  │
+│  │ Discovery Invite  │ Hook      │ 156        │ ☑           │  │
+│  │ Territory Alert   │ Marketing │ 148        │ ☑           │  │
+│  │ Success Story #1  │ Grooming  │ 155        │ □           │  │
+│  │ ROI Teaser        │ Marketing │ 138        │ ☑           │  │
+│  └───────────────────────────────────────────────────────────────┘  │
+│                                                                     │
+│  [Save Settings]                                                    │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+##### SMS Analytics & Reporting
+
+| Metric | Description | Target |
+|--------|-------------|--------|
+| **Delivery Rate** | Messages delivered / messages sent | > 95% |
+| **Opt-Out Rate** | Opt-outs / total recipients per campaign | < 3% |
+| **Response Rate** | Inbound replies / messages delivered | > 10% |
+| **Click-Through Rate** | Link clicks / messages delivered | > 5% |
+| **Conversion Rate** | Stage advances attributed to SMS / messages sent | > 2% |
+| **Cost per Conversion** | Total SMS spend / conversions | < $15 |
+| **Sequence Completion Rate** | Enrollments completed / enrollments started | > 60% |
+
+```
+SMS Dashboard:
+├── Messages Sent (MTD): 1,247
+├── Delivery Rate: 97.2%
+├── Response Rate: 12.4%
+├── Opt-Out Rate: 1.8%
+├── Active Campaigns: 3
+├── Active Sequence Enrollments: 127
+├── Cost (MTD): $9.85
+├── Pipeline Advances Attributed to SMS: 18
+└── Top Performing Template: "Discovery Invite" (22% response rate)
+```
+
+##### Twilio Cost Estimation
+
+| Component | Unit Cost | Monthly Estimate (200 candidates) |
+|-----------|-----------|----------------------------------|
+| **Outbound SMS** | $0.0079/message | ~$12 (avg 8 msgs/candidate) |
+| **Inbound SMS** | $0.0075/message | ~$3 (est. 20% reply rate) |
+| **Phone Number** | $1.00/month (local) | $1-$5 |
+| **Lookup (carrier)** | $0.01/lookup | $2 |
+| **Verify (opt-in)** | $0.05/verification | $10 |
+| **Messaging Service** | Included | $0 |
+| **Estimated Monthly Total** | | **$28-$32** |
+
 ---
 
 ## Implementation Roadmap
@@ -648,11 +1155,11 @@ Provide prospects with ROI projections:
 ### Timeline Overview
 
 ```
-Month 1-2          Month 3-4           Month 5-6          Month 7-8
-──────────────    ──────────────     ──────────────    ──────────────
-Phase 1:          Phase 2:           Phase 3:          Phase 4-5:
-Foundation        LinkedIn           AI Engine         UI & Advanced
-                  Integration        Updates           Features
+Month 1-2          Month 3-4           Month 5-6          Month 7-8          Month 9-10
+──────────────    ──────────────     ──────────────    ──────────────    ──────────────
+Phase 1:          Phase 2:           Phase 3:          Phase 4-5:        Phase 6:
+Foundation        LinkedIn           AI Engine         UI & Advanced     Twilio SMS
+                  Integration        Updates           Features          Outreach
 ```
 
 ### Phase 1: Foundation (Weeks 1-8)
@@ -699,6 +1206,15 @@ Foundation        LinkedIn           AI Engine         UI & Advanced
 | 35-36 | Investment calculator | ROI projections |
 | 37-38 | CRM integration | Salesforce/HubSpot sync |
 | 39-40 | Reporting & polish | Pipeline reports, bug fixes |
+
+### Phase 6: Twilio SMS Outreach (Weeks 41-48)
+
+| Week | Tasks | Deliverables |
+|------|-------|--------------|
+| 41-42 | Twilio account setup, 10DLC registration, TwilioSMSService class | API integration, send/receive SMS, delivery tracking |
+| 43-44 | Pipeline hooks implementation | Automated SMS triggers on stage changes, webhook handlers |
+| 45-46 | Marketing campaigns & grooming sequences | Campaign engine, sequence scheduler, enrollment management |
+| 47-48 | AI message personalization, analytics, SMS settings UI | GPT-powered templates, SMS dashboard, compliance tools |
 
 ---
 
@@ -780,6 +1296,10 @@ Monthly Metrics:
 | User adoption resistance | Medium | Medium | Training, gradual rollout |
 | Data privacy issues | Low | High | Legal review, compliance framework |
 | Integration complexity | Medium | Medium | Phased approach, MVP first |
+| TCPA SMS compliance violation | Low | Critical | Legal review, strict opt-in enforcement, automated opt-out |
+| SMS opt-out rate too high | Medium | Medium | A/B test messaging, respect frequency limits, personalize content |
+| 10DLC registration delays | Medium | Low | Begin registration early in Phase 5, use toll-free as interim |
+| Carrier filtering/blocking | Low | Medium | Follow 10DLC best practices, monitor delivery rates, rotate numbers |
 
 ---
 
@@ -798,7 +1318,17 @@ Monthly Metrics:
 - Entrepreneur Franchise 500
 - FRANdata
 
-### C. Competitor Analysis
+### C. Twilio API Resources
+
+- [Twilio Programmable Messaging](https://www.twilio.com/docs/messaging)
+- [Twilio Messaging Services](https://www.twilio.com/docs/messaging/services)
+- [Twilio 10DLC Registration](https://www.twilio.com/docs/messaging/guides/10dlc)
+- [Twilio Webhooks](https://www.twilio.com/docs/messaging/guides/webhook-request)
+- [TCPA Compliance Guide](https://www.twilio.com/docs/messaging/compliance)
+- [Twilio Lookup API](https://www.twilio.com/docs/lookup)
+- [Twilio Verify API](https://www.twilio.com/docs/verify)
+
+### D. Competitor Analysis
 
 | Competitor | Focus | Differentiator |
 |------------|-------|----------------|
@@ -814,6 +1344,7 @@ Monthly Metrics:
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-02-03 | Claude AI | Initial draft |
+| 1.1 | 2026-02-04 | Claude AI | Added Twilio SMS outbound communication section (hooks, marketing campaigns, grooming sequences) |
 
 ---
 
