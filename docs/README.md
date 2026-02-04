@@ -21,6 +21,15 @@ This folder contains all technical and user documentation for the FranchiseAI Pr
 | [PERFORMANCE_OPTIMIZATION.md](PERFORMANCE_OPTIMIZATION.md) | Performance tuning guide covering API optimization, caching, progressive loading, and scoring engine |
 | [GEOLOCATION_OPTIONS.md](GEOLOCATION_OPTIONS.md) | Analysis of geolocation service options - Google, OpenStreetMap, Nominatim, and alternatives |
 | [SPRINT_AUTH_PLAN.md](SPRINT_AUTH_PLAN.md) | Authentication sprint plan - JWT implementation, session management, and security features |
+| [DATA_DICTIONARY.md](DATA_DICTIONARY.md) | Data dictionary defining all models, fields, types, and relationships across the application |
+
+### Strategic & Transition Planning
+
+| Document | Description |
+|----------|-------------|
+| [GENERIC_TRANSITION_PLAN2.md](GENERIC_TRANSITION_PLAN2.md) | **RECOMMENDED** - Generic configurable prospecting platform plan with multi-vertical support (franchise buyers, catering clients, hotel venues) driven by Prospect Profile seed data |
+| [GENERIC_PROSPECTING_TRANSITION_PLAN.md](GENERIC_PROSPECTING_TRANSITION_PLAN.md) | Original franchise buyer targeting transition plan with LinkedIn integration, Twilio SMS outreach (hooks, marketing campaigns, grooming sequences), and detailed implementation specs |
+| [TRANSITION_TO_MULTIPLE_ENTRYPOINTS.md](TRANSITION_TO_MULTIPLE_ENTRYPOINTS.md) | Architecture plan for transitioning to multiple application entry points |
 
 ### Business Documentation
 
@@ -30,6 +39,7 @@ This folder contains all technical and user documentation for the FranchiseAI Pr
 | [PROPOSAL_DECK.pdf](PROPOSAL_DECK.pdf) | PDF version of the proposal deck (generated) |
 | [PROPOSAL_DECK.pptx](PROPOSAL_DECK.pptx) | PowerPoint version of the proposal deck (generated) |
 | [PROPOSAL_DECK.html](PROPOSAL_DECK.html) | HTML version of the proposal deck for web presentations |
+| [DEMO_WORKFLOW.md](DEMO_WORKFLOW.md) | Demo workflow and walkthrough scripts for product demonstrations |
 
 ## Generating Presentation Slides
 
@@ -104,10 +114,12 @@ For more customization options, see the [Marp documentation](https://marpit.marp
 
 ## Quick Links
 
+- **Platform Strategy**: See [GENERIC_TRANSITION_PLAN2.md](GENERIC_TRANSITION_PLAN2.md) for the generic prospecting platform plan
 - **What's New**: See [RELEASE_NOTES_v2.md](RELEASE_NOTES_v2.md) for v2.0 features and improvements
 - **Getting Started**: See [USER_GUIDE.md](USER_GUIDE.md) for application usage
 - **API Performance**: See [PERFORMANCE_OPTIMIZATION.md](PERFORMANCE_OPTIMIZATION.md) for optimization details
 - **Development**: See [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) for roadmap and priorities
+- **Data Models**: See [DATA_DICTIONARY.md](DATA_DICTIONARY.md) for field and model definitions
 - **Database Setup**: See [../database/README.md](../database/README.md) for ApiLogicServer setup
 
 ## Related Files
