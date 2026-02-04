@@ -5365,8 +5365,23 @@ input[type="range"].scoring-slider::before {
 
 .toast.toast-info::after {
     background: var(--info-color);
-    animation: none;  /* No progress animation for search toast */
+    animation: toast-progress-indeterminate 2s ease-in-out infinite;
     width: 100%;
+}
+
+@keyframes toast-progress-indeterminate {
+    0% {
+        width: 100%;
+        left: 0;
+    }
+    50% {
+        width: 30%;
+        left: 0;
+    }
+    100% {
+        width: 100%;
+        left: 0;
+    }
 }
 
 /* Search toast icon */
