@@ -1364,6 +1364,10 @@ make test_runner
 ./test_runner
 ```
 
+## Deployment
+
+For complete deployment instructions including production setup, database configuration, Nginx reverse proxy, SSL, systemd services, monitoring, backup procedures, and repository migration, see the **[Deployment Guide](docs/DEPLOYMENT_GUIDE.md)**.
+
 ## License
 
 MIT License - See LICENSE file for details.
