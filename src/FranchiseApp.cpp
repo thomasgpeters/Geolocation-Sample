@@ -1906,6 +1906,68 @@ void FranchiseApp::showProspectsPage() {
                     bbbBadge->setStyleClass("stat-badge stat-verified");
                 }
 
+                // Contact Information section
+                bool hasContact = !prospect.business->contact.primaryPhone.empty() ||
+                                  !prospect.business->contact.website.empty() ||
+                                  !prospect.business->contact.email.empty();
+                if (hasContact) {
+                    auto contactSection = cardBody->addWidget(std::make_unique<Wt::WContainerWidget>());
+                    contactSection->setStyleClass("card-section contact-section");
+
+                    auto contactHeader = contactSection->addWidget(std::make_unique<Wt::WContainerWidget>());
+                    contactHeader->setStyleClass("section-header");
+
+                    auto contactIcon = contactHeader->addWidget(std::make_unique<Wt::WText>("📞"));
+                    contactIcon->setStyleClass("section-icon");
+
+                    auto contactLabel = contactHeader->addWidget(std::make_unique<Wt::WText>("Contact Information"));
+                    contactLabel->setStyleClass("section-label");
+
+                    auto contactGrid = contactSection->addWidget(std::make_unique<Wt::WContainerWidget>());
+                    contactGrid->setStyleClass("contact-grid");
+
+                    if (!prospect.business->contact.primaryPhone.empty()) {
+                        auto phoneItem = contactGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
+                        phoneItem->setStyleClass("contact-item");
+                        auto phoneLabel = phoneItem->addWidget(std::make_unique<Wt::WText>("Phone: "));
+                        phoneLabel->setStyleClass("contact-field-label");
+                        phoneItem->addWidget(std::make_unique<Wt::WText>(prospect.business->contact.primaryPhone));
+                    }
+
+                    if (!prospect.business->contact.website.empty()) {
+                        auto webItem = contactGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
+                        webItem->setStyleClass("contact-item");
+                        auto webLabel = webItem->addWidget(std::make_unique<Wt::WText>("Website: "));
+                        webLabel->setStyleClass("contact-field-label");
+                        auto webLink = webItem->addWidget(std::make_unique<Wt::WAnchor>(
+                            Wt::WLink(prospect.business->contact.website),
+                            prospect.business->contact.website
+                        ));
+                        webLink->setTarget(Wt::LinkTarget::NewWindow);
+                        webLink->setStyleClass("contact-link");
+                    }
+
+                    if (!prospect.business->contact.email.empty()) {
+                        auto emailItem = contactGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
+                        emailItem->setStyleClass("contact-item");
+                        auto emailLabel = emailItem->addWidget(std::make_unique<Wt::WText>("Email: "));
+                        emailLabel->setStyleClass("contact-field-label");
+                        auto emailLink = emailItem->addWidget(std::make_unique<Wt::WAnchor>(
+                            Wt::WLink("mailto:" + prospect.business->contact.email),
+                            prospect.business->contact.email
+                        ));
+                        emailLink->setStyleClass("contact-link");
+                    }
+
+                    if (!prospect.business->contact.secondaryPhone.empty()) {
+                        auto phone2Item = contactGrid->addWidget(std::make_unique<Wt::WContainerWidget>());
+                        phone2Item->setStyleClass("contact-item");
+                        auto phone2Label = phone2Item->addWidget(std::make_unique<Wt::WText>("Alt Phone: "));
+                        phone2Label->setStyleClass("contact-field-label");
+                        phone2Item->addWidget(std::make_unique<Wt::WText>(prospect.business->contact.secondaryPhone));
+                    }
+                }
+
                 // Data Sources section
                 auto sourcesSection = cardBody->addWidget(std::make_unique<Wt::WContainerWidget>());
                 sourcesSection->setStyleClass("card-section sources-section");
@@ -4671,6 +4733,7 @@ Services::ProspectDTO FranchiseApp::prospectItemToDTO(const Models::SearchResult
         dto.latitude = item.business->address.latitude;
         dto.longitude = item.business->address.longitude;
         dto.primaryPhone = item.business->contact.primaryPhone;
+        dto.secondaryPhone = item.business->contact.secondaryPhone;
         dto.email = item.business->contact.email;
         dto.website = item.business->contact.website;
         dto.employeeCount = item.business->employeeCount;

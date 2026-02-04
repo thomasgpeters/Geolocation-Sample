@@ -1865,6 +1865,25 @@ input[type="range"].form-slider::-moz-range-thumb {
     color: var(--text-primary);
 }
 
+.contact-field-label {
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.contact-link {
+    color: var(--primary-color, #4a90d9);
+    text-decoration: none;
+    word-break: break-all;
+}
+
+.contact-link:hover {
+    text-decoration: underline;
+}
+
+.contact-section {
+    margin-top: 8px;
+}
+
 .sources-section {
     display: flex;
     align-items: center;
