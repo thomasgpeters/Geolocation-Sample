@@ -31,6 +31,13 @@ This folder contains all technical and user documentation for the FranchiseAI Pr
 | [GENERIC_PROSPECTING_TRANSITION_PLAN.md](GENERIC_PROSPECTING_TRANSITION_PLAN.md) | Original franchise buyer targeting transition plan with LinkedIn integration, Twilio SMS outreach (hooks, marketing campaigns, grooming sequences), and detailed implementation specs |
 | [TRANSITION_TO_MULTIPLE_ENTRYPOINTS.md](TRANSITION_TO_MULTIPLE_ENTRYPOINTS.md) | Architecture plan for transitioning to multiple application entry points |
 
+### Project Management & Engagement
+
+| Document | Description |
+|----------|-------------|
+| [STATEMENT_OF_WORK.md](STATEMENT_OF_WORK.md) | **NEW** - Formal Statement of Work (SOW) defining scope, deliverables, timeline, acceptance criteria, and signoff for the FranchiseAI platform engagement |
+| [PROJECT_PLAN.md](PROJECT_PLAN.md) | **NEW** - End-to-end project plan covering all 5 phases from inception to delivery, with sprint breakdowns, resource plan, QA strategy, and deployment approach |
+
 ### Business Documentation
 
 | Document | Description |
@@ -114,6 +121,8 @@ For more customization options, see the [Marp documentation](https://marpit.marp
 
 ## Quick Links
 
+- **Statement of Work**: See [STATEMENT_OF_WORK.md](STATEMENT_OF_WORK.md) for the formal SOW and client signoff document
+- **Project Plan**: See [PROJECT_PLAN.md](PROJECT_PLAN.md) for the end-to-end plan from inception to delivery
 - **Platform Strategy**: See [GENERIC_TRANSITION_PLAN2.md](GENERIC_TRANSITION_PLAN2.md) for the generic prospecting platform plan
 - **What's New**: See [RELEASE_NOTES_v2.md](RELEASE_NOTES_v2.md) for v2.0 features and improvements
 - **Getting Started**: See [USER_GUIDE.md](USER_GUIDE.md) for application usage
