@@ -37,6 +37,7 @@ This folder contains all technical and user documentation for the FranchiseAI Pr
 |----------|-------------|
 | [STATEMENT_OF_WORK.md](STATEMENT_OF_WORK.md) | **NEW** - Formal Statement of Work (SOW) defining scope, deliverables, timeline, acceptance criteria, and signoff for the FranchiseAI platform engagement |
 | [PROJECT_PLAN.md](PROJECT_PLAN.md) | **NEW** - End-to-end project plan covering all 5 phases from inception to delivery, with sprint breakdowns, resource plan, QA strategy, and deployment approach |
+| [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) | **NEW** - Complete deployment guide covering build, database setup, ApiLogicServer, production deployment (systemd, Nginx), SSL, monitoring, backup, and repository migration |
 
 ### Business Documentation
 
@@ -123,6 +124,7 @@ For more customization options, see the [Marp documentation](https://marpit.marp
 
 - **Statement of Work**: See [STATEMENT_OF_WORK.md](STATEMENT_OF_WORK.md) for the formal SOW and client signoff document
 - **Project Plan**: See [PROJECT_PLAN.md](PROJECT_PLAN.md) for the end-to-end plan from inception to delivery
+- **Deployment**: See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for build, deploy, and production setup
 - **Platform Strategy**: See [GENERIC_TRANSITION_PLAN2.md](GENERIC_TRANSITION_PLAN2.md) for the generic prospecting platform plan
 - **What's New**: See [RELEASE_NOTES_v2.md](RELEASE_NOTES_v2.md) for v2.0 features and improvements
 - **Getting Started**: See [USER_GUIDE.md](USER_GUIDE.md) for application usage
