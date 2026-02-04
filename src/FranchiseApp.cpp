@@ -1939,11 +1939,12 @@ void FranchiseApp::showProspectsPage() {
                         webItem->setStyleClass("contact-item");
                         auto webLabel = webItem->addWidget(std::make_unique<Wt::WText>("Website: "));
                         webLabel->setStyleClass("contact-field-label");
+                        Wt::WLink webLinkUrl(prospect.business->contact.website);
+                        webLinkUrl.setTarget(Wt::LinkTarget::NewWindow);
                         auto webLink = webItem->addWidget(std::make_unique<Wt::WAnchor>(
-                            Wt::WLink(prospect.business->contact.website),
+                            webLinkUrl,
                             prospect.business->contact.website
                         ));
-                        webLink->setTarget(Wt::LinkTarget::NewWindow);
                         webLink->setStyleClass("contact-link");
                     }
 
