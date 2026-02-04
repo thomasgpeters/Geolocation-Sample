@@ -12,11 +12,13 @@
 4. [Deployment Type A: Native (Binary on Host)](#4-deployment-type-a-native-binary-on-host)
 5. [Deployment Type B: Container (Docker)](#5-deployment-type-b-container-docker)
 6. [Deployment Type C: Cloud](#6-deployment-type-c-cloud)
-7. [Post-Deployment Verification](#7-post-deployment-verification)
-8. [SSL / HTTPS](#8-ssl--https)
-9. [Monitoring Setup](#9-monitoring-setup)
-10. [Backup Configuration](#10-backup-configuration)
-11. [Repository Migration](#11-repository-migration)
+7. [Deployment Type D: Kubernetes](#7-deployment-type-d-kubernetes)
+8. [Post-Deployment Verification](#8-post-deployment-verification)
+9. [SSL / HTTPS](#9-ssl--https)
+10. [Monitoring Setup](#10-monitoring-setup)
+11. [Backup Configuration](#11-backup-configuration)
+12. [Security: OAuth & SSO](#12-security-oauth--sso)
+13. [Repository Migration](#13-repository-migration)
 
 ---
 
@@ -122,14 +124,19 @@
 - [ ] API service running: `systemctl status franchiseai-api` shows active
 - [ ] App service running: `systemctl status franchiseai` shows active
 
-#### Nginx Reverse Proxy (UAT / PROD)
+#### Nginx Reverse Proxy + Load Balancing (UAT / PROD)
 
 - [ ] Nginx installed and running
 - [ ] Nginx config created for `franchiseai.example.com`
+- [ ] Upstream block configured with app instances
+- [ ] `ip_hash` enabled for WebSocket session affinity (multi-instance)
 - [ ] WebSocket proxy headers configured (`Upgrade`, `Connection`)
 - [ ] Static resources location configured (`/resources/`)
 - [ ] Nginx config tested: `nginx -t`
 - [ ] Nginx reloaded: `systemctl reload nginx`
+- [ ] **Scaling (UAT):** 2+ app instances running on separate ports
+- [ ] **Scaling (PROD):** 3+ app instances running on separate ports
+- [ ] Load distribution verified across instances
 
 #### Firewall
 
@@ -157,9 +164,25 @@
 - [ ] `.env` file created with `DB_PASSWORD`, `OPENAI_API_KEY`, etc.
 - [ ] All services start: `docker compose up -d`
 - [ ] PostgreSQL healthy: `docker compose ps postgres` shows healthy
-- [ ] API service running: `docker compose ps api` shows running
-- [ ] App service running: `docker compose ps app` shows running
+- [ ] API service healthy: `docker compose ps api` shows healthy
+- [ ] App service healthy: `docker compose ps app` shows healthy
 - [ ] Schema initialized (from `docker-entrypoint-initdb.d`)
+
+### 5e. Health Checks (All Tiers)
+
+- [ ] PostgreSQL healthcheck configured: `pg_isready` (interval: 10s)
+- [ ] API healthcheck configured: HTTP GET `/api` (interval: 30s)
+- [ ] App healthcheck configured: HTTP GET `/` (interval: 30s)
+- [ ] All three services show "healthy" in `docker compose ps`
+- [ ] Services restart automatically on health check failure
+- [ ] `depends_on` conditions use `service_healthy` for startup ordering
+
+### 5f. Scaling with Docker Compose
+
+- [ ] Host port mapping removed from `app` (use `expose` instead)
+- [ ] Nginx container or host Nginx configured as load balancer
+- [ ] Scale tested: `docker compose up -d --scale app=3`
+- [ ] All scaled instances healthy: `docker compose ps`
 
 ### 5c. Verification
 
@@ -227,7 +250,64 @@
 
 ---
 
-## 7. Post-Deployment Verification
+## 7. Deployment Type D: Kubernetes
+
+### 7a. Cluster Setup
+
+- [ ] Kubernetes cluster provisioned (EKS / AKS / GKE / self-managed)
+- [ ] `kubectl` configured and authenticated to cluster
+- [ ] Nginx Ingress Controller installed
+- [ ] Cert-Manager installed (for automated TLS)
+- [ ] Metrics Server installed (required for HPA)
+
+### 7b. Namespace and Configuration
+
+- [ ] Namespace created: `kubectl apply -f k8s/namespace.yaml`
+- [ ] ConfigMap applied with API host, port, protocol
+- [ ] Secrets created with DB password, API keys
+- [ ] Secrets stored securely (not committed to git)
+
+### 7c. Deployments
+
+- [ ] PostgreSQL StatefulSet deployed (or external managed DB configured)
+- [ ] API Deployment applied with correct image and replicas
+- [ ] App Deployment applied with correct image and replicas
+- [ ] All pods running: `kubectl get pods -n franchiseai`
+
+### 7d. Health Probes
+
+- [ ] App liveness probe configured: HTTP GET `/` on port 8080
+- [ ] App readiness probe configured: HTTP GET `/` on port 8080
+- [ ] API liveness probe configured: HTTP GET `/api` on port 5656
+- [ ] API readiness probe configured: HTTP GET `/api` on port 5656
+- [ ] Failing pods automatically restarted by kubelet
+- [ ] Unready pods removed from Service endpoints
+
+### 7e. Auto-Scaling (HPA)
+
+- [ ] App HPA applied: min 2, max 10, target CPU 70%
+- [ ] API HPA applied: min 2, max 5, target CPU 70%
+- [ ] HPA active: `kubectl get hpa -n franchiseai` shows targets
+- [ ] Scale-up tested under load
+- [ ] Scale-down verified after load subsides
+
+### 7f. Ingress and TLS
+
+- [ ] Ingress resource created for `franchiseai.example.com`
+- [ ] TLS secret provisioned by Cert-Manager (Let's Encrypt)
+- [ ] WebSocket annotations configured (proxy timeouts, upgrade headers)
+- [ ] Session affinity annotation set (`upstream-hash-by: $remote_addr`)
+- [ ] Application accessible via HTTPS at domain
+
+### 7g. Services
+
+- [ ] `app-service` (ClusterIP) routes to app pods on port 8080
+- [ ] `api-service` (ClusterIP) routes to API pods on port 5656
+- [ ] Services resolve correctly: `kubectl get svc -n franchiseai`
+
+---
+
+## 8. Post-Deployment Verification
 
 Run these checks after every deployment, regardless of deployment type.
 
@@ -266,7 +346,7 @@ Run these checks after every deployment, regardless of deployment type.
 
 ---
 
-## 8. SSL / HTTPS
+## 9. SSL / HTTPS
 
 ### Option A: Let's Encrypt (Nginx)
 
@@ -296,7 +376,7 @@ Run these checks after every deployment, regardless of deployment type.
 
 ---
 
-## 9. Monitoring Setup
+## 10. Monitoring Setup
 
 ### Process Monitoring
 
@@ -319,7 +399,7 @@ Run these checks after every deployment, regardless of deployment type.
 
 ---
 
-## 10. Backup Configuration
+## 11. Backup Configuration
 
 ### Database Backups
 
@@ -345,7 +425,46 @@ Run these checks after every deployment, regardless of deployment type.
 
 ---
 
-## 11. Repository Migration
+## 12. Security: OAuth & SSO
+
+> These items apply to future sprints (Sprint 15+). See [DEPLOYMENT_GUIDE.md, Section 15](DEPLOYMENT_GUIDE.md#15-security-roadmap-oauth--sso) for full details.
+
+### Prerequisites
+
+- [ ] HTTPS configured and working in target environment
+- [ ] Google Cloud Console project created
+- [ ] OAuth 2.0 Client ID created (Web application type)
+- [ ] Authorized redirect URI registered: `https://<domain>/oauth/callback`
+- [ ] Client ID and Client Secret securely stored (env vars or secrets manager)
+
+### Application Configuration
+
+- [ ] `auth.provider` set to `oauth2` in `app_config.json`
+- [ ] `auth.google.client_id` configured
+- [ ] `auth.google.client_secret` stored in environment variable (not config file)
+- [ ] `auth.google.redirect_uri` matches Google Console exactly
+- [ ] `auth.jwt.issuer` set to `https://accounts.google.com`
+- [ ] `fallback_local_auth` set to `true` for migration period
+
+### Deployment Verification
+
+- [ ] "Sign in with Google" button appears on login page
+- [ ] OAuth redirect flow completes successfully
+- [ ] User identity retrieved from Google (email, name)
+- [ ] Local session created after OAuth callback
+- [ ] JWT tokens issued and validated by ApiLogicServer
+- [ ] Token refresh works before expiry
+- [ ] Logout invalidates session and tokens
+
+### Kubernetes / Docker
+
+- [ ] OAuth client secret added to Kubernetes Secret or Docker `.env`
+- [ ] Session affinity configured (Nginx `ip_hash` or K8s `upstream-hash-by`)
+- [ ] CORS configured on ApiLogicServer for token validation
+
+---
+
+## 13. Repository Migration
 
 Use when creating `Geolocation-Franchise` from `Geolocation-Sample`.
 

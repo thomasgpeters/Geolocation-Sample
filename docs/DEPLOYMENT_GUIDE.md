@@ -16,11 +16,13 @@
 8. [Deployment Target: Native](#8-deployment-target-native)
 9. [Deployment Target: Container (Docker)](#9-deployment-target-container-docker)
 10. [Deployment Target: Cloud](#10-deployment-target-cloud)
-11. [SSL / HTTPS](#11-ssl--https)
-12. [Monitoring & Health Checks](#12-monitoring--health-checks)
-13. [Backup & Recovery](#13-backup--recovery)
-14. [Migrating to a New Repository](#14-migrating-to-a-new-repository)
-15. [Troubleshooting](#15-troubleshooting)
+11. [Deployment Target: Kubernetes](#11-deployment-target-kubernetes)
+12. [SSL / HTTPS](#12-ssl--https)
+13. [Monitoring & Health Checks](#13-monitoring--health-checks)
+14. [Backup & Recovery](#14-backup--recovery)
+15. [Security Roadmap: OAuth & SSO](#15-security-roadmap-oauth--sso)
+16. [Migrating to a New Repository](#16-migrating-to-a-new-repository)
+17. [Troubleshooting](#17-troubleshooting)
 
 ---
 
@@ -616,15 +618,72 @@ sudo systemctl start franchiseai-api
 sudo systemctl start franchiseai
 ```
 
-### Nginx Reverse Proxy
+### Nginx Reverse Proxy with Load Balancing
 
-For UAT and PROD, place Nginx in front of the application:
+For UAT and PROD, Nginx sits in front of the application as a reverse proxy with round-robin load balancing. This enables horizontal scaling by adding more app instances.
+
+#### Single Instance (Minimum)
 
 ```nginx
 upstream franchiseai {
     server 127.0.0.1:8080;
 }
+```
 
+#### Multi-Instance Round Robin (Scaled)
+
+```nginx
+upstream franchiseai {
+    # Round-robin is the default load balancing method.
+    # Wt uses WebSockets with session affinity, so use ip_hash
+    # to ensure a client's WebSocket reconnects hit the same instance.
+    ip_hash;
+
+    server 127.0.0.1:8081;
+    server 127.0.0.1:8082;
+    server 127.0.0.1:8083;
+    # Add more instances as needed
+}
+```
+
+To run multiple native instances, start each on a different port:
+
+```bash
+# Instance 1
+./bin/start.sh 8081 &
+# Instance 2
+./bin/start.sh 8082 &
+# Instance 3
+./bin/start.sh 8083 &
+```
+
+Or with Docker Compose, scale the app service:
+
+```bash
+# Scale to 3 app instances
+docker compose up -d --scale app=3
+```
+
+When scaling with Docker Compose, remove the fixed host port mapping from the `app` service and let Nginx discover containers via Docker DNS:
+
+```yaml
+# In docker-compose.yml, replace ports: ["8080:8080"] with:
+  app:
+    expose:
+      - "8080"
+    # ... (no host port mapping — Nginx routes internally)
+```
+
+```nginx
+upstream franchiseai {
+    ip_hash;
+    server app:8080;  # Docker DNS resolves to all 'app' container IPs
+}
+```
+
+#### Full Nginx Server Configuration
+
+```nginx
 server {
     listen 80;
     server_name franchiseai.example.com;
@@ -659,6 +718,15 @@ server {
     }
 }
 ```
+
+#### Scaling Strategy by Environment
+
+| Environment | App Instances | Load Balancing | Notes |
+|-------------|--------------|----------------|-------|
+| **DEV** | 1 | None (direct) | Single instance, no Nginx needed |
+| **TEST** | 1 | Nginx (single upstream) | Validates proxy configuration |
+| **UAT** | 2+ | Nginx round-robin (ip_hash) | Validates scaling behavior |
+| **PROD** | 3+ | Nginx round-robin (ip_hash) | Horizontal scaling for throughput |
 
 ### Firewall Rules
 
@@ -708,7 +776,7 @@ RUN mkdir build && cd build && cmake .. && make -j$(nproc)
 FROM ubuntu:22.04 AS runtime
 
 RUN apt-get update && apt-get install -y \
-    libwt-dev libwthttp-dev libcurl4 \
+    libwt-dev libwthttp-dev libcurl4 curl \
     && rm -rf /var/lib/apt/lists/*
 
 RUN useradd -r -s /bin/false franchiseai
@@ -727,6 +795,9 @@ USER franchiseai
 
 EXPOSE 8080
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:8080/ || exit 1
+
 CMD ["./bin/franchise_ai_search", \
      "--docroot", "./resources", \
      "--approot", "./resources", \
@@ -739,7 +810,7 @@ CMD ["./bin/franchise_ai_search", \
 ```dockerfile
 FROM python:3.11-slim
 
-RUN pip install ApiLogicServer
+RUN pip install ApiLogicServer && pip install curl-cffi || true
 
 WORKDIR /opt/api
 
@@ -747,6 +818,9 @@ WORKDIR /opt/api
 COPY api/ .
 
 EXPOSE 5656
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5656/api')" || exit 1
 
 CMD ["python", "api_logic_server_run.py"]
 ```
@@ -787,6 +861,12 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5656/api')\""]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
 
   app:
     build:
@@ -803,11 +883,26 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
 
 volumes:
   pgdata:
 ```
+
+All three tiers have healthchecks. The `depends_on` conditions ensure services only start after their dependencies are healthy:
+
+| Service | Health Check | Interval | Depends On |
+|---------|-------------|----------|------------|
+| **postgres** | `pg_isready` | 10s | — |
+| **api** | HTTP GET `/api` | 30s | postgres (healthy) |
+| **app** | HTTP GET `/` | 30s | api (healthy) |
 
 ### Build and Run
 
@@ -946,7 +1041,342 @@ In all cases, the deployed artifact is either:
 
 ---
 
-## 11. SSL / HTTPS
+## 11. Deployment Target: Kubernetes
+
+Kubernetes provides orchestration, auto-scaling, self-healing, and rolling deployments. Use the Docker images from Section 9 as the deployment artifact.
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Kubernetes Cluster                     │
+│                                                          │
+│  ┌──────────────────┐   ┌──────────────────┐            │
+│  │   Ingress (Nginx) │   │  Cert-Manager    │            │
+│  │   + TLS          │   │  (Let's Encrypt) │            │
+│  └────────┬─────────┘   └──────────────────┘            │
+│           │                                              │
+│  ┌────────▼─────────┐   ┌──────────────────┐            │
+│  │  Service: app     │   │  Service: api     │            │
+│  │  (ClusterIP)      │   │  (ClusterIP)      │            │
+│  └────────┬─────────┘   └────────┬─────────┘            │
+│           │                      │                       │
+│  ┌────────▼─────────┐   ┌───────▼──────────┐            │
+│  │  Deployment: app  │   │  Deployment: api  │            │
+│  │  replicas: 3      │   │  replicas: 2      │            │
+│  │  (HPA: 2-10)      │   │  (HPA: 2-5)       │            │
+│  └──────────────────┘   └──────────────────┘            │
+│                                                          │
+│  ┌──────────────────────────────────────────┐            │
+│  │  StatefulSet: postgres (or external DB)   │            │
+│  └──────────────────────────────────────────┘            │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Namespace
+
+```yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: franchiseai
+```
+
+### ConfigMap and Secrets
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: franchiseai-config
+  namespace: franchiseai
+data:
+  API_LOGIC_SERVER_HOST: "api-service"
+  API_LOGIC_SERVER_PORT: "5656"
+  API_LOGIC_SERVER_PROTOCOL: "http"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: franchiseai-secrets
+  namespace: franchiseai
+type: Opaque
+stringData:
+  DB_PASSWORD: "your-secure-password"
+  OPENAI_API_KEY: "sk-your-key"
+  GOOGLE_API_KEY: "your-google-key"
+  BBB_API_KEY: "your-bbb-key"
+  CENSUS_API_KEY: "your-census-key"
+```
+
+### Application Deployment
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: franchiseai-app
+  namespace: franchiseai
+  labels:
+    app: franchiseai
+    tier: frontend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: franchiseai
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        app: franchiseai
+        tier: frontend
+    spec:
+      containers:
+        - name: app
+          image: <registry>/franchiseai-app:latest
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: franchiseai-config
+            - secretRef:
+                name: franchiseai-secrets
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-service
+  namespace: franchiseai
+spec:
+  selector:
+    app: franchiseai
+    tier: frontend
+  ports:
+    - port: 8080
+      targetPort: 8080
+  type: ClusterIP
+```
+
+### ApiLogicServer Deployment
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: franchiseai-api
+  namespace: franchiseai
+  labels:
+    app: franchiseai
+    tier: middleware
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: franchiseai
+      tier: middleware
+  template:
+    metadata:
+      labels:
+        app: franchiseai
+        tier: middleware
+    spec:
+      containers:
+        - name: api
+          image: <registry>/franchiseai-api:latest
+          ports:
+            - containerPort: 5656
+          env:
+            - name: APILOGICPROJECT_PORT
+              value: "5656"
+            - name: APILOGICPROJECT_HOST
+              value: "0.0.0.0"
+            - name: SQLALCHEMY_DATABASE_URI
+              valueFrom:
+                secretKeyRef:
+                  name: franchiseai-secrets
+                  key: DB_PASSWORD
+          livenessProbe:
+            httpGet:
+              path: /api
+              port: 5656
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api
+              port: 5656
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-service
+  namespace: franchiseai
+spec:
+  selector:
+    app: franchiseai
+    tier: middleware
+  ports:
+    - port: 5656
+      targetPort: 5656
+  type: ClusterIP
+```
+
+### Horizontal Pod Autoscaler (HPA)
+
+Auto-scaling adjusts replica count based on CPU/memory utilization.
+
+```yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: franchiseai-app-hpa
+  namespace: franchiseai
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: franchiseai-app
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: franchiseai-api-hpa
+  namespace: franchiseai
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: franchiseai-api
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+```
+
+### Ingress with TLS
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: franchiseai-ingress
+  namespace: franchiseai
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "86400"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "86400"
+    nginx.ingress.kubernetes.io/upstream-hash-by: "$remote_addr"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    # WebSocket support
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header Upgrade $http_upgrade;
+      proxy_set_header Connection "upgrade";
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - franchiseai.example.com
+      secretName: franchiseai-tls
+  rules:
+    - host: franchiseai.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: app-service
+                port:
+                  number: 8080
+```
+
+### Deploy to Kubernetes
+
+```bash
+# Apply all manifests
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/secrets.yaml
+kubectl apply -f k8s/configmap.yaml
+kubectl apply -f k8s/postgres.yaml
+kubectl apply -f k8s/api-deployment.yaml
+kubectl apply -f k8s/app-deployment.yaml
+kubectl apply -f k8s/hpa.yaml
+kubectl apply -f k8s/ingress.yaml
+
+# Verify
+kubectl get pods -n franchiseai
+kubectl get hpa -n franchiseai
+kubectl get ingress -n franchiseai
+```
+
+### Managed Kubernetes Options
+
+| Provider | Service | Notes |
+|----------|---------|-------|
+| **AWS** | EKS | Use ALB Ingress Controller; RDS for database |
+| **Azure** | AKS | Use AGIC (Application Gateway Ingress); Azure DB for PostgreSQL |
+| **GCP** | GKE | Use GCE Ingress; Cloud SQL for database |
+
+---
+
+## 12. SSL / HTTPS
 
 ### Option A: Let's Encrypt with Certbot (Free)
 
@@ -981,7 +1411,7 @@ openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -node
 
 ---
 
-## 12. Monitoring & Health Checks
+## 13. Monitoring & Health Checks
 
 ### Process Monitoring
 
@@ -1023,7 +1453,7 @@ ss -tlnp | grep 8080
 
 ---
 
-## 13. Backup & Recovery
+## 14. Backup & Recovery
 
 ### Database Backup
 
@@ -1064,7 +1494,99 @@ tar czf config_backup.tar.gz \
 
 ---
 
-## 14. Migrating to a New Repository
+## 15. Security Roadmap: OAuth & SSO
+
+The current application uses local session-based authentication. Future sprints will add OAuth 2.0 and SSO to support enterprise identity management.
+
+### Current State
+
+- Session-based authentication with username/password
+- Session cookies managed by Wt framework
+- `users` table with hashed passwords in PostgreSQL
+- Session timeout and idle timeout enforced via `wt_config.xml`
+
+### Planned: OAuth 2.0 + OpenID Connect
+
+| Feature | Description | Target Sprint |
+|---------|-------------|---------------|
+| **OAuth 2.0 Authorization** | Replace password auth with OAuth 2.0 authorization code flow | Sprint 15 |
+| **Google SSO** | "Sign in with Google" via OpenID Connect (OIDC) | Sprint 15 |
+| **Token-based Sessions** | JWT access tokens with refresh token rotation | Sprint 15 |
+| **Role-based Access Control** | OAuth scopes mapped to application roles (admin, user, viewer) | Sprint 16 |
+| **Additional SSO Providers** | Microsoft Entra ID (Azure AD), Okta, Auth0 | Sprint 17+ |
+
+### Architecture (Planned)
+
+```
+┌──────────┐     ┌──────────────┐     ┌────────────────┐
+│  Browser  │────▶│  FranchiseAI  │────▶│  OAuth Provider │
+│           │◀────│  (Wt App)     │◀────│  (Google OIDC)  │
+└──────────┘     └──────┬───────┘     └────────────────┘
+                        │
+                        │ JWT validation
+                        ▼
+                 ┌──────────────┐
+                 │ ApiLogicServer│
+                 │ (validates    │
+                 │  JWT tokens)  │
+                 └──────────────┘
+```
+
+### OAuth Flow: Google SSO
+
+1. User clicks "Sign in with Google" on the login page
+2. Application redirects to Google's authorization endpoint
+3. User authenticates with Google and grants consent
+4. Google redirects back with an authorization code
+5. Application exchanges the code for ID token + access token
+6. Application validates the ID token (signature, issuer, audience)
+7. Application creates a local session linked to the Google identity
+8. Subsequent API calls carry a JWT; ApiLogicServer validates the token
+
+### Configuration (Planned)
+
+```json
+{
+  "auth": {
+    "provider": "oauth2",
+    "google": {
+      "client_id": "your-google-client-id.apps.googleusercontent.com",
+      "client_secret": "GOCSPX-your-client-secret",
+      "redirect_uri": "https://franchiseai.example.com/oauth/callback",
+      "scopes": ["openid", "email", "profile"]
+    },
+    "jwt": {
+      "issuer": "https://accounts.google.com",
+      "audience": "your-google-client-id.apps.googleusercontent.com",
+      "token_expiry_seconds": 3600,
+      "refresh_token_expiry_seconds": 604800
+    },
+    "fallback_local_auth": true
+  }
+}
+```
+
+### Deployment Considerations for OAuth
+
+| Concern | Requirement |
+|---------|-------------|
+| **HTTPS required** | OAuth requires HTTPS in UAT/PROD; HTTP allowed only for localhost DEV |
+| **Redirect URI** | Must match exactly in Google Cloud Console and `app_config.json` |
+| **Client secrets** | Store in environment variables or secrets manager — never in source code |
+| **CORS** | ApiLogicServer must allow the application's origin for token validation |
+| **Session affinity** | Nginx `ip_hash` or Kubernetes `upstream-hash-by` ensures OAuth state is preserved |
+
+### Google Cloud Console Setup (When Ready)
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/) > APIs & Services > Credentials
+2. Create OAuth 2.0 Client ID (Web application)
+3. Add authorized redirect URI: `https://franchiseai.example.com/oauth/callback`
+4. Note the Client ID and Client Secret
+5. Enable the "Google+ API" or "People API" for profile information
+
+---
+
+## 16. Migrating to a New Repository
 
 When starting a new project from this codebase (e.g., creating `Geolocation-Franchise` from `Geolocation-Sample`).
 
@@ -1100,7 +1622,7 @@ gh repo create thomasgpeters/Geolocation-Franchise --private --source=. --push
 
 ---
 
-## 15. Troubleshooting
+## 17. Troubleshooting
 
 ### Build Issues (DEV Only)
 
